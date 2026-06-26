@@ -1,0 +1,4 @@
+interface:
+  display_name: "Open Source Onboarding"
+  short_description: "Structure learning records for a new OSS repo"
+  default_prompt: "Use $open-source-onboarding to set up learning reports and a first-week study plan for this repository."
