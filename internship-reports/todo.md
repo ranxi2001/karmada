@@ -17,15 +17,15 @@
 
 | 优先级 | 任务 | 状态 | 难度 | 成本 | 预计时间 | 产出/证据 | 下一步 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| P0 | 建立 Karmada 实习基础仓库结构 | DOING | 低 | 低 | 0.5 天 | `AGENTS.md`、`PROGRESS.md`、`internship-reports/`、`.agents/skills/open-source-onboarding/` | 校验 skill，提交到 `intern` 分支 |
+| P0 | 建立 Karmada 实习基础仓库结构 | DONE | 低 | 低 | 0.5 天 | `AGENTS.md`、`PROGRESS.md`、`internship-reports/`、`.agents/skills/open-source-onboarding/`、[Day 1 日报](day1-karmada-7598-default-version-pr.md) | 后续按 dayN 文件继续记录 |
 | P0 | 迁移并 Karmada 化本地 skills | DONE | 中 | 低 | 0.5 天 | `.agents/skills/drawio-skill/`、`.agents/skills/karmada-pr-management/`、`.agents/skills/karmada-issue-discussion/`；4 个 skills 均通过 `quick_validate.py`，Karmada GitHub 脚本 smoke test 通过 | 后续画图、issue 分析、PR 准备分别使用这些 skills |
-| P0 | 配置 upstream 远程和分支卫生规则 | TODO | 低 | 低 | 0.5 天 | `git remote -v`、`git fetch upstream master` 记录 | 添加 `upstream=https://github.com/karmada-io/karmada.git`，确认 `intern` 只放学习记录 |
+| P0 | 配置 upstream 远程和分支卫生规则 | DONE | 低 | 低 | 0.5 天 | `upstream=https://github.com/karmada-io/karmada.git`；upstream PR 分支从 `upstream/master` 创建；`intern` 只放学习记录 | 后续 upstream 改动继续使用独立 topic branch |
 | P0 | 跑通或预检 Karmada Quick Start | TODO | 中 | 中 | 1 天 | Day 1 报告、命令日志、kubeconfig/context 记录 | 运行或拆解 `hack/local-up-karmada.sh`，记录 host cluster、control plane、member clusters |
 | P0 | 梳理 Karmada 项目结构和核心组件 | TODO | 中 | 低 | 1 天 | Day 2 源码地图 | 阅读 `cmd/`、`pkg/apis/`、`pkg/controllers/`、`pkg/scheduler/`、`pkg/karmadactl/`、`operator/` |
 | P0 | 梳理 ResourceTemplate -> PropagationPolicy -> ResourceBinding -> Work -> member cluster 数据流 | TODO | 中 | 低 | 1 天 | 架构笔记、Mermaid 流程图、源码入口 | 从 README 架构图、samples/nginx 和 controller 目录建立第一版链路 |
 | P0 | 建立 Karmada 术语表 | DOING | 低 | 低 | 0.5 天 | [intern-glossary.md](intern-glossary.md) | 随源码阅读补充 Cluster、Work、Binding、PropagationPolicy、OverridePolicy、interpreter、estimator 等术语 |
 | P0 | 跑基础测试命令并记录成本 | TODO | 中 | 低 | 0.5-1 天 | `make test` / 聚焦 `go test` 结果 | 先跑轻量目标，再决定是否跑完整 `make test` 和 `make verify` |
-| P1 | 分析 Karmada 社区 issue / PR 动态 | TODO | 中 | 低 | 0.5-1 天 | issue/PR triage 报告 | 浏览 `good first issue`、`help wanted`、flaking test、docs 类 issue，优先找低风险贡献点 |
+| P1 | 分析 Karmada 社区 issue / PR 动态 | DONE | 中 | 低 | 0.5-1 天 | [Day 1 日报](day1-karmada-7598-default-version-pr.md)；分析 #7598 并提交 upstream PR #7666 | 继续观察 #7666 CI 和 review |
 | P1 | 深读 scheduler 调度逻辑 | TODO | 高 | 低 | 1-2 天 | scheduler 源码笔记、测试矩阵 | 阅读 `pkg/scheduler/`、调度 policy、spread/weight/affinity 相关代码和单测 |
 | P1 | 深读 controller-manager 传播链路 | TODO | 高 | 低 | 1-2 天 | controller 源码笔记、reconcile 流程图 | 阅读 policy、binding、execution、status、cluster controller |
 | P1 | 深读 karmadactl CLI | TODO | 中 | 低 | 1 天 | CLI 命令地图、潜在 docs/test gap | 阅读 `pkg/karmadactl/` 和 `cmd/karmadactl/`，找帮助文档或测试改进点 |
@@ -61,3 +61,4 @@
 | --- | --- |
 | 创建本地 `intern` 分支 | 当前工作分支为 `intern` |
 | 建立 Karmada 本地 skills 基础 | `open-source-onboarding`、`drawio-skill`、`karmada-pr-management`、`karmada-issue-discussion` |
+| 完成第一个 upstream PR 练习 | 分析 #7598 follow-up，提交 PR #7666：同步安装入口默认 Kubernetes / etcd 版本 |
