@@ -1,0 +1,4 @@
+interface:
+  display_name: "Karmada Issue Discussion"
+  short_description: "Analyze and draft Karmada issue discussions"
+  default_prompt: "Use $karmada-issue-discussion to summarize a Karmada issue and draft a careful English reply."

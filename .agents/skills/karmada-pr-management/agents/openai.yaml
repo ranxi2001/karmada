@@ -1,0 +1,4 @@
+interface:
+  display_name: "Karmada PR Management"
+  short_description: "Prepare and review Karmada upstream PRs"
+  default_prompt: "Use $karmada-pr-management to prepare a Karmada PR branch, test plan, and official PR body."

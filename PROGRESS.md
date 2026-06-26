@@ -10,13 +10,14 @@
 
 - 2026-06-26：从 `master` 新建并切换到本地 `intern` 分支。
 - 2026-06-26：参考 AgentCube 实习记录结构，开始为 Karmada 建立基础文件：根目录 `AGENTS.md`、`PROGRESS.md`、`internship-reports/README.md`、`internship-reports/todo.md`、`internship-reports/intern-glossary.md`，以及本地可复用 skill `.agents/skills/open-source-onboarding/`。
+- 2026-06-26：从 AgentCube 迁移 3 个本地 skills 到 Karmada：`.agents/skills/drawio-skill/` 保留通用绘图能力；`agentcube-pr-management` 改造为 `.agents/skills/karmada-pr-management/`，默认 repo 为 `karmada-io/karmada`、基线分支为 `upstream/master`、测试命令按 Karmada `make test` / `make verify` / `hack/update-*`；`agentcube-issue-discussion` 改造为 `.agents/skills/karmada-issue-discussion/`，脚本默认 repo 改为 `karmada-io/karmada`。4 个本地 skills 已通过 `quick_validate.py`。
 - 当前仓库 `origin` 是个人 fork：`https://github.com/ranxi2001/karmada`。尚未配置 `upstream` 远程。
 
 ## Current Blockers
 
 - 尚未实际运行 `hack/local-up-karmada.sh`，因此本机 kind / Docker / kubeconfig / 多集群环境是否可用还没有验证。
 - 尚未跑 `make test` 或 `make verify`，当前只建立学习和记录骨架。
-- 尚未配置 `upstream` 远程，不能直接执行规范的 upstream sync 或基于 upstream `master` 创建官方 PR 分支。
+- 尚未配置 `upstream` 远程，不能直接执行规范的 upstream sync 或基于 upstream `master` 创建官方 PR 分支；`karmada-pr-management` 已记录正确流程。
 
 ## Ruled Out
 
@@ -30,6 +31,8 @@
 - 做 Day 1 报告：跑通或预检 `hack/local-up-karmada.sh`，记录环境、失败命令、错误、绕过方式和最终结果。
 - 做 Day 2 源码地图：按 API types、controller-manager、scheduler、agent、execution controller、work API、CLI、operator、e2e 测试梳理目录职责。
 - 如果要找第一个贡献点，先从 docs、tests、good first issue、flaking test、CLI help 或小型 validation/test gap 入手。
+- 需要绘制 Karmada 架构图、传播链路图或调度流程图时，使用 `.agents/skills/drawio-skill/`。
+- 分析 Karmada issue/PR 或准备 upstream PR 时，优先使用 `.agents/skills/karmada-issue-discussion/` 和 `.agents/skills/karmada-pr-management/`。
 
 ## Stop Conditions
 

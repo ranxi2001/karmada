@@ -18,6 +18,7 @@
 | 优先级 | 任务 | 状态 | 难度 | 成本 | 预计时间 | 产出/证据 | 下一步 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | 建立 Karmada 实习基础仓库结构 | DOING | 低 | 低 | 0.5 天 | `AGENTS.md`、`PROGRESS.md`、`internship-reports/`、`.agents/skills/open-source-onboarding/` | 校验 skill，提交到 `intern` 分支 |
+| P0 | 迁移并 Karmada 化本地 skills | DONE | 中 | 低 | 0.5 天 | `.agents/skills/drawio-skill/`、`.agents/skills/karmada-pr-management/`、`.agents/skills/karmada-issue-discussion/`；4 个 skills 均通过 `quick_validate.py`，Karmada GitHub 脚本 smoke test 通过 | 后续画图、issue 分析、PR 准备分别使用这些 skills |
 | P0 | 配置 upstream 远程和分支卫生规则 | TODO | 低 | 低 | 0.5 天 | `git remote -v`、`git fetch upstream master` 记录 | 添加 `upstream=https://github.com/karmada-io/karmada.git`，确认 `intern` 只放学习记录 |
 | P0 | 跑通或预检 Karmada Quick Start | TODO | 中 | 中 | 1 天 | Day 1 报告、命令日志、kubeconfig/context 记录 | 运行或拆解 `hack/local-up-karmada.sh`，记录 host cluster、control plane、member clusters |
 | P0 | 梳理 Karmada 项目结构和核心组件 | TODO | 中 | 低 | 1 天 | Day 2 源码地图 | 阅读 `cmd/`、`pkg/apis/`、`pkg/controllers/`、`pkg/scheduler/`、`pkg/karmadactl/`、`operator/` |
@@ -59,3 +60,4 @@
 | 事项 | 产出 |
 | --- | --- |
 | 创建本地 `intern` 分支 | 当前工作分支为 `intern` |
+| 建立 Karmada 本地 skills 基础 | `open-source-onboarding`、`drawio-skill`、`karmada-pr-management`、`karmada-issue-discussion` |
