@@ -8,6 +8,7 @@
 
 ## Last Run
 
+- 2026-06-28：按 mentor 反馈同步修正 Karmada CI 验证规则：以后不再向个人 fork 仓库提 PR 来跑 CI。Karmada 与 AgentCube 不同，`.github/workflows/ci.yml` 已经明确支持 `push` 到 fork 分支触发 CI（排除 `dependabot/**`），所以预提交 upstream 前直接 push topic/validation branch 到 `origin` 并查看 commit SHA Actions/checks；如失败先分类为代码问题、fork 环境差异、缺少 tag/history、CI flake 或 upstream-only gate。已更新 `AGENTS.md` 和 `.agents/skills/karmada-pr-management/SKILL.md`。
 - 2026-06-26：从 `master` 新建并切换到本地 `intern` 分支。
 - 2026-06-26：参考 AgentCube 实习记录结构，开始为 Karmada 建立基础文件：根目录 `AGENTS.md`、`PROGRESS.md`、`internship-reports/README.md`、`internship-reports/todo.md`、`internship-reports/intern-glossary.md`，以及本地可复用 skill `.agents/skills/open-source-onboarding/`。
 - 2026-06-26：从 AgentCube 迁移 3 个本地 skills 到 Karmada：`.agents/skills/drawio-skill/` 保留通用绘图能力；`agentcube-pr-management` 改造为 `.agents/skills/karmada-pr-management/`，默认 repo 为 `karmada-io/karmada`、基线分支为 `upstream/master`、测试命令按 Karmada `make test` / `make verify` / `hack/update-*`；`agentcube-issue-discussion` 改造为 `.agents/skills/karmada-issue-discussion/`，脚本默认 repo 改为 `karmada-io/karmada`。4 个本地 skills 已通过 `quick_validate.py`。

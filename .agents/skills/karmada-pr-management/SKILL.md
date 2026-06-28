@@ -21,7 +21,7 @@ Use this skill for Karmada upstream PR work: branch prep, template filling, issu
 - Keep `intern` for internship reports, Chinese notes, local benchmark records, and local skills.
 - Do not open an upstream PR, draft PR, WIP PR, issue, upstream review, or upstream comment without explicit user confirmation immediately before posting.
 - Prepare the branch, diff, tests, and exact title/body/comment locally first, then ask for approval.
-- Prefer fork-only validation for CI experiments. Use fork branches, fork PRs, or local tests before involving `karmada-io/karmada`.
+- Prefer fork-only validation before involving `karmada-io/karmada`. Karmada's upstream `.github/workflows/ci.yml` already runs on branch `push` in fork repositories, except `dependabot/**`, so push a topic or validation branch to `origin` and watch the commit SHA Actions/checks. Do not create PRs against the personal fork just to run CI.
 - Keep internship reports, raw benchmark results, and Chinese-only notes out of upstream PRs unless explicitly intended.
 - For other contributors' PRs, do not draft comments or review suggestions until you have read the PR body, changed files, relevant docs/tests, and existing human review discussion.
 - Prefer script-first PR analysis. If status checks, file summaries, review comment filtering, CI state, or branch hygiene checks are repeated across PRs, improve `.agents/skills/karmada-pr-management/scripts/` and update this skill.
@@ -43,7 +43,7 @@ Approval request must include:
 - Diff summary and tests run.
 - Why upstream attention is needed now.
 
-If the goal is only to run CI, use fork CI first.
+If the goal is only to run CI, push the branch to the personal fork and inspect the push-triggered GitHub Actions checks. Do not open a self-fork PR.
 
 ## Branch Workflow
 
@@ -90,6 +90,29 @@ git push origin <branch>
 ```
 
 Do not push to `upstream`.
+
+### Fork Push CI Validation
+
+Karmada differs from repositories where CI is `pull_request`-only: `.github/workflows/ci.yml` explicitly runs on every `push` to upstream/fork repositories except `dependabot/**`. Use this for pre-upstream confidence.
+
+Recommended validation flow:
+
+```bash
+git fetch upstream master
+git switch -c <kind>/<short-topic> upstream/master
+# edit and commit the focused change
+git push origin <kind>/<short-topic>:<kind>/<short-topic>
+# inspect GitHub Actions for the pushed commit SHA in ranxi2001/karmada
+```
+
+If you need a separate validation branch, use `test/<topic>` or `ci/<topic>` and push it directly:
+
+```bash
+git switch -c test/<topic>-validation
+git push origin test/<topic>-validation:test/<topic>-validation
+```
+
+Do not create a PR against `ranxi2001/karmada` merely to run CI. If push CI fails, inspect job logs and uploaded artifacts, then classify the failure as a code issue, fork environment difference, missing tag/history difference, CI flake, or upstream-only gate before changing code.
 
 Use `git commit -s` by default for upstream-facing commits. If a commit is missing `Signed-off-by` and the branch is only yours, repair it with `git commit --amend --no-edit --signoff` or `git rebase HEAD~N --signoff`, then update with `git push --force-with-lease`.
 
@@ -242,7 +265,7 @@ NONE
 
 For partial work use `Part of #<issue>` or `Refs #<issue>` instead of `Fixes #<issue>`.
 
-If a PR is intentionally unfinished, use `[WIP]` in the title and still get user approval before creation. Prefer fork-only PRs for WIP validation unless upstream maintainers explicitly need to see the work.
+If a PR is intentionally unfinished, use `[WIP]` in the title and still get user approval before creation. Prefer fork branch push CI for WIP validation unless upstream maintainers explicitly need to see the work.
 
 ## Review Management
 
@@ -284,6 +307,7 @@ python3 .agents/skills/karmada-issue-discussion/scripts/thread_brief.py <pr-numb
 
 - Do not create upstream PRs, draft PRs, WIP PRs, issues, or comments without immediate user approval of the exact title/body/comment.
 - Do not use upstream PRs as disposable CI runners.
+- Do not create self-fork PRs just to run CI; use Karmada's existing push-triggered fork CI.
 - Do not ignore the official PR template.
 - Do not comment on or mention maintainers in read-only PR analysis unless the user approves and upstream input is genuinely needed.
 - Do not merge unrelated formatting with behavior changes.

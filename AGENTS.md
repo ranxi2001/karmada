@@ -52,6 +52,8 @@ This workspace currently has `origin` configured as the personal fork: `https://
 
 Keep `intern` for internship notes and learning assets. For upstream-facing changes, create a clean topic branch from the latest upstream `master`, include one focused change, run the relevant verification commands, and keep internship records out of the PR branch. Before opening an upstream PR, issue, review comment, maintainer mention, or community-facing proposal, get explicit user confirmation on the exact target and English text.
 
+Do not create PRs against the personal fork just to run CI. Karmada's `.github/workflows/ci.yml` already runs on `push` to fork branches, except `dependabot/**`, and on `pull_request`. For pre-upstream validation, push the topic or validation branch to `origin` and watch the commit SHA Actions/checks directly. If a push-triggered fork CI failure differs from upstream PR CI, classify it as code issue, fork environment difference, or CI flake before changing code.
+
 ## Security and Configuration
 
 Do not commit real kubeconfigs, cloud credentials, registry credentials, tokens, or private cluster details. If local secrets are needed for experiments, keep them in ignored files with restricted permissions and never paste values into reports, logs, commits, or PR text.
