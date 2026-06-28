@@ -1,6 +1,6 @@
 # 实习任务 TODO
 
-更新时间：2026-06-26
+更新时间：2026-06-29
 
 这个文档用于管理 Karmada 实习期间的后续任务。日报记录每天做了什么，TODO 记录现在还要做什么、优先级是什么、做到哪里、卡在哪里。
 
@@ -21,8 +21,8 @@
 | P0 | 迁移并 Karmada 化本地 skills | DONE | 中 | 低 | 0.5 天 | `.agents/skills/drawio-skill/`、`.agents/skills/karmada-pr-management/`、`.agents/skills/karmada-issue-discussion/`；4 个 skills 均通过 `quick_validate.py`，Karmada GitHub 脚本 smoke test 通过 | 后续画图、issue 分析、PR 准备分别使用这些 skills |
 | P0 | 配置 upstream 远程和分支卫生规则 | DONE | 低 | 低 | 0.5 天 | `upstream=https://github.com/karmada-io/karmada.git`；upstream PR 分支从 `upstream/master` 创建；`intern` 只放学习记录 | 后续 upstream 改动继续使用独立 topic branch |
 | P0 | 跑通或预检 Karmada Quick Start | TODO | 中 | 中 | 1 天 | Day 1 报告、命令日志、kubeconfig/context 记录 | 运行或拆解 `hack/local-up-karmada.sh`，记录 host cluster、control plane、member clusters |
-| P0 | 梳理 Karmada 项目结构和核心组件 | TODO | 中 | 低 | 1 天 | Day 2 源码地图 | 阅读 `cmd/`、`pkg/apis/`、`pkg/controllers/`、`pkg/scheduler/`、`pkg/karmadactl/`、`operator/` |
-| P0 | 梳理 ResourceTemplate -> PropagationPolicy -> ResourceBinding -> Work -> member cluster 数据流 | TODO | 中 | 低 | 1 天 | 架构笔记、Mermaid 流程图、源码入口 | 从 README 架构图、samples/nginx 和 controller 目录建立第一版链路 |
+| P0 | 梳理 Karmada 项目结构和核心组件 | DONE | 中 | 低 | 1 天 | [Day 2 项目理解](day2-karmada-project-understanding.md)、[PNG 架构图](day2-karmada-architecture.png)、[draw.io 架构图](day2-karmada-architecture.drawio) | Day 3 深追 `samples/nginx` 真实传播链路 |
+| P0 | 梳理 ResourceTemplate -> PropagationPolicy -> ResourceBinding -> Work -> member cluster 数据流 | DONE | 中 | 低 | 1 天 | [Day 2 项目理解](day2-karmada-project-understanding.md) 中的 Mermaid 流程图和源码入口 | 继续读 `pkg/detector/`、`pkg/controllers/binding/`、`pkg/controllers/execution/` 的 reconcile 细节 |
 | P0 | 建立 Karmada 术语表 | DOING | 低 | 低 | 0.5 天 | [intern-glossary.md](intern-glossary.md) | 随源码阅读补充 Cluster、Work、Binding、PropagationPolicy、OverridePolicy、interpreter、estimator 等术语 |
 | P0 | 跑基础测试命令并记录成本 | TODO | 中 | 低 | 0.5-1 天 | `make test` / 聚焦 `go test` 结果 | 先跑轻量目标，再决定是否跑完整 `make test` 和 `make verify` |
 | P1 | 分析 Karmada 社区 issue / PR 动态 | DONE | 中 | 低 | 0.5-1 天 | [Day 1 日报](day1-karmada-7598-default-version-pr.md)；分析 #7598 并提交 upstream PR #7666 | 继续观察 #7666 CI 和 review |
@@ -62,3 +62,4 @@
 | 创建本地 `intern` 分支 | 当前工作分支为 `intern` |
 | 建立 Karmada 本地 skills 基础 | `open-source-onboarding`、`drawio-skill`、`karmada-pr-management`、`karmada-issue-discussion` |
 | 完成第一个 upstream PR 练习 | 分析 #7598 follow-up，提交 PR #7666：同步安装入口默认 Kubernetes / etcd 版本 |
+| 完成 Day 2 Karmada 项目理解 | 输出 [Day 2 项目理解](day2-karmada-project-understanding.md)，用 Mermaid 梳理控制面、资源传播链路和源码目录地图，并生成 [PNG 架构图](day2-karmada-architecture.png) 与 [draw.io 架构图](day2-karmada-architecture.drawio) |

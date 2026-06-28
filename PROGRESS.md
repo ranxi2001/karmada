@@ -8,6 +8,8 @@
 
 ## Last Run
 
+- 2026-06-29：按用户反馈修整 `internship-reports/day2-karmada-architecture.drawio`。改为真正用 draw.io CLI 导出并视觉检查，入口流程调整为 User -> Karmada API Server，Admission Webhook 画成 API Server 的 admission 调用；移除长边标签，用编号 1-6 + 底部图例表达流程；重新导出 `day2-karmada-architecture.png`、`day2-karmada-architecture.drawio.png`、`day2-karmada-architecture.drawio.svg`，`validate.py` 结果为 `0 error(s), 0 warning(s)`。当前 Day 2 相关文件已暂存，尚未 commit/push，等待用户确认图。
+- 2026-06-29：完成 Day 2 Karmada 项目理解。新增 `internship-reports/day2-karmada-project-understanding.md`，面向首次接触 Karmada、仅有基础 K8s 概念的读者，用 Mermaid 梳理控制面、ResourceTemplate -> PropagationPolicy -> ResourceBinding -> Work -> member cluster 传播链路、nginx 样例和源码目录地图；新增 `internship-reports/day2-karmada-architecture.drawio` 作为可编辑架构图源文件，并导出 `internship-reports/day2-karmada-architecture.png`、`internship-reports/day2-karmada-architecture.drawio.png`、`internship-reports/day2-karmada-architecture.drawio.svg`。
 - 2026-06-28：处理 GitHub fork sync 提示。`origin/master` 曾比 `upstream/master` 多 1 个 personal fork PR #1 merge commit `410202123`，同时落后 upstream 3 个 commit；已按 fork `master` 镜像规则把本地/远端 `master` force-with-lease 重置到 `upstream/master` `56d5d87ec`。当前 `origin/master` 与 `upstream/master` 一致，`intern` 保留实习记录不受影响。
 - 2026-06-28：按 mentor 反馈同步修正 Karmada CI 验证规则：以后不再向个人 fork 仓库提 PR 来跑 CI。Karmada 与 AgentCube 不同，`.github/workflows/ci.yml` 已经明确支持 `push` 到 fork 分支触发 CI（排除 `dependabot/**`），所以预提交 upstream 前直接 push topic/validation branch 到 `origin` 并查看 commit SHA Actions/checks；如失败先分类为代码问题、fork 环境差异、缺少 tag/history、CI flake 或 upstream-only gate。已更新 `AGENTS.md` 和 `.agents/skills/karmada-pr-management/SKILL.md`。
 - 2026-06-26：从 `master` 新建并切换到本地 `intern` 分支。
@@ -20,6 +22,7 @@
 - 尚未实际运行 `hack/local-up-karmada.sh`，因此本机 kind / Docker / kubeconfig / 多集群环境是否可用还没有验证。
 - 尚未跑完整 `make test` 或 `make verify`。本次 PR 只跑了相关范围的 `go test`、`hack/verify-command-line-flags.sh`、Helm lint、脚本语法和 YAML 解析。
 - upstream PR #7666 的 GitHub Actions 仍需继续观察。
+- 当前 Windows 电脑上 draw.io 已安装但未加入 PATH：`drawio` / `draw.io` 命令不可用，系统级路径 `C:\Program Files\draw.io\draw.io.exe` 也不存在；实际可用路径是 `C:\Users\ranxi\AppData\Local\Programs\draw.io\draw.io.exe`，版本 `30.2.6`。这个路径只适用于当前 Windows 机器；macOS 或其他机器仍按 drawio-skill 的正常探测顺序处理。
 
 ## Ruled Out
 
@@ -31,7 +34,7 @@
 - 继续观察 upstream PR #7666 的 CI 和 review；如果失败，先区分代码问题、环境抖动和 CI 环境差异。
 - 阅读 Karmada 官方入口：`README.md`、`CONTRIBUTING.md`、`docs/README.md`、`docs/images/architecture.png`、`samples/nginx/README.md`。
 - 补 Quick Start 预检报告：跑通或拆解 `hack/local-up-karmada.sh`，记录环境、失败命令、错误、绕过方式和最终结果。
-- 做 Day 2 源码地图：按 API types、controller-manager、scheduler、agent、execution controller、work API、CLI、operator、e2e 测试梳理目录职责。
+- Day 3 深追 `samples/nginx` 传播链路：从 `Deployment` + `PropagationPolicy` 到 `ResourceBinding`、`Work` 和 member cluster manifest，重点读 `pkg/detector/`、`pkg/controllers/binding/`、`pkg/controllers/execution/`。
 - 如果要找第一个贡献点，先从 docs、tests、good first issue、flaking test、CLI help 或小型 validation/test gap 入手。
 - 需要绘制 Karmada 架构图、传播链路图或调度流程图时，使用 `.agents/skills/drawio-skill/`。
 - 分析 Karmada issue/PR 或准备 upstream PR 时，优先使用 `.agents/skills/karmada-issue-discussion/` 和 `.agents/skills/karmada-pr-management/`。

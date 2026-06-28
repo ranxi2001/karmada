@@ -7,6 +7,7 @@
 ## 日报列表
 
 - [Day 1：Karmada #7598 依赖升级 follow-up 和 upstream PR](day1-karmada-7598-default-version-pr.md)
+- [Day 2：Karmada 项目理解和源码地图](day2-karmada-project-understanding.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
