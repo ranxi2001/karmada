@@ -26,6 +26,9 @@
 | P0 | 建立 Karmada 术语表 | DOING | 低 | 低 | 0.5 天 | [intern-glossary.md](intern-glossary.md) | 随源码阅读补充 Cluster、Work、Binding、PropagationPolicy、OverridePolicy、interpreter、estimator 等术语 |
 | P0 | 跑基础测试命令并记录成本 | TODO | 中 | 低 | 0.5-1 天 | `make test` / 聚焦 `go test` 结果 | 先跑轻量目标，再决定是否跑完整 `make test` 和 `make verify` |
 | P1 | 分析 Karmada 社区 issue / PR 动态 | DONE | 中 | 低 | 0.5-1 天 | [Day 1 日报](day1-karmada-7598-default-version-pr.md)；分析 #7598 并提交 upstream PR #7666 | 继续观察 #7666 CI 和 review |
+| P1 | 调研证书管理相关 issue / PR 并拆任务 | DONE | 中 | 低 | 0.5 天 | [Day 3 证书管理任务整理](day3-certificate-management-task-triage.md) | 优先跟进 #6051 Helm 证书命名规范；先做差距表，不直接改代码 |
+| P1 | 对照 #6051 梳理 Helm 证书 Secret / volume / mount path 差距 | TODO | 中 | 低 | 0.5-1 天 | Helm 证书命名差距表、英文 issue 评论草稿 | 阅读 `charts/karmada/templates/`、`charts/karmada/values.yaml` 和 #6051 Task two 示例 |
+| P1 | 评估是否协助 #6788 split secret layout PR | TODO | 中 | 低 | 0.5 天 | PR 状态分析、冲突/测试记录或 review 评论草稿 | 拉取 #6788 diff，先确认作者和 reviewer 是否需要协助 |
 | P1 | 深读 scheduler 调度逻辑 | TODO | 高 | 低 | 1-2 天 | scheduler 源码笔记、测试矩阵 | 阅读 `pkg/scheduler/`、调度 policy、spread/weight/affinity 相关代码和单测 |
 | P1 | 深读 controller-manager 传播链路 | TODO | 高 | 低 | 1-2 天 | controller 源码笔记、reconcile 流程图 | 阅读 policy、binding、execution、status、cluster controller |
 | P1 | 深读 karmadactl CLI | TODO | 中 | 低 | 1 天 | CLI 命令地图、潜在 docs/test gap | 阅读 `pkg/karmadactl/` 和 `cmd/karmadactl/`，找帮助文档或测试改进点 |
@@ -63,3 +66,4 @@
 | 建立 Karmada 本地 skills 基础 | `open-source-onboarding`、`drawio-skill`、`karmada-pr-management`、`karmada-issue-discussion` |
 | 完成第一个 upstream PR 练习 | 分析 #7598 follow-up，提交 PR #7666：同步安装入口默认 Kubernetes / etcd 版本 |
 | 完成 Day 2 Karmada 项目理解 | 输出 [Day 2 项目理解](day2-karmada-project-understanding.md)，用 Mermaid 梳理控制面、资源传播链路和源码目录地图，并生成 [PNG 架构图](day2-karmada-architecture.png) 与 [draw.io 架构图](day2-karmada-architecture.drawio) |
+| 完成 Day 3 证书管理任务整理 | 输出 [Day 3 证书管理任务整理](day3-certificate-management-task-triage.md)，确认 #6051 Helm 证书命名规范是当前最适合继续拆解的任务 |

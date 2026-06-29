@@ -1,0 +1,4 @@
+interface:
+  display_name: "Karmada Push CI Check"
+  short_description: "Check fork push CI workflow status"
+  default_prompt: "Use $karmada-push-ci-check to summarize GitHub Actions push CI for my Karmada fork branch."

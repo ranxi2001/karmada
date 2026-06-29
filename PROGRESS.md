@@ -8,6 +8,7 @@
 
 ## Last Run
 
+- 2026-06-29：完成 Day 3 证书管理方向任务整理。新增 `internship-reports/day3-certificate-management-task-triage.md`，梳理 community#69、#6091、#6269、#6670、#6788、#6553 和 #6051 的关系；结论是优先跟进 #6051 中 Helm 证书 Secret / volume / mount path naming convention 的 `help wanted` 空位。随后按“不要为了改代码而改代码，先抽象证书管理层”的反馈，追加了批量系统证书替换分发的初步设计，包括证书身份、layout plan、Secret plan、组件 kubeconfig 分发和验证计划，并加入 Mermaid 前后对比图说明抽象层引入后的变化。同步更新 `internship-reports/README.md` 和 `internship-reports/todo.md`。
 - 2026-06-29：按用户反馈修整 `internship-reports/day2-karmada-architecture.drawio`。改为真正用 draw.io CLI 导出并视觉检查，入口流程调整为 User -> Karmada API Server，Admission Webhook 画成 API Server 的 admission 调用；移除长边标签，用编号 1-6 + 底部图例表达流程；重新导出 `day2-karmada-architecture.png`、`day2-karmada-architecture.drawio.png`、`day2-karmada-architecture.drawio.svg`，`validate.py` 结果为 `0 error(s), 0 warning(s)`。当前 Day 2 相关文件已暂存，尚未 commit/push，等待用户确认图。
 - 2026-06-29：完成 Day 2 Karmada 项目理解。新增 `internship-reports/day2-karmada-project-understanding.md`，面向首次接触 Karmada、仅有基础 K8s 概念的读者，用 Mermaid 梳理控制面、ResourceTemplate -> PropagationPolicy -> ResourceBinding -> Work -> member cluster 传播链路、nginx 样例和源码目录地图；新增 `internship-reports/day2-karmada-architecture.drawio` 作为可编辑架构图源文件，并导出 `internship-reports/day2-karmada-architecture.png`、`internship-reports/day2-karmada-architecture.drawio.png`、`internship-reports/day2-karmada-architecture.drawio.svg`。
 - 2026-06-28：处理 GitHub fork sync 提示。`origin/master` 曾比 `upstream/master` 多 1 个 personal fork PR #1 merge commit `410202123`，同时落后 upstream 3 个 commit；已按 fork `master` 镜像规则把本地/远端 `master` force-with-lease 重置到 `upstream/master` `56d5d87ec`。当前 `origin/master` 与 `upstream/master` 一致，`intern` 保留实习记录不受影响。
@@ -22,6 +23,7 @@
 - 尚未实际运行 `hack/local-up-karmada.sh`，因此本机 kind / Docker / kubeconfig / 多集群环境是否可用还没有验证。
 - 尚未跑完整 `make test` 或 `make verify`。本次 PR 只跑了相关范围的 `go test`、`hack/verify-command-line-flags.sh`、Helm lint、脚本语法和 YAML 解析。
 - upstream PR #7666 的 GitHub Actions 仍需继续观察。
+- GitHub CLI 当前未登录，匿名 GitHub API broad search 已遇到 rate limit；后续继续做 issue/PR 批量检索时应配置 `GH_TOKEN` 或改用浏览器页面。
 - 当前 Windows 电脑上 draw.io 已安装但未加入 PATH：`drawio` / `draw.io` 命令不可用，系统级路径 `C:\Program Files\draw.io\draw.io.exe` 也不存在；实际可用路径是 `C:\Users\ranxi\AppData\Local\Programs\draw.io\draw.io.exe`，版本 `30.2.6`。这个路径只适用于当前 Windows 机器；macOS 或其他机器仍按 drawio-skill 的正常探测顺序处理。
 
 ## Ruled Out
@@ -35,6 +37,7 @@
 - 阅读 Karmada 官方入口：`README.md`、`CONTRIBUTING.md`、`docs/README.md`、`docs/images/architecture.png`、`samples/nginx/README.md`。
 - 补 Quick Start 预检报告：跑通或拆解 `hack/local-up-karmada.sh`，记录环境、失败命令、错误、绕过方式和最终结果。
 - Day 3 深追 `samples/nginx` 传播链路：从 `Deployment` + `PropagationPolicy` 到 `ResourceBinding`、`Work` 和 member cluster manifest，重点读 `pkg/detector/`、`pkg/controllers/binding/`、`pkg/controllers/execution/`。
+- 证书方向下一步：先把证书管理层设计收敛成更小的代码边界，避免在部署代码里散落 `split` 判断；再根据 mentor 方向决定是继续 `karmadactl init` split layout，还是回到 #6051 Helm 证书 Secret / volume / mount path 差距表。
 - 如果要找第一个贡献点，先从 docs、tests、good first issue、flaking test、CLI help 或小型 validation/test gap 入手。
 - 需要绘制 Karmada 架构图、传播链路图或调度流程图时，使用 `.agents/skills/drawio-skill/`。
 - 分析 Karmada issue/PR 或准备 upstream PR 时，优先使用 `.agents/skills/karmada-issue-discussion/` 和 `.agents/skills/karmada-pr-management/`。
