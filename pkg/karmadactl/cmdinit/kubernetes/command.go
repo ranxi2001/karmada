@@ -21,13 +21,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/certmanager"
 	initConfig "github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/config"
 	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/options"
-	globaloptions "github.com/karmada-io/karmada/pkg/karmadactl/options"
 	"github.com/karmada-io/karmada/pkg/karmadactl/util"
 )
 
 func (i *CommandInitOption) defaultEtcdContainerCommand() []string {
+	paths := i.componentPaths(certmanager.ComponentEtcd)
 	var etcdClusterConfig strings.Builder
 	for v := int32(0); v < i.EtcdReplicas; v++ {
 		etcdClusterConfig.WriteString(fmt.Sprintf("%s-%v=http://%s-%v.%s.%s.svc.%s:%v", etcdStatefulSetAndServiceName, v, etcdStatefulSetAndServiceName, v, etcdStatefulSetAndServiceName, i.Namespace, i.HostClusterDomain, etcdContainerServerPort) + ",")
@@ -43,22 +44,23 @@ func (i *CommandInitOption) defaultEtcdContainerCommand() []string {
 		fmt.Sprintf("--initial-cluster=%s", strings.TrimRight(etcdClusterConfig.String(), ",")),
 		"--initial-cluster-state=new",
 		"--client-cert-auth=true",
-		fmt.Sprintf("--cert-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdServerCertAndKeyName),
-		fmt.Sprintf("--key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.EtcdServerCertAndKeyName),
-		fmt.Sprintf("--trusted-ca-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdCaCertAndKeyName),
+		fmt.Sprintf("--cert-file=%s", paths[certmanager.PathTLSCertFile]),
+		fmt.Sprintf("--key-file=%s", paths[certmanager.PathTLSKeyFile]),
+		fmt.Sprintf("--trusted-ca-file=%s", paths[certmanager.PathClientCAFile]),
 		fmt.Sprintf("--data-dir=%s", etcdContainerDataVolumeMountPath),
 		fmt.Sprintf("--cipher-suites=%s", etcdCipherSuites),
 		"--initial-cluster-token=etcd-cluster",
 		fmt.Sprintf("--initial-advertise-peer-urls=http://$(%s):%v", etcdEnvPodIP, etcdContainerServerPort),
 		"--peer-client-cert-auth=false",
-		fmt.Sprintf("--peer-trusted-ca-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdCaCertAndKeyName),
-		fmt.Sprintf("--peer-key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.EtcdServerCertAndKeyName),
-		fmt.Sprintf("--peer-cert-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdServerCertAndKeyName),
+		fmt.Sprintf("--peer-trusted-ca-file=%s", paths[certmanager.PathEtcdPeerCAFile]),
+		fmt.Sprintf("--peer-key-file=%s", paths[certmanager.PathEtcdPeerKeyFile]),
+		fmt.Sprintf("--peer-cert-file=%s", paths[certmanager.PathEtcdPeerCertFile]),
 	}
 	return command
 }
 
 func (i *CommandInitOption) defaultKarmadaAPIServerContainerCommand() []string {
+	paths := i.componentPaths(certmanager.ComponentAPIServer)
 	var etcdServers string
 	if etcdServers = i.ExternalEtcdServers; etcdServers == "" {
 		etcdServers = strings.TrimRight(i.etcdServers(), ",")
@@ -67,11 +69,11 @@ func (i *CommandInitOption) defaultKarmadaAPIServerContainerCommand() []string {
 		"kube-apiserver",
 		"--allow-privileged=true",
 		"--authorization-mode=Node,RBAC",
-		fmt.Sprintf("--client-ca-file=%s/%s.crt", karmadaCertsVolumeMountPath, globaloptions.CaCertAndKeyName),
+		fmt.Sprintf("--client-ca-file=%s", paths[certmanager.PathClientCAFile]),
 		"--enable-bootstrap-token-auth=true",
-		fmt.Sprintf("--etcd-cafile=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdCaCertAndKeyName),
-		fmt.Sprintf("--etcd-certfile=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdClientCertAndKeyName),
-		fmt.Sprintf("--etcd-keyfile=%s/%s.key", karmadaCertsVolumeMountPath, options.EtcdClientCertAndKeyName),
+		fmt.Sprintf("--etcd-cafile=%s", paths[certmanager.PathEtcdCAFile]),
+		fmt.Sprintf("--etcd-certfile=%s", paths[certmanager.PathEtcdCertFile]),
+		fmt.Sprintf("--etcd-keyfile=%s", paths[certmanager.PathEtcdKeyFile]),
 		fmt.Sprintf("--etcd-servers=%s", etcdServers),
 		"--bind-address=0.0.0.0",
 		"--disable-admission-plugins=StorageObjectInUseProtection,ServiceAccount",
@@ -79,18 +81,18 @@ func (i *CommandInitOption) defaultKarmadaAPIServerContainerCommand() []string {
 		fmt.Sprintf("--apiserver-count=%v", i.KarmadaAPIServerReplicas),
 		fmt.Sprintf("--secure-port=%v", karmadaAPIServerContainerPort),
 		fmt.Sprintf("--service-account-issuer=https://kubernetes.default.svc.%s", i.HostClusterDomain),
-		fmt.Sprintf("--service-account-key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.KarmadaCertAndKeyName),
-		fmt.Sprintf("--service-account-signing-key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.KarmadaCertAndKeyName),
+		fmt.Sprintf("--service-account-key-file=%s", paths[certmanager.PathServiceAccountPublicKeyFile]),
+		fmt.Sprintf("--service-account-signing-key-file=%s", paths[certmanager.PathServiceAccountPrivateKeyFile]),
 		fmt.Sprintf("--service-cluster-ip-range=%s", serviceClusterIP),
-		fmt.Sprintf("--proxy-client-cert-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.FrontProxyClientCertAndKeyName),
-		fmt.Sprintf("--proxy-client-key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.FrontProxyClientCertAndKeyName),
+		fmt.Sprintf("--proxy-client-cert-file=%s", paths[certmanager.PathProxyClientCertFile]),
+		fmt.Sprintf("--proxy-client-key-file=%s", paths[certmanager.PathProxyClientKeyFile]),
 		"--requestheader-allowed-names=front-proxy-client",
-		fmt.Sprintf("--requestheader-client-ca-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.FrontProxyCaCertAndKeyName),
+		fmt.Sprintf("--requestheader-client-ca-file=%s", paths[certmanager.PathRequestHeaderClientCAFile]),
 		"--requestheader-extra-headers-prefix=X-Remote-Extra-",
 		"--requestheader-group-headers=X-Remote-Group",
 		"--requestheader-username-headers=X-Remote-User",
-		fmt.Sprintf("--tls-cert-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.ApiserverCertAndKeyName),
-		fmt.Sprintf("--tls-private-key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.ApiserverCertAndKeyName),
+		fmt.Sprintf("--tls-cert-file=%s", paths[certmanager.PathTLSCertFile]),
+		fmt.Sprintf("--tls-private-key-file=%s", paths[certmanager.PathTLSKeyFile]),
 		"--tls-min-version=VersionTLS13",
 		"--v=2",
 	}
@@ -101,6 +103,7 @@ func (i *CommandInitOption) defaultKarmadaAPIServerContainerCommand() []string {
 }
 
 func (i *CommandInitOption) defaultKarmadaSchedulerContainerCommand() []string {
+	paths := i.componentPaths(certmanager.ComponentScheduler)
 	return []string{
 		"/bin/karmada-scheduler",
 		fmt.Sprintf("--kubeconfig=%s", filepath.Join(karmadaConfigVolumeMountPath, util.KarmadaConfigFieldName)),
@@ -108,9 +111,9 @@ func (i *CommandInitOption) defaultKarmadaSchedulerContainerCommand() []string {
 		"--health-probe-bind-address=$(POD_IP):10351",
 		"--enable-scheduler-estimator=true",
 		"--leader-elect=true",
-		"--scheduler-estimator-ca-file=/etc/karmada/pki/ca.crt",
-		"--scheduler-estimator-cert-file=/etc/karmada/pki/karmada.crt",
-		"--scheduler-estimator-key-file=/etc/karmada/pki/karmada.key",
+		fmt.Sprintf("--scheduler-estimator-ca-file=%s", paths[certmanager.PathSchedulerEstimatorCAFile]),
+		fmt.Sprintf("--scheduler-estimator-cert-file=%s", paths[certmanager.PathSchedulerEstimatorCertFile]),
+		fmt.Sprintf("--scheduler-estimator-key-file=%s", paths[certmanager.PathSchedulerEstimatorKeyFile]),
 		fmt.Sprintf("--leader-elect-resource-namespace=%s", i.Namespace),
 		"--v=2",
 	}
@@ -118,6 +121,7 @@ func (i *CommandInitOption) defaultKarmadaSchedulerContainerCommand() []string {
 
 // default command line arguments for kube-controller-manager
 func (i *CommandInitOption) defaultKarmadaKubeControllerManagerContainerCommand() []string {
+	paths := i.componentPaths(certmanager.ComponentKubeControllerManager)
 	return []string{
 		"kube-controller-manager",
 		"--allocate-node-cidrs=true",
@@ -125,17 +129,17 @@ func (i *CommandInitOption) defaultKarmadaKubeControllerManagerContainerCommand(
 		fmt.Sprintf("--authentication-kubeconfig=%s", filepath.Join(karmadaConfigVolumeMountPath, util.KarmadaConfigFieldName)),
 		fmt.Sprintf("--authorization-kubeconfig=%s", filepath.Join(karmadaConfigVolumeMountPath, util.KarmadaConfigFieldName)),
 		"--bind-address=0.0.0.0",
-		fmt.Sprintf("--client-ca-file=%s/%s.crt", karmadaCertsVolumeMountPath, globaloptions.CaCertAndKeyName),
+		fmt.Sprintf("--client-ca-file=%s", paths[certmanager.PathClientCAFile]),
 		"--cluster-cidr=10.244.0.0/16",
 		fmt.Sprintf("--cluster-name=%s", options.ClusterName),
-		fmt.Sprintf("--cluster-signing-cert-file=%s/%s.crt", karmadaCertsVolumeMountPath, globaloptions.CaCertAndKeyName),
-		fmt.Sprintf("--cluster-signing-key-file=%s/%s.key", karmadaCertsVolumeMountPath, globaloptions.CaCertAndKeyName),
+		fmt.Sprintf("--cluster-signing-cert-file=%s", paths[certmanager.PathClusterSigningCertFile]),
+		fmt.Sprintf("--cluster-signing-key-file=%s", paths[certmanager.PathClusterSigningKeyFile]),
 		"--controllers=namespace,garbagecollector,serviceaccount-token,ttl-after-finished,bootstrapsigner,tokencleaner,csrcleaner,csrsigning,clusterrole-aggregation",
 		"--leader-elect=true",
 		fmt.Sprintf("--leader-elect-resource-namespace=%s", i.Namespace),
 		"--node-cidr-mask-size=24",
-		fmt.Sprintf("--root-ca-file=%s/%s.crt", karmadaCertsVolumeMountPath, globaloptions.CaCertAndKeyName),
-		fmt.Sprintf("--service-account-private-key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.KarmadaCertAndKeyName),
+		fmt.Sprintf("--root-ca-file=%s", paths[certmanager.PathRootCAFile]),
+		fmt.Sprintf("--service-account-private-key-file=%s", paths[certmanager.PathServiceAccountPrivateKeyFile]),
 		fmt.Sprintf("--service-cluster-ip-range=%s", serviceClusterIP),
 		"--use-service-account-credentials=true",
 		"--v=2",
@@ -155,6 +159,7 @@ func (i *CommandInitOption) defaultKarmadaControllerManagerContainerCommand() []
 }
 
 func (i *CommandInitOption) defaultKarmadaWebhookContainerCommand() []string {
+	paths := i.componentPaths(certmanager.ComponentWebhook)
 	return []string{
 		"/bin/karmada-webhook",
 		fmt.Sprintf("--kubeconfig=%s", filepath.Join(karmadaConfigVolumeMountPath, util.KarmadaConfigFieldName)),
@@ -162,12 +167,13 @@ func (i *CommandInitOption) defaultKarmadaWebhookContainerCommand() []string {
 		"--metrics-bind-address=$(POD_IP):8080",
 		"--health-probe-bind-address=$(POD_IP):8000",
 		fmt.Sprintf("--secure-port=%v", webhookTargetPort),
-		fmt.Sprintf("--cert-dir=%s", webhookCertVolumeMountPath),
+		fmt.Sprintf("--cert-dir=%s", paths[certmanager.PathWebhookCertDir]),
 		"--v=2",
 	}
 }
 
 func (i *CommandInitOption) defaultKarmadaAggregatedAPIServerContainerCommand() []string {
+	paths := i.componentPaths(certmanager.ComponentAggregatedAPIServer)
 	var etcdServers string
 	if etcdServers = i.ExternalEtcdServers; etcdServers == "" {
 		etcdServers = strings.TrimRight(i.etcdServers(), ",")
@@ -178,11 +184,11 @@ func (i *CommandInitOption) defaultKarmadaAggregatedAPIServerContainerCommand() 
 		fmt.Sprintf("--authentication-kubeconfig=%s", filepath.Join(karmadaConfigVolumeMountPath, util.KarmadaConfigFieldName)),
 		fmt.Sprintf("--authorization-kubeconfig=%s", filepath.Join(karmadaConfigVolumeMountPath, util.KarmadaConfigFieldName)),
 		fmt.Sprintf("--etcd-servers=%s", etcdServers),
-		fmt.Sprintf("--etcd-cafile=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdCaCertAndKeyName),
-		fmt.Sprintf("--etcd-certfile=%s/%s.crt", karmadaCertsVolumeMountPath, options.EtcdClientCertAndKeyName),
-		fmt.Sprintf("--etcd-keyfile=%s/%s.key", karmadaCertsVolumeMountPath, options.EtcdClientCertAndKeyName),
-		fmt.Sprintf("--tls-cert-file=%s/%s.crt", karmadaCertsVolumeMountPath, options.KarmadaCertAndKeyName),
-		fmt.Sprintf("--tls-private-key-file=%s/%s.key", karmadaCertsVolumeMountPath, options.KarmadaCertAndKeyName),
+		fmt.Sprintf("--etcd-cafile=%s", paths[certmanager.PathEtcdCAFile]),
+		fmt.Sprintf("--etcd-certfile=%s", paths[certmanager.PathEtcdCertFile]),
+		fmt.Sprintf("--etcd-keyfile=%s", paths[certmanager.PathEtcdKeyFile]),
+		fmt.Sprintf("--tls-cert-file=%s", paths[certmanager.PathTLSCertFile]),
+		fmt.Sprintf("--tls-private-key-file=%s", paths[certmanager.PathTLSKeyFile]),
 		"--tls-min-version=VersionTLS13",
 		"--audit-log-path=-",
 		"--audit-log-maxage=0",

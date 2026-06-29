@@ -25,6 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/component-base/cli/flag"
+
+	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/certmanager"
 )
 
 const (
@@ -44,8 +46,6 @@ const (
 	etcdConfigName                     = "etcd.conf"
 	etcdEnvPodName                     = "POD_NAME"
 	etcdEnvPodIP                       = "POD_IP"
-	//secrets name
-	etcdCertName = "etcd-cert"
 )
 
 var (
@@ -56,23 +56,15 @@ var (
 )
 
 func (i *CommandInitOption) etcdVolume() (*[]corev1.Volume, *corev1.PersistentVolumeClaim) {
-	var Volumes []corev1.Volume
+	Volumes := i.componentVolumes(certmanager.ComponentEtcd)
 
-	secretVolume := corev1.Volume{
-		Name: etcdCertName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: etcdCertName,
-			},
-		},
-	}
 	configVolume := corev1.Volume{
 		Name: etcdContainerConfigVolumeMountName,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
 		},
 	}
-	Volumes = append(Volumes, secretVolume, configVolume)
+	Volumes = append(Volumes, configVolume)
 
 	switch i.EtcdStorageMode {
 	case etcdStorageModePVC:
@@ -128,6 +120,19 @@ func (i *CommandInitOption) etcdVolume() (*[]corev1.Volume, *corev1.PersistentVo
 
 func (i *CommandInitOption) makeETCDStatefulSet() *appsv1.StatefulSet {
 	Volumes, persistentVolumeClaim := i.etcdVolume()
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      etcdContainerDataVolumeMountName,
+			ReadOnly:  false,
+			MountPath: etcdContainerDataVolumeMountPath,
+		},
+		{
+			Name:      etcdContainerConfigVolumeMountName,
+			ReadOnly:  false,
+			MountPath: etcdContainerConfigDataMountPath,
+		},
+	}
+	volumeMounts = append(volumeMounts, i.componentVolumeMounts(certmanager.ComponentEtcd)...)
 
 	// GroupsApiVersionResource
 	etcd := &appsv1.StatefulSet{
@@ -220,23 +225,7 @@ func (i *CommandInitOption) makeETCDStatefulSet() *appsv1.StatefulSet {
 						Protocol:      corev1.ProtocolTCP,
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      etcdContainerDataVolumeMountName,
-						ReadOnly:  false,
-						MountPath: etcdContainerDataVolumeMountPath,
-					},
-					{
-						Name:      etcdContainerConfigVolumeMountName,
-						ReadOnly:  false,
-						MountPath: etcdContainerConfigDataMountPath,
-					},
-					{
-						Name:      etcdCertName,
-						ReadOnly:  true,
-						MountPath: karmadaCertsVolumeMountPath,
-					},
-				},
+				VolumeMounts:   volumeMounts,
 				LivenessProbe:  livenessProbe,
 				ReadinessProbe: readinessProbe,
 				Env: []corev1.EnvVar{

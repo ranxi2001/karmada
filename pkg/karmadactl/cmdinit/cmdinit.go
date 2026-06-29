@@ -26,6 +26,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/cert"
+	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/certmanager"
 	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/kubernetes"
 	cmdinitoptions "github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/options"
 	"github.com/karmada-io/karmada/pkg/karmadactl/options"
@@ -193,6 +194,7 @@ func NewCmdInit(parentCommand string) *cobra.Command {
 	flags.Int32VarP(&opts.KarmadaAPIServerNodePort, "port", "p", 32443, "Karmada apiserver service node port")
 	flags.StringVarP(&opts.KarmadaDataPath, "karmada-data", "d", "/etc/karmada", "Karmada data path. kubeconfig cert and crds files")
 	flags.StringVarP(&opts.KarmadaPkiPath, "karmada-pki", "", "/etc/karmada/pki", "Karmada pki path. Karmada cert files")
+	flags.StringVar(&opts.SecretLayout, "secret-layout", certmanager.LayoutLegacy, fmt.Sprintf("Certificate Secret layout. One of %s.", strings.Join(certmanager.SupportedLayouts(), ",")))
 	flags.IntVarP(&opts.WaitComponentReadyTimeout, "wait-component-ready-timeout", "", cmdinitoptions.WaitComponentReadyTimeout, "Wait for karmada component ready timeout. 0 means wait forever")
 	// karmada-apiserver
 	flags.StringVarP(&opts.KarmadaAPIServerImage, "karmada-apiserver-image", "", "", "Kubernetes apiserver image")

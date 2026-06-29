@@ -18,6 +18,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"reflect"
@@ -29,8 +30,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/certmanager"
 	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/config"
 	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/utils"
+	"github.com/karmada-io/karmada/pkg/karmadactl/util"
+	"github.com/karmada-io/karmada/pkg/util/names"
 )
 
 func Test_initializeDirectory(t *testing.T) {
@@ -235,6 +239,29 @@ func TestCommandInitOption_genCerts(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
+}
+
+func TestCommandInitOption_createCertsSecretsSplit(t *testing.T) {
+	opt := &CommandInitOption{
+		KubeClientSet: fake.NewClientset(),
+		Namespace:     "karmada-system",
+	}
+	opt.SecretLayout = "split"
+	plan, err := opt.certificatePlan()
+	assert.NoError(t, err)
+
+	opt.CertAndKeyFileData = fakeCertificateMaterial(plan)
+	err = opt.createCertsSecrets(plan)
+	assert.NoError(t, err)
+
+	secret, err := opt.KubeClientSet.CoreV1().Secrets(opt.Namespace).Get(context.TODO(), certmanager.SecretAPIServerServer, metav1.GetOptions{})
+	assert.NoError(t, err)
+	assert.Equal(t, corev1.SecretTypeTLS, secret.Type)
+	assert.Contains(t, secret.StringData, certmanager.KeyTLSCrt)
+
+	configSecret, err := opt.KubeClientSet.CoreV1().Secrets(opt.Namespace).Get(context.TODO(), util.KarmadaConfigName(names.KarmadaSchedulerComponentName), metav1.GetOptions{})
+	assert.NoError(t, err)
+	assert.Contains(t, configSecret.StringData, util.KarmadaConfigFieldName)
 }
 
 func TestInitKarmadaAPIServer(t *testing.T) {
@@ -553,6 +580,7 @@ func TestParseInitConfig(t *testing.T) {
 			KarmadaDataPath:           "/etc/karmada",
 			KarmadaPKIPath:            "/etc/karmada/pki",
 			KarmadaCRDs:               "https://github.com/karmada-io/karmada/releases/download/test/crds.tar.gz",
+			SecretLayout:              "split",
 			Certificates: config.Certificates{
 				CACertFile:     "/path/to/ca.crt",
 				CAKeyFile:      "/path/to/ca.key",
@@ -689,6 +717,7 @@ func TestParseInitConfig(t *testing.T) {
 	assert.Equal(t, "IfNotPresent", opt.ImagePullPolicy)
 	assert.Equal(t, []string{"secret1", "secret2"}, opt.PullSecrets)
 	assert.Equal(t, "https://github.com/karmada-io/karmada/releases/download/test/crds.tar.gz", opt.CRDs)
+	assert.Equal(t, "split", opt.SecretLayout)
 }
 
 func TestParseInitConfig_MissingFields(t *testing.T) {
@@ -720,4 +749,19 @@ func parseDuration(durationStr string) time.Duration {
 		return 0
 	}
 	return duration
+}
+
+func fakeCertificateMaterial(plan *certmanager.Plan) map[string][]byte {
+	material := map[string][]byte{}
+	for _, name := range plan.CertificateNames {
+		id := certmanager.IdentityID(name)
+		if id == certmanager.APIServerServiceAccountKeyPair {
+			material[fmt.Sprintf("%s.key", id)] = []byte("key")
+			material[fmt.Sprintf("%s.pub", id)] = []byte("pub")
+			continue
+		}
+		material[fmt.Sprintf("%s.crt", id)] = []byte("crt")
+		material[fmt.Sprintf("%s.key", id)] = []byte("key")
+	}
+	return material
 }

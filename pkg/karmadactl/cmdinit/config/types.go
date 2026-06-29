@@ -71,6 +71,10 @@ type KarmadaInitSpec struct {
 	// +optional
 	KarmadaPKIPath string `json:"karmadaPKIPath,omitempty" yaml:"karmadaPKIPath,omitempty"`
 
+	// SecretLayout configures how generated certificates are distributed as Kubernetes Secrets
+	// +optional
+	SecretLayout string `json:"secretLayout,omitempty" yaml:"secretLayout,omitempty"`
+
 	// WaitComponentReadyTimeout configures the timeout (in seconds) for waiting for components to be ready
 	// +optional
 	WaitComponentReadyTimeout int `json:"waitComponentReadyTimeout,omitempty" yaml:"waitComponentReadyTimeout,omitempty"`

@@ -26,8 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	globaloptions "github.com/karmada-io/karmada/pkg/karmadactl/options"
-	"github.com/karmada-io/karmada/pkg/karmadactl/util"
+	"github.com/karmada-io/karmada/pkg/karmadactl/cmdinit/certmanager"
 	"github.com/karmada-io/karmada/pkg/util/names"
 )
 
@@ -38,7 +37,6 @@ const (
 	metricsPortName      = "metrics"
 	defaultMetricsPort   = 8080
 
-	karmadaCertsVolumeMountPath                                 = "/etc/karmada/pki"
 	karmadaConfigVolumeName                                     = "karmada-config"
 	karmadaConfigVolumeMountPath                                = "/etc/karmada/config"
 	karmadaAPIServerDeploymentAndServiceName                    = "karmada-apiserver"
@@ -50,8 +48,6 @@ const (
 	controllerManagerDeploymentAndServiceName                   = names.KarmadaControllerManagerComponentName
 	controllerManagerSecurePort                                 = 10357
 	webhookDeploymentAndServiceAccountAndServiceName            = names.KarmadaWebhookComponentName
-	webhookCertsName                                            = "karmada-webhook-cert"
-	webhookCertVolumeMountPath                                  = "/var/serving-cert"
 	webhookPortName                                             = "webhook"
 	webhookTargetPort                                           = 8443
 	webhookPort                                                 = 443
@@ -153,27 +149,12 @@ func (i *CommandInitOption) makeKarmadaAPIServerDeployment() *appsv1.Deployment 
 						Protocol:      corev1.ProtocolTCP,
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      globaloptions.KarmadaCertsName,
-						ReadOnly:  true,
-						MountPath: karmadaCertsVolumeMountPath,
-					},
-				},
+				VolumeMounts:   i.componentVolumeMounts(certmanager.ComponentAPIServer),
 				LivenessProbe:  livenessProbe,
 				ReadinessProbe: readinessProbe,
 			},
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: globaloptions.KarmadaCertsName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: globaloptions.KarmadaCertsName,
-					},
-				},
-			},
-		},
+		Volumes: i.componentVolumes(certmanager.ComponentAPIServer),
 		//HostNetwork:  true,
 		Tolerations: []corev1.Toleration{
 			{
@@ -269,38 +250,10 @@ func (i *CommandInitOption) makeKarmadaKubeControllerManagerDeployment() *appsv1
 						Protocol:      corev1.ProtocolTCP,
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      karmadaConfigVolumeName,
-						ReadOnly:  true,
-						MountPath: karmadaConfigVolumeMountPath,
-					},
-					{
-						Name:      globaloptions.KarmadaCertsName,
-						ReadOnly:  true,
-						MountPath: karmadaCertsVolumeMountPath,
-					},
-				},
+				VolumeMounts: i.componentVolumeMounts(certmanager.ComponentKubeControllerManager),
 			},
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: karmadaConfigVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: util.KarmadaConfigName(names.KubeControllerManagerComponentName),
-					},
-				},
-			},
-			{
-				Name: globaloptions.KarmadaCertsName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: globaloptions.KarmadaCertsName,
-					},
-				},
-			},
-		},
+		Volumes: i.componentVolumes(certmanager.ComponentKubeControllerManager),
 		Tolerations: []corev1.Toleration{
 			{
 				Effect:   corev1.TaintEffectNoExecute,
@@ -404,38 +357,10 @@ func (i *CommandInitOption) makeKarmadaSchedulerDeployment() *appsv1.Deployment 
 						Protocol:      corev1.ProtocolTCP,
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      karmadaConfigVolumeName,
-						ReadOnly:  true,
-						MountPath: karmadaConfigVolumeMountPath,
-					},
-					{
-						Name:      globaloptions.KarmadaCertsName,
-						ReadOnly:  true,
-						MountPath: karmadaCertsVolumeMountPath,
-					},
-				},
+				VolumeMounts: i.componentVolumeMounts(certmanager.ComponentScheduler),
 			},
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: karmadaConfigVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: util.KarmadaConfigName(names.KarmadaSchedulerComponentName),
-					},
-				},
-			},
-			{
-				Name: globaloptions.KarmadaCertsName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: globaloptions.KarmadaCertsName,
-					},
-				},
-			},
-		},
+		Volumes: i.componentVolumes(certmanager.ComponentScheduler),
 		Tolerations: []corev1.Toleration{
 			{
 				Effect:   corev1.TaintEffectNoExecute,
@@ -546,25 +471,10 @@ func (i *CommandInitOption) makeKarmadaControllerManagerDeployment() *appsv1.Dep
 						Protocol:      corev1.ProtocolTCP,
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      karmadaConfigVolumeName,
-						ReadOnly:  true,
-						MountPath: karmadaConfigVolumeMountPath,
-					},
-				},
+				VolumeMounts: i.componentVolumeMounts(certmanager.ComponentControllerManager),
 			},
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: karmadaConfigVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: util.KarmadaConfigName(names.KarmadaControllerManagerComponentName),
-					},
-				},
-			},
-		},
+		Volumes: i.componentVolumes(certmanager.ComponentControllerManager),
 		Tolerations: []corev1.Toleration{
 			{
 				Effect:   corev1.TaintEffectNoExecute,
@@ -671,39 +581,11 @@ func (i *CommandInitOption) makeKarmadaWebhookDeployment() *appsv1.Deployment {
 						Protocol:      corev1.ProtocolTCP,
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      karmadaConfigVolumeName,
-						ReadOnly:  true,
-						MountPath: karmadaConfigVolumeMountPath,
-					},
-					{
-						Name:      webhookCertsName,
-						ReadOnly:  true,
-						MountPath: webhookCertVolumeMountPath,
-					},
-				},
+				VolumeMounts:   i.componentVolumeMounts(certmanager.ComponentWebhook),
 				ReadinessProbe: readinesProbe,
 			},
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: karmadaConfigVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: util.KarmadaConfigName(names.KarmadaWebhookComponentName),
-					},
-				},
-			},
-			{
-				Name: webhookCertsName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: webhookCertsName,
-					},
-				},
-			},
-		},
+		Volumes: i.componentVolumes(certmanager.ComponentWebhook),
 		Tolerations: []corev1.Toleration{
 			{
 				Effect:   corev1.TaintEffectNoExecute,
@@ -821,38 +703,10 @@ func (i *CommandInitOption) makeKarmadaAggregatedAPIServerDeployment() *appsv1.D
 						corev1.ResourceCPU: resource.MustParse("100m"),
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      karmadaConfigVolumeName,
-						ReadOnly:  true,
-						MountPath: karmadaConfigVolumeMountPath,
-					},
-					{
-						Name:      globaloptions.KarmadaCertsName,
-						ReadOnly:  true,
-						MountPath: karmadaCertsVolumeMountPath,
-					},
-				},
+				VolumeMounts: i.componentVolumeMounts(certmanager.ComponentAggregatedAPIServer),
 			},
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: karmadaConfigVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: util.KarmadaConfigName(names.KarmadaAggregatedAPIServerComponentName),
-					},
-				},
-			},
-			{
-				Name: globaloptions.KarmadaCertsName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: globaloptions.KarmadaCertsName,
-					},
-				},
-			},
-		},
+		Volumes: i.componentVolumes(certmanager.ComponentAggregatedAPIServer),
 		Tolerations: []corev1.Toleration{
 			{
 				Effect:   corev1.TaintEffectNoExecute,

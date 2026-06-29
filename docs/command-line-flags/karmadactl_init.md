@@ -155,6 +155,7 @@ karmadactl init
   -n, --namespace string                                        Kubernetes namespace (default "karmada-system")
   -p, --port int32                                              Karmada apiserver service node port (default 32443)
       --private-image-registry string                           Private image registry where pull images from. If set, all required images will be downloaded from it, it would be useful in offline installation scenarios.  In addition, you still can use --kube-image-registry to specify the registry for Kubernetes's images.
+      --secret-layout string                                    Certificate Secret layout. One of legacy,split. (default "legacy")
       --storage-classes-name string                             Kubernetes StorageClasses Name
       --wait-component-ready-timeout int                        Wait for karmada component ready timeout. 0 means wait forever (default 120)
 ```

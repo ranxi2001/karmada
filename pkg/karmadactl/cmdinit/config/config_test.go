@@ -108,6 +108,7 @@ spec:
  karmadaDataPath: "/etc/karmada"
  karmadaPKIPath: "/etc/karmada/pki"
  karmadaCRDs: "https://github.com/karmada-io/karmada/releases/download/test/crds.tar.gz"
+ secretLayout: "split"
  waitComponentReadyTimeout: 120
 `
 
@@ -131,6 +132,7 @@ func TestLoadInitConfiguration(t *testing.T) {
 			KarmadaDataPath:           "/etc/karmada",
 			KarmadaPKIPath:            "/etc/karmada/pki",
 			KarmadaCRDs:               "https://github.com/karmada-io/karmada/releases/download/test/crds.tar.gz",
+			SecretLayout:              "split",
 			Certificates: Certificates{
 				CACertFile: "/etc/karmada/pki/ca.crt",
 				CAKeyFile:  "/etc/karmada/pki/ca.key",
