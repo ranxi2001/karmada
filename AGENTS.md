@@ -35,6 +35,8 @@ Use these files for local learning state:
 
 When writing learning reports, include process blockers and debugging evidence, not just the final successful path. Record failed commands, observed errors, likely root causes, and workarounds. For abstract Kubernetes or distributed-systems concepts, add short Markdown notes such as `> 注释：...` or `> 分析：...` near the relevant paragraph so a future reviewer can read the report without chat context.
 
+When preparing long reusable text such as upstream issue comments, PR descriptions, review comments, mentor summaries, or Mermaid explanations, write it into the appropriate report or draft file instead of only returning it in terminal/chat output. The terminal is inconvenient for copying and should not be the only handoff surface for content the user is expected to reuse.
+
 When creating diagrams or other visual artifacts for reports, do not wait for the user to ask for a preview. Deliver a directly viewable PNG or SVG alongside the editable source (`.drawio`, Mermaid, etc.) by default. If the preferred export tool is unavailable, proactively use a reasonable fallback such as Mermaid rendering or a local script-generated PNG, and record the tool limitation in the report or `PROGRESS.md`.
 
 On the current Windows workspace only, draw.io is installed per-user at `C:\Users\ranxi\AppData\Local\Programs\draw.io\draw.io.exe` and is not on PATH. For drawio-skill exports on this Windows machine, use this full path before declaring draw.io unavailable; `drawio`, `draw.io`, and `C:\Program Files\draw.io\draw.io.exe` may fail even when the app is installed. On macOS or other machines, follow the normal drawio-skill detection order instead of assuming this Windows path.

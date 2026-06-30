@@ -138,6 +138,108 @@ So I cannot reproduce the reported incorrect total memory on current upstream/ma
 
 发布前需要用户确认完整英文文本。不要擅自评论 upstream issue。
 
+## 可直接复制的 upstream 评论草稿
+
+下面这版用于直接贴到 [#7643](https://github.com/karmada-io/karmada/issues/7643) 评论区。它比上一节更完整，包含 Mermaid 图和验证输出，方便解释“issue 担心的路径”和“实际验证到的路径”的差异。
+
+````md
+I took a closer look at this on current upstream/master (`ffbade988`). Based on the verification below, I cannot reproduce the reported incorrect memory calculation.
+
+The concern in this issue is understandable. The suspected path is:
+
+```mermaid
+flowchart LR
+    A["FlinkDeployment<br/>memory: 100m"] --> B["kube.getResourceQuantity(100m)"]
+    B --> C["Lua number: 0.1"]
+    C --> D["Converted back to resource.Quantity"]
+    D --> E["Expected wrong result:<br/>memory = 1"]
+    E --> F["Wrong total:<br/>100m + 100m becomes 1 + 1"]
+```
+
+But what I observed on current master is:
+
+```mermaid
+flowchart LR
+    A["FlinkDeployment<br/>memory: 100m"] --> B["kube.getResourceQuantity(100m)"]
+    B --> C["Lua number: 0.1"]
+    C --> D["JSON number: 0.1"]
+    D --> E["resource.Quantity"]
+    E --> F["String: 100m<br/>MilliValue: 100<br/>Equal(100m): true"]
+    F --> G["JM 100m + TM 100m"]
+    G --> H["CalculateResourceUsage:<br/>memory = 200m"]
+```
+
+## What I verified
+
+### 1. Function-level conversion
+
+I added a temporary local test around `resource.Quantity` and the Lua conversion path.
+
+Command:
+
+```bash
+go test ./pkg/resourceinterpreter/customized/declarative/luavm -run 'TestIssue7643' -count=1 -v
+```
+
+Relevant output:
+
+```text
+resource.MustParse("100m"): String="100m" AsApproximateFloat64=0.1 Value=1 MilliValue=100
+json.Unmarshal(0.1): String="100m" AsApproximateFloat64=0.1 Value=1 MilliValue=100 Equal100m=true
+json.Unmarshal(1): String="1" AsApproximateFloat64=1 Value=1 MilliValue=1000 Equal100m=false
+components JSON after Lua conversion: [{"name":"jobmanager","replicas":1,"replicaRequirements":{"resourceRequest":{"cpu":"150m","memory":"100m"}}}]
+component memory quantity: String="100m" AsApproximateFloat64=0.1 Value=1 MilliValue=100 Equal100m=true
+CalculateResourceUsage JSON: {"cpu":"300m","memory":"200m"}
+memory usage: String="200m" Value=1 MilliValue=200 Equal200m=true
+PASS
+```
+
+The important detail is that `Quantity.Value()` returning `1` for `100m` does not mean the stored quantity became `"1"`. It is the rounded-up integer value in base units. For this case, `MilliValue()` is `100`, and `Equal(resource.MustParse("100m"))` is true.
+
+### 2. Default FlinkDeployment customization path
+
+I also loaded the current default `FlinkDeployment/customizations.yaml` and ran `GetComponents` with both JobManager and TaskManager memory set to `100m`.
+
+Command:
+
+```bash
+go test ./pkg/resourceinterpreter/default/thirdparty -run 'TestIssue7643FlinkDefaultCustomizationEvidence' -count=1 -v
+```
+
+Relevant output:
+
+```text
+Flink components JSON: [{"name":"jobmanager","replicas":1,"replicaRequirements":{"resourceRequest":{"cpu":"150m","memory":"100m"}}},{"name":"taskmanager","replicas":1,"replicaRequirements":{"resourceRequest":{"cpu":"150m","memory":"100m"}}}]
+Flink CalculateResourceUsage JSON: {"cpu":"300m","memory":"200m"}
+jobmanager memory: String="100m" Value=1 MilliValue=100 Equal100m=true
+taskmanager memory: String="100m" Value=1 MilliValue=100 Equal100m=true
+total memory usage: String="200m" Value=1 MilliValue=200 Equal200m=true
+PASS
+```
+
+So the actual path I observed is:
+
+```text
+100m -> kube.getResourceQuantity(...) -> Lua number 0.1 -> resource.Quantity("100m")
+JM 100m + TM 100m -> CalculateResourceUsage -> memory 200m
+```
+
+## Current conclusion
+
+I do not see a functional bug in the current conversion path on `upstream/master@ffbade988`.
+
+The proposed change:
+
+```lua
+jm_requires.resourceRequest.memory = jm_memory
+tm_requires.resourceRequest.memory = tm_memory
+```
+
+may still be a readability improvement, because memory assignment does not need a numeric conversion. But based on the outputs above, I do not think the current evidence proves that memory is actually calculated incorrectly.
+
+Could you share the exact failing output or the downstream path where the value becomes `"1"` instead of `"100m"`?
+````
+
 ## 后续动作
 
 1. 清理验证 worktree 中的临时测试文件和临时 YAML case。
