@@ -8,6 +8,52 @@
 
 这次只做验证和证据整理。Issue 当前已经由 `@Priyanshu8023` 认领，`@zhzhuang-zju` 明确要求先提供 verification process 和 outputs，并 `/cc @ranxi2001`。
 
+## 给自己看的通俗解释
+
+这个 issue 一开始容易绕晕，是因为中间跨了两种语言和两套数据表示：
+
+- Lua 脚本里没有 Kubernetes 的 `resource.Quantity` 这种 Go 类型。
+- Go 代码最终需要拿到 `[]workv1alpha2.Component`，里面的 `resourceRequest.memory` 又必须是 Kubernetes 的 `resource.Quantity`。
+- 所以 Karmada 的 interpreter 做法是：Lua 先返回普通 Lua table，然后 Go 把 Lua table 编成 JSON，再把 JSON 反序列化到 Go 结构体。
+
+可以把它理解成一次“跨语言搬家”：
+
+```text
+FlinkDeployment YAML
+  -> Lua 脚本读字段并组装 Lua table
+  -> Lua table 序列化成 JSON
+  -> JSON 反序列化成 Go 的 []Component
+  -> Component.ResourceRequest.memory 变成 resource.Quantity
+```
+
+为什么要序列化 / 反序列化？
+
+因为 Lua table 和 Go struct 不是同一种内存对象，Go 不能直接把 Lua table 当成 `[]Component` 用。JSON 是中间格式：Lua table 先转成 JSON 字节，Go 再按目标结构体字段和类型解析 JSON。这样 `resourceRequest.memory` 这个字段就能触发 Kubernetes `resource.Quantity` 自己的 JSON 解析逻辑。
+
+这正是本 issue 的关键点。作者担心的是：
+
+```text
+"100m" -> kube.getResourceQuantity -> 0.1 -> JSON/Go -> "1"
+```
+
+但我们验证到的是：
+
+```text
+"100m" -> kube.getResourceQuantity -> 0.1 -> JSON number 0.1 -> resource.Quantity("100m")
+```
+
+也就是说，中间确实变成了 Lua number `0.1`，但 Go 反序列化回 `resource.Quantity` 时，`0.1` 会被 Kubernetes 正确解析成 `100m`。后面真正写入 component JSON 的还是 `"100m"`，两个组件汇总出来也是 `"200m"`。
+
+最容易误解的是 `Quantity.Value()`。对 `100m` 来说，`Value()` 返回 `1`，不是因为存储错了，而是因为它返回“向上取整后的整数 base unit”。`100m` 是 `0.1`，向上取整就是 `1`。如果要判断它是不是原来的 `100m`，应该看：
+
+```text
+String()     -> "100m"
+MilliValue() -> 100
+Equal(resource.MustParse("100m")) -> true
+```
+
+所以这个 issue 的学习点是：不要只看 `Value()` 就判断资源被算错了，要沿着 Lua -> JSON -> Go struct -> resource.Quantity -> resource usage 的完整链路验证。
+
 ## 验证环境
 
 - 仓库：`karmada-io/karmada`
