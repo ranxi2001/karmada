@@ -44,13 +44,78 @@ FlinkDeployment YAML
 
 也就是说，中间确实变成了 Lua number `0.1`，但 Go 反序列化回 `resource.Quantity` 时，`0.1` 会被 Kubernetes 正确解析成 `100m`。后面真正写入 component JSON 的还是 `"100m"`，两个组件汇总出来也是 `"200m"`。
 
-最容易误解的是 `Quantity.Value()`。对 `100m` 来说，`Value()` 返回 `1`，不是因为存储错了，而是因为它返回“向上取整后的整数 base unit”。`100m` 是 `0.1`，向上取整就是 `1`。如果要判断它是不是原来的 `100m`，应该看：
+这里和 `Quantity.Value()` 有关系，因为 issue 作者看到的“变成 1”很可能就是从 `Quantity.Value()` 这个观察角度来的。
+
+链路是这样：
 
 ```text
-String()     -> "100m"
-MilliValue() -> 100
-Equal(resource.MustParse("100m")) -> true
+Lua 里：
+"100m" -> kube.getResourceQuantity("100m") -> 0.1
+
+Go 里：
+JSON number 0.1 -> resource.Quantity
 ```
+
+关键在第二步：Kubernetes 的 `resource.Quantity` 可以从 JSON number 解析。`0.1` 不是普通 float 留在那里，而是被解析成一个 Quantity，语义上就是 `100m`。
+
+所以 Go 里的对象不是：
+
+```text
+memory = 0.1
+```
+
+而是：
+
+```text
+memory = resource.Quantity("100m")
+```
+
+但如果你对这个 Quantity 调：
+
+```go
+q.Value()
+```
+
+它会返回：
+
+```text
+1
+```
+
+因为 `Value()` 的语义是“返回向上取整后的整数 base unit”。`100m` 等于 `0.1` 个 base unit，向上取整就是 `1`。
+
+所以误解来源大概是：
+
+```text
+看到 kube.getResourceQuantity("100m") -> 0.1
+又看到 Quantity.Value() -> 1
+于是以为 0.1 最后变成了错误的 memory=1
+```
+
+但真实情况是：
+
+```text
+resource.Quantity("100m").Value() == 1
+resource.Quantity("100m").String() == "100m"
+resource.Quantity("100m").MilliValue() == 100
+resource.Quantity("100m").Equal(resource.MustParse("100m")) == true
+```
+
+也就是说，`Value() == 1` 只是这个对象的一个“整数取值视角”，不是它最终序列化出来的资源值。
+
+我们确实传输了 `0.1` 这种不带单位的数字，但 Go 反序列化到 `resource.Quantity` 时会把它按 Kubernetes Quantity 规则解析成 `100m`。如果最终真的错了，JSON 输出会是：
+
+```json
+"memory": "1"
+```
+
+但我们验证看到的是：
+
+```json
+"memory": "100m"
+```
+
+所以这个 issue 的误会点就是：把 `Quantity.Value()` 的整数结果，当成了最终资源 JSON 里的 memory 值。
 
 所以这个 issue 的学习点是：不要只看 `Value()` 就判断资源被算错了，要沿着 Lua -> JSON -> Go struct -> resource.Quantity -> resource usage 的完整链路验证。
 
