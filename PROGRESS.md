@@ -8,6 +8,7 @@
 
 ## Last Run
 
+- 2026-06-30：按“先做成 issue、让 @zhzhuang-zju review 提案”的社区流程要求，重新核对 #6051、#6670、#6788：#6051 是证书/配置命名规范 umbrella，#6670 是证书标准化 proposal，#6788 是已有 open split secret layout PR。已在 Day 3 增加英文 upstream issue 草稿，明确该提案与三者的关系、plan-based 抽象边界、prototype branch、CI 证据和待 maintainer 确认的问题；未发布 upstream issue/comment，也未自动 mention maintainer，等待用户确认目标和完整文本。
 - 2026-06-30：确认 `feature/cert-manager-layout` commit `eb02bde96` fork push CI 全绿：18 个 check runs 中 16 success、2 skipped、0 failed。新增 Day 3 的 PR 审阅准备部分，整理当前 PR 的实现边界、未实现内容、文件修改解释、reviewer 重点关注点、本地验证命令、fork CI 结果和 upstream PR 文案草稿；补充两张方案图 `Karmada证书管理方案-数据流图.png`、`Karmada证书管理方案对比分析-数据流图.png` 作为长期方案/对比说明资料。
 - 2026-06-30：分析 fork push CI 结果。`feature/cert-manager-layout` commit `651cbec29` 的 push CI 已全部结束，只有 `CI Workflow / lint` 失败；compile、unit test、codegen、3 个 e2e、CLI / Chart / Operator Kubernetes 矩阵均通过或 skipped。失败根因是新增 `pkg/karmadactl/cmdinit/certmanager` 包未满足 `.golangci.yml` 静态检查：导出符号缺 Go doc、Secret 名称常量触发 gosec G101 误报、测试循环可改 `slices.Contains`、`legacyCertificateNames` 参数未使用。已把复盘和提交前 lint checklist 写入 Day 3，并在 TODO 加入 P0 lint 习惯项。
 - 2026-06-29：完成 Day 3 证书管理方向任务整理。新增 `internship-reports/day3-certificate-management-task-triage.md`，梳理 community#69、#6091、#6269、#6670、#6788、#6553 和 #6051 的关系；结论是优先跟进 #6051 中 Helm 证书 Secret / volume / mount path naming convention 的 `help wanted` 空位。随后按“不要为了改代码而改代码，先抽象证书管理层”的反馈，追加了批量系统证书替换分发的初步设计，包括证书身份、layout plan、Secret plan、组件 kubeconfig 分发和验证计划，并加入 Mermaid 前后对比图说明抽象层引入后的变化。同步更新 `internship-reports/README.md` 和 `internship-reports/todo.md`。
@@ -35,6 +36,7 @@
 
 ## Next
 
+- 证书方向先走 upstream issue/comment 设计 review：让用户确认 Day 3 中的英文提案文本和发布目标；若新建 issue，使用 enhancement 模板；若认为重复，改为 #6670 或 #6788 评论；确认前不发布、不 mention maintainer。
 - `feature/cert-manager-layout` 已通过 fork push CI。若准备 upstream PR，先让用户确认 PR 标题/body，再按 `.github/PULL_REQUEST_TEMPLATE.md` 创建，不要擅自发布。
 - 继续观察 upstream PR #7666 的 CI 和 review；如果失败，先区分代码问题、环境抖动和 CI 环境差异。
 - 阅读 Karmada 官方入口：`README.md`、`CONTRIBUTING.md`、`docs/README.md`、`docs/images/architecture.png`、`samples/nginx/README.md`。

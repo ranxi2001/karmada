@@ -550,10 +550,99 @@ karmadactl: Added `--secret-layout=split` to `karmadactl init` to optionally dis
 ```
 ````
 
+### 拟 upstream issue 文案（未发布）
+
+> 注意：下面是发往 `karmada-io/karmada` 的英文 issue 草稿。由于草稿中会直接 mention maintainer，必须先让用户确认目标和完整文本，不能自动发布。
+
+建议目标：
+
+1. 如果 maintainer 接受单独设计提案：新建 issue。
+2. 如果 maintainer 认为 #6670 已覆盖该主题：把下面内容改成 #6670 评论。
+3. 如果 maintainer 希望直接 review 现有实现：把重点收敛为 #6788 的设计评论，而不是开重复 PR。
+
+标题：
+
+```text
+Proposal: plan-based split certificate Secret layout for karmadactl init
+```
+
+正文：
+
+```md
+**What would you like to be added**:
+
+I would like to propose a plan-based certificate Secret layout abstraction for `karmadactl init`, related to #6051 and #6670, and taking into account the existing implementation attempt in #6788.
+
+The user-facing entry would be an optional layout selector:
+
+- `--secret-layout=legacy`: keep the current aggregated Secret behavior as the default.
+- `--secret-layout=split`: distribute generated certificate material into component-scoped Secrets, while making workload commands, volumes, mounts, and kubeconfigs consume a declarative certificate plan.
+
+The proposed internal boundary is:
+
+- A certificate layout plan layer that describes identities, Secret names, Secret data keys, kubeconfig contents, component volume mounts, and command-line certificate paths.
+- A Kubernetes adapter layer that creates Secrets, generates component kubeconfigs, and translates component plans into Deployment/StatefulSet specs.
+- The existing `karmadactl init` flow selects a layout and passes the plan to deployment generation.
+
+For split mode, the initial scope would be `karmadactl init` only:
+
+- Split control-plane server/client material into component-scoped Secrets.
+- Give scheduler/descheduler their own scheduler-estimator client certificate Secret.
+- Keep webhook serving certificates in their own Secret.
+- Keep internal etcd server/client certificates separate.
+- For external etcd, keep using user-provided CA/client certificate material instead of generating internal etcd server material.
+- Keep `legacy` as the default behavior for backward compatibility.
+
+Non-goals for the first PR:
+
+- No cert-manager CRDs or controller integration.
+- No automatic certificate rotation or hot reload behavior.
+- No Helm chart or operator changes in the same PR.
+- No RBAC/client identity tightening unless maintainers want it included with the layout change.
+
+I prepared a prototype branch to make the design concrete:
+
+- Branch: https://github.com/ranxi2001/karmada/tree/feature/cert-manager-layout
+- Commit: https://github.com/ranxi2001/karmada/commit/eb02bde96cbd88697bb808e2cb56137070d18a4c
+- Fork push CI: passed for CI Workflow, CLI, Chart, and Operator; FOSSA and image-scanning were skipped.
+
+Local checks run on the prototype:
+
+- `golangci-lint run ./pkg/karmadactl/cmdinit/...`
+- `hack/verify-staticcheck.sh`
+- `hack/verify-import-aliases.sh`
+- `go test ./pkg/karmadactl/... -count=1`
+- `hack/verify-command-line-flags.sh`
+- `git diff --check`
+
+**Why is this needed**:
+
+The current `karmadactl init` certificate handling mixes certificate identity, Secret layout, Secret data keys, volume mounts, kubeconfig generation, and command-line paths across the Kubernetes deployment generation code. This makes the naming convention work in #6051 and the certificate standardization goal in #6670 harder to evolve safely.
+
+A plan-based boundary would keep the default behavior compatible while giving `karmadactl init` a clearer path to support split certificate distribution. It should also reduce scattered `legacy`/`split` conditionals in Deployment and StatefulSet builders.
+
+The main design questions I would like to clarify before opening or continuing an upstream PR are:
+
+1. Is a plan-based certificate layout boundary acceptable for `karmadactl init`?
+2. Should the first implementation target only `karmadactl init`, or should Helm/operator alignment be designed in the same issue?
+3. Should split mode keep a legacy-compatible `karmada-cert` Secret temporarily for compatibility?
+4. Should component client certificate groups/privileges be narrowed in the layout PR, or left for a follow-up?
+5. Since #6788 is already open, would maintainers prefer continuing that PR, opening a smaller replacement PR with this abstraction, or first discussing the design under #6670?
+
+@zhzhuang-zju, could you help review whether this direction is reasonable before I proceed with upstream code work?
+```
+
+发布前检查：
+
+- 不能写 `Fixes #6670`，因为这个 issue 草稿只是设计讨论，不应该自动关闭已有 proposal。
+- 必须明确 #6788 已经存在，避免社区认为我们没有尊重已有贡献。
+- 如果发布为 #6670 评论，开头要改成 `Thanks for the proposal. I explored a plan-based implementation direction...`，并删掉 enhancement issue 模板标题。
+- 如果发布为新 issue，保留 `**What would you like to be added**` / `**Why is this needed**` 两段，符合 `.github/ISSUE_TEMPLATE/enhancement.md`。
+
 ## 明日最小行动
 
-1. 把证书管理层设计先整理成更小的代码改动边界，避免直接在部署代码中散落 `split` 判断。
-2. 继续确认 `#6788` 的冲突点和设计缺口，但不直接复制它的大 diff。
-3. 对照 `artifacts/deploy/*.yaml`、`hack/deploy-karmada.sh` 和 `pkg/karmadactl/cmdinit/`，固化 split Secret / mount path 命名表。
+1. 先让用户确认 upstream issue/comment 的目标和完整英文文本，再决定是否发布并 mention `@zhzhuang-zju`。
+2. 如果发布为新 issue，使用 enhancement 模板；如果维护者认为重复，则转为 #6670 或 #6788 评论。
+3. 在获得设计方向前，不急着创建 upstream PR；已有 fork prototype 只作为设计证据。
 4. 如果 mentor 仍建议先接 `#6051` Helm 部分，则回到 Helm Secret / volume / mount path 差距表。
 5. 如果 mentor 要求继续基础学习，则回到 Day 2 计划，深追 `samples/nginx` 传播链路。
