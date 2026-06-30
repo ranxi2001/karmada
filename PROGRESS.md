@@ -8,6 +8,7 @@
 
 ## Last Run
 
+- 2026-06-30：分析 fork push CI 结果。`feature/cert-manager-layout` commit `651cbec29` 的 push CI 已全部结束，只有 `CI Workflow / lint` 失败；compile、unit test、codegen、3 个 e2e、CLI / Chart / Operator Kubernetes 矩阵均通过或 skipped。失败根因是新增 `pkg/karmadactl/cmdinit/certmanager` 包未满足 `.golangci.yml` 静态检查：导出符号缺 Go doc、Secret 名称常量触发 gosec G101 误报、测试循环可改 `slices.Contains`、`legacyCertificateNames` 参数未使用。已把复盘和提交前 lint checklist 写入 Day 3，并在 TODO 加入 P0 lint 习惯项。
 - 2026-06-29：完成 Day 3 证书管理方向任务整理。新增 `internship-reports/day3-certificate-management-task-triage.md`，梳理 community#69、#6091、#6269、#6670、#6788、#6553 和 #6051 的关系；结论是优先跟进 #6051 中 Helm 证书 Secret / volume / mount path naming convention 的 `help wanted` 空位。随后按“不要为了改代码而改代码，先抽象证书管理层”的反馈，追加了批量系统证书替换分发的初步设计，包括证书身份、layout plan、Secret plan、组件 kubeconfig 分发和验证计划，并加入 Mermaid 前后对比图说明抽象层引入后的变化。同步更新 `internship-reports/README.md` 和 `internship-reports/todo.md`。
 - 2026-06-29：按用户反馈修整 `internship-reports/day2-karmada-architecture.drawio`。改为真正用 draw.io CLI 导出并视觉检查，入口流程调整为 User -> Karmada API Server，Admission Webhook 画成 API Server 的 admission 调用；移除长边标签，用编号 1-6 + 底部图例表达流程；重新导出 `day2-karmada-architecture.png`、`day2-karmada-architecture.drawio.png`、`day2-karmada-architecture.drawio.svg`，`validate.py` 结果为 `0 error(s), 0 warning(s)`。当前 Day 2 相关文件已暂存，尚未 commit/push，等待用户确认图。
 - 2026-06-29：完成 Day 2 Karmada 项目理解。新增 `internship-reports/day2-karmada-project-understanding.md`，面向首次接触 Karmada、仅有基础 K8s 概念的读者，用 Mermaid 梳理控制面、ResourceTemplate -> PropagationPolicy -> ResourceBinding -> Work -> member cluster 传播链路、nginx 样例和源码目录地图；新增 `internship-reports/day2-karmada-architecture.drawio` 作为可编辑架构图源文件，并导出 `internship-reports/day2-karmada-architecture.png`、`internship-reports/day2-karmada-architecture.drawio.png`、`internship-reports/day2-karmada-architecture.drawio.svg`。
@@ -20,6 +21,7 @@
 
 ## Current Blockers
 
+- `feature/cert-manager-layout` fork push CI 目前只有 lint 失败，修复前不要开 upstream PR；下一轮先修 `certmanager` 包 lint，再 force-with-lease 推 fork。
 - 尚未实际运行 `hack/local-up-karmada.sh`，因此本机 kind / Docker / kubeconfig / 多集群环境是否可用还没有验证。
 - 尚未跑完整 `make test` 或 `make verify`。本次 PR 只跑了相关范围的 `go test`、`hack/verify-command-line-flags.sh`、Helm lint、脚本语法和 YAML 解析。
 - upstream PR #7666 的 GitHub Actions 仍需继续观察。
@@ -33,6 +35,7 @@
 
 ## Next
 
+- 修复 `feature/cert-manager-layout` 的 lint：导出符号补注释或降为未导出、处理 gosec G101 误报、删除未用参数、测试 helper 改 `slices.Contains`；通过 `golangci-lint run ./pkg/karmadactl/cmdinit/...` 后再推 fork CI。
 - 继续观察 upstream PR #7666 的 CI 和 review；如果失败，先区分代码问题、环境抖动和 CI 环境差异。
 - 阅读 Karmada 官方入口：`README.md`、`CONTRIBUTING.md`、`docs/README.md`、`docs/images/architecture.png`、`samples/nginx/README.md`。
 - 补 Quick Start 预检报告：跑通或拆解 `hack/local-up-karmada.sh`，记录环境、失败命令、错误、绕过方式和最终结果。

@@ -308,6 +308,80 @@ split 布局应对齐 `artifacts/deploy/*.yaml` 已经使用的路径和 Secret 
 | GitHub API 匿名限流 | 后续 broad search 出现 rate limit exceeded | 已经拿到核心 issue / PR 信息，后续如果继续做需要配置 `GH_TOKEN` |
 | “批量证书管理配置工具”不是精确标题 | 搜索不到同名 issue / PR | 通过证书生命周期、self-signed standardization、split secret layout、secret naming convention 串联判断 |
 
+## CI lint 失败复盘
+
+日期：2026-06-30
+
+在 `feature/cert-manager-layout` 分支把证书管理层初版实现推到 fork 后，push CI 已经跑完。结果不是功能测试失败，而是 `CI Workflow / lint` 失败：
+
+| 项目 | 结果 |
+| --- | --- |
+| commit | `651cbec29 feat: add cert secret layout for init` |
+| fork branch | `ranxi2001/karmada:feature/cert-manager-layout` |
+| workflow | `CI Workflow` |
+| failed job | `lint` |
+| failed step | `hack/verify-staticcheck.sh` |
+| 通过项 | `compile`、`unit test`、`codegen`、3 个 e2e、CLI / Chart / Operator Kubernetes 矩阵 |
+| skipped | `FOSSA`、`image-scanning` |
+
+### 什么是 lint 规范
+
+这里的 lint 不是业务测试，而是项目的静态代码规范检查。Karmada 在 `.golangci.yml` 里配置了 `golangci-lint`，CI 的 `lint` job 会依次跑：
+
+1. `hack/verify-license.sh`
+2. `hack/verify-vendor.sh`
+3. `hack/verify-staticcheck.sh`
+4. `hack/verify-import-aliases.sh`
+
+本次失败发生在第 3 步。`hack/verify-staticcheck.sh` 实际执行 `golangci-lint run`。它会检查代码风格、导出 API 注释、安全误报、现代 Go 写法、未使用参数等问题。即使 `go test` 全部通过，只要这些规范不满足，CI 仍然失败。
+
+### 本次失败原因
+
+本地复现命令：
+
+```bash
+PATH="$(go env GOPATH)/bin:$PATH" golangci-lint run ./pkg/karmadactl/cmdinit/...
+```
+
+复现结果：31 条问题，全部集中在新增的 `pkg/karmadactl/cmdinit/certmanager` 包。
+
+| 类型 | 数量 | 说明 |
+| --- | --- | --- |
+| `revive` | 26 | 新增的导出 const / type / function 缺少 Go doc 注释 |
+| `gosec` | 4 | `Secret... = "...-cert"` 这类常量被误判为 hardcoded credentials |
+| `modernize` | 1 | 测试里手写循环可以改成 `slices.Contains` |
+| `unused-parameter` | 1 | `legacyCertificateNames(externalEtcd bool)` 参数未使用 |
+
+根因不是 Karmada 业务逻辑失败，而是提交前只跑了 `go test ./pkg/karmadactl/...` 和 `hack/verify-command-line-flags.sh`，漏跑了 CI lint 对应的 `hack/verify-staticcheck.sh` / `golangci-lint run`。新增一个公开包时，导出符号和常量名会被 lint 严格检查，不能只靠单测判断。
+
+### 以后避免规则
+
+以后只要新增 Go 包、导出类型、导出常量、命令行 flag、证书/Secret 名称或较大抽象层，提交前必须先跑：
+
+```bash
+PATH="$(go env GOPATH)/bin:$PATH" golangci-lint run ./pkg/karmadactl/cmdinit/...
+go test ./pkg/karmadactl/... -count=1
+hack/verify-command-line-flags.sh
+```
+
+如果要推到 fork 跑完整 push CI，再跑：
+
+```bash
+python3 /home/karmada/.agents/skills/karmada-push-ci-check/scripts/check_push_ci.py \
+  --repo ranxi2001/karmada \
+  --branch "$(git rev-parse --abbrev-ref HEAD)" \
+  --sha "$(git rev-parse HEAD)" \
+  --show-jobs failed
+```
+
+本次补救计划：
+
+1. 给 `certmanager` 包所有导出符号补 Go doc 注释，或者把没有跨包必要的符号改成未导出。
+2. 对 gosec 误判的 Secret 名称常量做合理处理：优先通过更清晰的命名/分组降低误报；必要时对确定安全的常量加局部 `#nosec G101`，但要写明这是 Kubernetes Secret 对象名，不是密钥内容。
+3. 删除或真正使用 `legacyCertificateNames` 的 `externalEtcd` 参数。
+4. 测试 helper 改用 `slices.Contains`。
+5. 复跑 `golangci-lint run ./pkg/karmadactl/cmdinit/...`，通过后再 amend / force-with-lease 推 fork。
+
 ## 明日最小行动
 
 1. 把证书管理层设计先整理成更小的代码改动边界，避免直接在部署代码中散落 `split` 判断。
