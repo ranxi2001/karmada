@@ -237,9 +237,7 @@ PASS
 建议在 issue 下回复验证证据，核心内容可以是：
 
 ````md
-I verified this on upstream/master (`ffbade988`) with both a function-level check and the default FlinkDeployment third-party customization path.
-
-The key point is the conversion boundary between Lua and Go:
+I think the key point is the conversion boundary between Lua and Go:
 
 ```text
 Lua:
