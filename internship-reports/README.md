@@ -11,6 +11,7 @@
 - [Day 3：证书管理相关 issue / PR 调研和任务整理](day3-certificate-management-task-triage.md)
 - [Day 4：#7690 发布后的 branch / proposal gap 分析](day4-certificate-layout-issue-follow-up.md)
 - [Day 5：#7643 FlinkDeployment memory 计算问题验证](day5-issue-7643-flink-memory-verification.md)
+- [Day 6：证书轮换方案设计与实现准备](day6-certificate-rotation-design-implementation.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
