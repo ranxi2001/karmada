@@ -8,6 +8,7 @@
 
 ## Last Run
 
+- 2026-06-30：按用户确认发布 upstream issue。使用 Day 3 中已确认的英文草稿新建 `karmada-io/karmada#7690`：`Proposal: plan-based split certificate Secret layout for karmadactl init`，正文包含 #6051/#6670/#6788 关联、scope/non-goals、两张设计图 raw 链接、prototype branch/commit/CI 证据，并 mention `@zhzhuang-zju` 请求 review。已用 `thread_brief.py 7690` 确认为 open，暂无 labels、assignees、milestone、comments。
 - 2026-06-30：按“新建 issue 最好带图片引用解释”的要求，增强 Day 3 upstream issue 草稿：加入两张已推到 fork `intern` 分支的设计图 raw 链接，并验证链接返回 `200 image/png`。草稿中明确图片只作为长期方向和前后对比说明，当前 issue/PR scope 仍限于 `karmadactl init` 的 plan-based certificate Secret layout，不引入 CRD/controller/cert-manager 集成。
 - 2026-06-30：按“先做成 issue、让 @zhzhuang-zju review 提案”的社区流程要求，重新核对 #6051、#6670、#6788：#6051 是证书/配置命名规范 umbrella，#6670 是证书标准化 proposal，#6788 是已有 open split secret layout PR。已在 Day 3 增加英文 upstream issue 草稿，明确该提案与三者的关系、plan-based 抽象边界、prototype branch、CI 证据和待 maintainer 确认的问题；未发布 upstream issue/comment，也未自动 mention maintainer，等待用户确认目标和完整文本。
 - 2026-06-30：确认 `feature/cert-manager-layout` commit `eb02bde96` fork push CI 全绿：18 个 check runs 中 16 success、2 skipped、0 failed。新增 Day 3 的 PR 审阅准备部分，整理当前 PR 的实现边界、未实现内容、文件修改解释、reviewer 重点关注点、本地验证命令、fork CI 结果和 upstream PR 文案草稿；补充两张方案图 `Karmada证书管理方案-数据流图.png`、`Karmada证书管理方案对比分析-数据流图.png` 作为长期方案/对比说明资料。
@@ -37,7 +38,7 @@
 
 ## Next
 
-- 证书方向先走 upstream issue/comment 设计 review：让用户确认 Day 3 中的英文提案文本和发布目标；若新建 issue，使用 enhancement 模板；若认为重复，改为 #6670 或 #6788 评论；确认前不发布、不 mention maintainer。
+- 证书方向先观察 upstream issue #7690 的 maintainer review；回复前不急着开 PR。若 maintainer 认为重复，按要求转到 #6670 或 #6788；若接受方向，再基于 fork prototype 拆小 PR。
 - `feature/cert-manager-layout` 已通过 fork push CI。若准备 upstream PR，先让用户确认 PR 标题/body，再按 `.github/PULL_REQUEST_TEMPLATE.md` 创建，不要擅自发布。
 - 继续观察 upstream PR #7666 的 CI 和 review；如果失败，先区分代码问题、环境抖动和 CI 环境差异。
 - 阅读 Karmada 官方入口：`README.md`、`CONTRIBUTING.md`、`docs/README.md`、`docs/images/architecture.png`、`samples/nginx/README.md`。

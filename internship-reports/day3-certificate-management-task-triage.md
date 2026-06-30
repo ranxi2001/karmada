@@ -550,15 +550,24 @@ karmadactl: Added `--secret-layout=split` to `karmadactl init` to optionally dis
 ```
 ````
 
-### 拟 upstream issue 文案（未发布）
+### Upstream issue 发布记录
 
-> 注意：下面是发往 `karmada-io/karmada` 的英文 issue 草稿。由于草稿中会直接 mention maintainer，必须先让用户确认目标和完整文本，不能自动发布。
+已发布：
+
+- Issue: https://github.com/karmada-io/karmada/issues/7690
+- 标题：`Proposal: plan-based split certificate Secret layout for karmadactl init`
+- 作者：`@ranxi2001`
+- 状态：open
+- 创建时间：2026-06-30 11:31 CST
+- 发布方式：使用已确认的英文 issue 草稿新建 `karmada-io/karmada` issue，并 mention `@zhzhuang-zju` 请求 review。
+
+注意：下面保留发布正文快照，方便后续根据 reviewer 回复更新 PR 文案或补充评论。
 
 建议目标：
 
-1. 如果 maintainer 接受单独设计提案：新建 issue。
-2. 如果 maintainer 认为 #6670 已覆盖该主题：把下面内容改成 #6670 评论。
-3. 如果 maintainer 希望直接 review 现有实现：把重点收敛为 #6788 的设计评论，而不是开重复 PR。
+1. 如果 maintainer 接受单独设计提案：后续基于 #7690 开小 PR。
+2. 如果 maintainer 认为 #6670 已覆盖该主题：后续把 #7690 关闭或转为 #6670 的补充讨论。
+3. 如果 maintainer 希望直接 review 现有实现：把重点收敛为 #6788 的设计评论或替代 PR，不开重复实现。
 
 标题：
 
@@ -644,7 +653,7 @@ The main design questions I would like to clarify before opening or continuing a
 @zhzhuang-zju, could you help review whether this direction is reasonable before I proceed with upstream code work?
 ```
 
-发布前检查：
+发布后检查：
 
 - 不能写 `Fixes #6670`，因为这个 issue 草稿只是设计讨论，不应该自动关闭已有 proposal。
 - 必须明确 #6788 已经存在，避免社区认为我们没有尊重已有贡献。
@@ -652,11 +661,12 @@ The main design questions I would like to clarify before opening or continuing a
 - 如果发布为新 issue，保留 `**What would you like to be added**` / `**Why is this needed**` 两段，符合 `.github/ISSUE_TEMPLATE/enhancement.md`。
 - 两张图片链接已验证为 `200 image/png`。如果从 GitHub Web UI 发布，最好上传为 GitHub issue attachments，再把 raw fork 图片链接替换为 `github.com/user-attachments/assets/...`，避免未来 `intern` 分支改名或图片移动导致链接失效。
 - 图片是长期方向说明，发布时必须保留 `Non-goals` 和 `Design overview` 的 scope 说明，避免 reviewer 误解为本 issue 要一次性引入 CRD/controller/cert-manager 集成。
+- 已用 `thread_brief.py 7690` 确认 issue 为 open，暂无 labels、assignees、milestone、comments。
 
 ## 明日最小行动
 
-1. 先让用户确认 upstream issue/comment 的目标和完整英文文本，再决定是否发布并 mention `@zhzhuang-zju`。
-2. 如果发布为新 issue，使用 enhancement 模板；如果维护者认为重复，则转为 #6670 或 #6788 评论。
-3. 在获得设计方向前，不急着创建 upstream PR；已有 fork prototype 只作为设计证据。
+1. 观察 #7690 是否有 `@zhzhuang-zju` 或其他 maintainer 回复；回复前不急着创建 upstream PR。
+2. 如果 maintainer 认为重复，则按要求转到 #6670 或 #6788 并关闭/关联 #7690。
+3. 如果 maintainer 接受 plan-based 方向，再基于 fork prototype 拆一个小而清晰的 upstream PR。
 4. 如果 mentor 仍建议先接 `#6051` Helm 部分，则回到 Helm Secret / volume / mount path 差距表。
 5. 如果 mentor 要求继续基础学习，则回到 Day 2 计划，深追 `samples/nginx` 传播链路。
