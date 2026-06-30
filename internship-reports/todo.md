@@ -29,7 +29,7 @@
 | P1 | 分析 Karmada 社区 issue / PR 动态 | DONE | 中 | 低 | 0.5-1 天 | [Day 1 日报](day1-karmada-7598-default-version-pr.md)；分析 #7598 并提交 upstream PR #7666 | 继续观察 #7666 CI 和 review |
 | P1 | 调研证书管理相关 issue / PR 并拆任务 | DONE | 中 | 低 | 0.5 天 | [Day 3 证书管理任务整理](day3-certificate-management-task-triage.md) | 优先跟进 #6051 Helm 证书命名规范；先做差距表，不直接改代码 |
 | P1 | 准备证书 layout upstream 提案 | DONE | 中 | 低 | 0.5 天 | [Upstream issue #7690](https://github.com/karmada-io/karmada/issues/7690)；[Day 3 发布记录](day3-certificate-management-task-triage.md#upstream-issue-发布记录) | 等 maintainer review；回复前不急着开 PR |
-| P1 | 准备 `karmadactl init` split Secret layout PR | REVIEW | 中 | 中 | 0.5-1 天 | [Day 3 PR 审阅准备](day3-certificate-management-task-triage.md#pr-审阅准备)；fork push CI 已通过 | 先走 issue/comment 设计 review；获得方向后再决定是否开 PR、接续 #6788 或缩小 PR |
+| P1 | 准备 `karmadactl init` split Secret layout PR | REVIEW | 中 | 中 | 0.5-1 天 | [Day 3 PR 审阅准备](day3-certificate-management-task-triage.md#pr-审阅准备)；[Day 4 gap 分析](day4-certificate-layout-issue-follow-up.md)；fork push CI 已通过 | 先走 issue/comment 设计 review；获得方向后再决定是否拆小 PR、接续 #6788 或缩小 scope |
 | P1 | 对照 #6051 梳理 Helm 证书 Secret / volume / mount path 差距 | TODO | 中 | 低 | 0.5-1 天 | Helm 证书命名差距表、英文 issue 评论草稿 | 阅读 `charts/karmada/templates/`、`charts/karmada/values.yaml` 和 #6051 Task two 示例 |
 | P1 | 评估是否协助 #6788 split secret layout PR | TODO | 中 | 低 | 0.5 天 | PR 状态分析、冲突/测试记录或 review 评论草稿 | 拉取 #6788 diff，先确认作者和 reviewer 是否需要协助 |
 | P1 | 深读 scheduler 调度逻辑 | TODO | 高 | 低 | 1-2 天 | scheduler 源码笔记、测试矩阵 | 阅读 `pkg/scheduler/`、调度 policy、spread/weight/affinity 相关代码和单测 |
@@ -71,3 +71,4 @@
 | 完成 Day 2 Karmada 项目理解 | 输出 [Day 2 项目理解](day2-karmada-project-understanding.md)，用 Mermaid 梳理控制面、资源传播链路和源码目录地图，并生成 [PNG 架构图](day2-karmada-architecture.png) 与 [draw.io 架构图](day2-karmada-architecture.drawio) |
 | 完成 Day 3 证书管理任务整理 | 输出 [Day 3 证书管理任务整理](day3-certificate-management-task-triage.md)，确认 #6051 Helm 证书命名规范是当前最适合继续拆解的任务，并补充 `karmadactl init` split Secret layout 的 upstream issue 草稿 |
 | 发布证书 layout upstream 提案 | 新建 [karmada-io/karmada#7690](https://github.com/karmada-io/karmada/issues/7690)，请求 `@zhzhuang-zju` review plan-based split certificate Secret layout 方向 |
+| 完成 #7690 后续 gap 分析 | 输出 [Day 4 gap 分析](day4-certificate-layout-issue-follow-up.md)，确认当前 prototype branch 覆盖第一版 `karmadactl init` subset，但 intentional defer 长期证书管理系统、RBAC 收窄、Helm/operator、rotation 和真实 smoke test |

@@ -9,6 +9,7 @@
 - [Day 1：Karmada #7598 依赖升级 follow-up 和 upstream PR](day1-karmada-7598-default-version-pr.md)
 - [Day 2：Karmada 项目理解和源码地图](day2-karmada-project-understanding.md)
 - [Day 3：证书管理相关 issue / PR 调研和任务整理](day3-certificate-management-task-triage.md)
+- [Day 4：#7690 发布后的 branch / proposal gap 分析](day4-certificate-layout-issue-follow-up.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
