@@ -8,6 +8,7 @@
 
 ## Last Run
 
+- 2026-06-30：按“新建 issue 最好带图片引用解释”的要求，增强 Day 3 upstream issue 草稿：加入两张已推到 fork `intern` 分支的设计图 raw 链接，并验证链接返回 `200 image/png`。草稿中明确图片只作为长期方向和前后对比说明，当前 issue/PR scope 仍限于 `karmadactl init` 的 plan-based certificate Secret layout，不引入 CRD/controller/cert-manager 集成。
 - 2026-06-30：按“先做成 issue、让 @zhzhuang-zju review 提案”的社区流程要求，重新核对 #6051、#6670、#6788：#6051 是证书/配置命名规范 umbrella，#6670 是证书标准化 proposal，#6788 是已有 open split secret layout PR。已在 Day 3 增加英文 upstream issue 草稿，明确该提案与三者的关系、plan-based 抽象边界、prototype branch、CI 证据和待 maintainer 确认的问题；未发布 upstream issue/comment，也未自动 mention maintainer，等待用户确认目标和完整文本。
 - 2026-06-30：确认 `feature/cert-manager-layout` commit `eb02bde96` fork push CI 全绿：18 个 check runs 中 16 success、2 skipped、0 failed。新增 Day 3 的 PR 审阅准备部分，整理当前 PR 的实现边界、未实现内容、文件修改解释、reviewer 重点关注点、本地验证命令、fork CI 结果和 upstream PR 文案草稿；补充两张方案图 `Karmada证书管理方案-数据流图.png`、`Karmada证书管理方案对比分析-数据流图.png` 作为长期方案/对比说明资料。
 - 2026-06-30：分析 fork push CI 结果。`feature/cert-manager-layout` commit `651cbec29` 的 push CI 已全部结束，只有 `CI Workflow / lint` 失败；compile、unit test、codegen、3 个 e2e、CLI / Chart / Operator Kubernetes 矩阵均通过或 skipped。失败根因是新增 `pkg/karmadactl/cmdinit/certmanager` 包未满足 `.golangci.yml` 静态检查：导出符号缺 Go doc、Secret 名称常量触发 gosec G101 误报、测试循环可改 `slices.Contains`、`legacyCertificateNames` 参数未使用。已把复盘和提交前 lint checklist 写入 Day 3，并在 TODO 加入 P0 lint 习惯项。

@@ -600,6 +600,18 @@ Non-goals for the first PR:
 - No Helm chart or operator changes in the same PR.
 - No RBAC/client identity tightening unless maintainers want it included with the layout change.
 
+Design overview:
+
+The diagrams below are for review context. They describe the broader certificate-management direction and the current-vs-future data flow. The first implementation proposed by this issue would only take the `karmadactl init` layout-plan subset; it would not introduce the CRDs, controllers, or cert-manager integration shown in the longer-term view.
+
+The first diagram shows the long-term certificate management model: policy/plan/inventory APIs, a controller layer, optional cert-manager/CA integration, distribution to member clusters, and observability. For this issue, the relevant part is the layout-plan boundary between certificate generation, Secret distribution, and workload consumption.
+
+![Long-term certificate management data flow](https://raw.githubusercontent.com/ranxi2001/karmada/intern/internship-reports/Karmada%E8%AF%81%E4%B9%A6%E7%AE%A1%E7%90%86%E6%96%B9%E6%A1%88-%E6%95%B0%E6%8D%AE%E6%B5%81%E5%9B%BE.png)
+
+The second diagram compares the current built-in certificate flow with the longer-term automated certificate-management direction. For this issue, the relevant change is moving from scattered hard-coded Secret/path handling to a layout plan consumed by the `karmadactl init` deployment generation code.
+
+![Current vs proposed certificate management data flow](https://raw.githubusercontent.com/ranxi2001/karmada/intern/internship-reports/Karmada%E8%AF%81%E4%B9%A6%E7%AE%A1%E7%90%86%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90-%E6%95%B0%E6%8D%AE%E6%B5%81%E5%9B%BE.png)
+
 I prepared a prototype branch to make the design concrete:
 
 - Branch: https://github.com/ranxi2001/karmada/tree/feature/cert-manager-layout
@@ -638,6 +650,8 @@ The main design questions I would like to clarify before opening or continuing a
 - 必须明确 #6788 已经存在，避免社区认为我们没有尊重已有贡献。
 - 如果发布为 #6670 评论，开头要改成 `Thanks for the proposal. I explored a plan-based implementation direction...`，并删掉 enhancement issue 模板标题。
 - 如果发布为新 issue，保留 `**What would you like to be added**` / `**Why is this needed**` 两段，符合 `.github/ISSUE_TEMPLATE/enhancement.md`。
+- 两张图片链接已验证为 `200 image/png`。如果从 GitHub Web UI 发布，最好上传为 GitHub issue attachments，再把 raw fork 图片链接替换为 `github.com/user-attachments/assets/...`，避免未来 `intern` 分支改名或图片移动导致链接失效。
+- 图片是长期方向说明，发布时必须保留 `Non-goals` 和 `Design overview` 的 scope 说明，避免 reviewer 误解为本 issue 要一次性引入 CRD/controller/cert-manager 集成。
 
 ## 明日最小行动
 
