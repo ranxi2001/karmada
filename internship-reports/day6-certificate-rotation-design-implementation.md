@@ -91,7 +91,7 @@ karmadactl init --cert-mode=rotate \
 工具做的事情：
 
 1. 读取和普通 `init` 相同的 flags / config。
-2. 根据这些参数重新生成 Karmada 所需证书材料。
+2. 根据这些参数重新生成 Karmada 组件身份证书，也就是 server/client 等 leaf certificates。
 3. 更新 `karmada-config-*`、`karmada-cert`、`etcd-cert`、`karmada-webhook-cert` 等相关 Secrets。
 4. 输出需要重启的组件提示。
 
@@ -99,7 +99,7 @@ karmadactl init --cert-mode=rotate \
 
 1. 确认 rotate 命令使用的证书参数和原安装一致。
 2. 在 Secret 更新后重启相关 Karmada 组件。
-3. 如果 CA 发生变化，需要特别关注 webhook configuration、APIService、CRD conversion caBundle 等信任链配置是否同步更新。
+3. 确认使用的是原有 CA 签发新的组件身份证书。CA/root certificate 是底层信任链基石，第一版不轮转、不更新。
 
 ## 当前代码链路
 
@@ -133,11 +133,11 @@ RunInit(parentCommand)
 | --- | --- | --- |
 | `Validate()` | 解析 config file、校验参数 | 需要复用，但可能要按 mode 调整校验 |
 | `Complete()` | 初始化 kube client、检查 NodePort、处理 node selector、获取 apiserver IP、初始化 command args、清理/创建 data path | 不能原样复用，需要小心拆分 |
-| `genCerts()` | 根据参数生成 CA、leaf cert、etcd cert、front-proxy cert | 需要复用或抽取 |
+| `genCerts()` | 根据参数生成 CA、leaf cert、etcd cert、front-proxy cert | 不能在 rotate mode 原样复用，需要避免生成新 root CA，只复用既有 CA 签发组件身份证书 |
 | `readExternalEtcdCert()` | external etcd 场景读取用户提供的 etcd cert/key | 需要复用 |
 | `createCertsSecrets()` | 创建/更新 kubeconfig Secrets、`etcd-cert`、`karmada-cert`、`karmada-webhook-cert` | 需要复用 |
 | `initKarmadaAPIServer()` | 创建 etcd/apiserver/aggregated-apiserver workload | rotate mode 不执行 |
-| `karmada.InitKarmadaResources()` | 创建/patch CRD、webhook、APIService、bootstrap RBAC 等 | rotate mode 是否部分复用，需要按 CA 策略决策 |
+| `karmada.InitKarmadaResources()` | 创建/patch CRD、webhook、APIService、bootstrap RBAC 等 | rotate mode 不复用；因为 CA 不变，不需要更新 caBundle/APIService/Webhook/CRD conversion 信任配置 |
 | `initKarmadaComponent()` | 创建 controller-manager、scheduler、webhook 等 workload | rotate mode 不执行 |
 
 ## 关键设计点
@@ -202,7 +202,7 @@ syncCertSecrets()
 
 如果为了减少 diff，第一版可以继续使用 `createCertsSecrets()` 名称，但 PR 描述里要说明 rotate mode 复用它更新 Secret。
 
-### 4. CA rotation 和 leaf renewal 要分清楚
+### 4. 只轮转组件身份证书，不轮转 CA
 
 当前 `cert.GenCerts()` 的行为是：
 
@@ -211,24 +211,34 @@ syncCertSecrets()
 - `front-proxy-ca` 和 internal `etcd-ca` 每次都会重新生成。
 - leaf cert 的有效期由 `--cert-validity-period` 控制。
 
-这带来一个重要问题：
+这里已经明确第一版策略：
+
+> 轮转的是组件身份证书，也就是组件用于 TLS server/client 身份验证的 leaf certificates。CA/root certificates 是底层信任链基石，数量少、影响面大，不在这个功能里轮转。
+
+原因是 CA 一旦变化，所有信任这个 CA 的 kubeconfig、WebhookConfiguration、APIService、CRD conversion caBundle、组件间 TLS 信任链都可能需要同步更新。对用户来说，这不是普通证书续期，而是信任根迁移，兼容风险明显更高。
+
+因此 rotate mode 必须复用既有 CA 签发新的组件身份证书，不能偷偷生成新的 root CA。
+
+明确后的场景表：
 
 | 场景 | 含义 | rotate mode 影响 |
 | --- | --- | --- |
-| 复用旧 CA 续签 leaf cert | 新 leaf cert 仍由旧 CA 签发 | 只更新 Secrets 和重启组件通常足够 |
-| 生成新 CA | 信任根变化 | 需要同步 caBundle、APIService、webhook/CRD conversion 相关信任配置，否则组件可能不互信 |
-| internal etcd CA 重新生成 | etcd server/client mutual TLS 信任链变化 | 需要同时更新 `etcd-cert` 和 apiserver 使用的 etcd client cert，并重启 etcd/apiserver |
-| external etcd | 外部 etcd CA/client cert 由用户提供 | 工具不应该擅自生成外部 etcd 证书 |
+| 复用旧 CA 续签组件身份证书 | 新 server/client cert 仍由旧 CA 签发 | 第一版目标路径，只更新相关 Secrets 并提示用户重启组件 |
+| 生成新 Karmada root CA | 信任根变化 | 第一版不支持，避免破坏现有信任链 |
+| 生成新 front-proxy CA | front-proxy 信任根变化 | 第一版不支持，应复用既有 front-proxy CA 签发新的 front-proxy-client cert |
+| 生成新 internal etcd CA | etcd mutual TLS 信任根变化 | 第一版不支持，应复用既有 etcd CA 签发新的 etcd server/client cert |
+| external etcd | 外部 etcd CA/client cert 由用户提供 | 工具不轮转 external etcd CA；如用户提供新的 external etcd client cert/key，只作为输入材料同步进 Secret |
 
-所以 PR 里必须明确第一版支持哪种策略。更保守的路线是：
+这会直接影响实现：
 
-1. 第一版允许重新生成并替换当前 `karmadactl init` 管理的全部证书 Secret。
-2. 如果生成新 root CA，则同步更新由 `karmadactl init` 管理的 caBundle 资源，或者明确暂不支持 root CA rotation。
-3. 如果暂不支持 root CA rotation，rotate mode 应要求用户提供原 CA 的 `--ca-cert-file` / `--ca-key-file`，只做 leaf renewal。
+1. 不能在 rotate mode 里直接调用当前 `cert.GenCerts()`，因为它在未传 CA 文件时会生成新的 `karmada` root CA，并且总是重新生成 `front-proxy-ca` 和 internal `etcd-ca`。
+2. rotate mode 需要有“读取既有 CA 材料”的能力，来源可以是用户显式传入的 CA 文件，也可以是从现有 Secret 中读取 CA cert/key。
+3. 轮转函数应只重新签发组件身份证书：apiserver server cert、admin/client cert、front-proxy-client cert、etcd server/client cert、webhook serving cert/kubeconfig client cert 等。
+4. 如果找不到签发所需的既有 CA private key，应该直接报错，而不是自动生成新 CA。
 
-这个点需要实现前和维护者确认，因为 #4787 里“证书过期”可能同时包括 CA 和 leaf cert 过期。只 renew leaf 不能解决 root CA 已过期的问题。
+换句话说，`--cert-mode=rotate` 的语义更接近 “renew component identity certificates”，不是 “rotate trust roots”。
 
-### 5. 是否更新 caBundle 是一个分界点
+### 5. caBundle 不属于第一版更新范围
 
 `karmada.InitKarmadaResources()` 在安装时会使用 CA 更新：
 
@@ -237,17 +247,17 @@ syncCertSecrets()
 - `ValidatingWebhookConfiguration`
 - aggregated APIService 的 `CABundle`
 
-如果 rotate mode 会生成新 CA，就不能只更新 Secrets。否则 webhook、aggregated apiserver、CRD conversion 相关 trust bundle 仍指向旧 CA。
+现在策略明确为“不轮转 CA”，所以 rotate mode 不应该更新这些 caBundle。这样可以避免把证书身份证明续期扩展成信任根迁移。
 
-可选方案：
+如果未来社区需要 root CA migration，应作为单独设计处理，至少需要：
 
-| 方案 | 优点 | 风险 |
-| --- | --- | --- |
-| 第一版只支持复用旧 CA 签发 leaf cert | 改动小，风险低，测试简单 | 不能解决 root CA 已过期场景 |
-| rotate mode 同步更新 caBundle | 更完整，能覆盖新 CA 场景 | 需要拆出 `InitKarmadaResources()` 中 caBundle patch 子流程，测试面更大 |
-| 分成两个 mode：`renew` 和 `rotate-ca` | 语义清晰 | flag 设计变复杂，第一版可能过重 |
+- 信任 bundle 双写或过渡期机制；
+- WebhookConfiguration / APIService / CRD conversion caBundle 同步；
+- kubeconfig client CA bundle 更新；
+- 组件重启顺序和回滚策略；
+- external etcd / internal etcd 不同信任链的迁移边界。
 
-我的倾向：先实现小而可靠的 rotate path，同时在 PR 描述中主动暴露 CA 策略。如果维护者希望覆盖 #4787 的 root CA 已过期场景，就必须把 caBundle 同步纳入第一版。
+这些都不是 #7693 第一版目标。
 
 ## 建议实现方案
 
@@ -301,12 +311,10 @@ flowchart TD
     G --> H[create/update workloads and Karmada resources]
 
     C -->|rotate| I[complete rotate options]
-    I --> J[prepare cert material]
-    J --> K[update cert-related Secrets]
-    K --> L{CA changed?}
-    L -->|no / old CA reused| M[print restart guidance]
-    L -->|yes / supported| N[update caBundle resources]
-    N --> M
+    I --> J[load existing CA material]
+    J --> K[renew component identity certs]
+    K --> L[update cert-related Secrets]
+    L --> M[print restart guidance]
 ```
 
 ### 代码拆分建议
@@ -338,10 +346,10 @@ runInstall()
   -> initKarmadaComponent()
 
 runRotate()
-  -> prepareCertMaterial()
+  -> loadExistingCAMaterial()
+  -> renewComponentIdentityCerts()
   -> ensure namespace exists
   -> createCertsSecrets()
-  -> optionally update caBundle resources
   -> print restart guidance
 ```
 
@@ -360,8 +368,9 @@ runRotate()
    - 如果加 `spec.certMode`，测试 YAML config 能解析到 `CommandInitOption.CertMode`。
 
 3. cert material preparation：
-   - internal etcd 场景能生成并读入 `certList` 中的 `.crt/.key`。
-   - external etcd 场景读取用户提供的 CA/client cert/key，不生成 external etcd 证书。
+   - internal etcd 场景能读取既有 `karmada` CA、`front-proxy-ca`、`etcd-ca`，并重新签发组件身份证书。
+   - rotate mode 找不到既有 CA private key 时必须报错，不能自动生成新 CA。
+   - external etcd 场景读取用户提供的 external etcd client cert/key，不生成 external etcd CA。
 
 4. rotate secret sync：
    - fake client 中预置 namespace 和旧 Secrets。
@@ -373,8 +382,9 @@ runRotate()
    - 这条测试很重要，能防止 rotate mode accidentally reinstall。
 
 6. CA bundle 行为：
-   - 如果第一版支持新 CA，同步测试 webhook configuration / APIService / CRD conversion caBundle 被更新。
-   - 如果第一版不支持新 CA，测试没有原 CA 输入时给出明确错误。
+   - rotate mode 不更新 WebhookConfiguration / APIService / CRD conversion caBundle。
+   - 测试可以通过 fake client action list 确认没有相关 update/patch 行为。
+   - 如果输入会导致生成新 CA，应直接报错或拒绝，而不是进入 caBundle 更新路径。
 
 ### 本地验证命令
 
@@ -412,7 +422,7 @@ kubectl -n karmada-system rollout restart deploy/karmada-webhook
 kubectl -n karmada-system get pod
 ```
 
-如果使用 internal etcd 且 etcd CA/server cert 更新，还要评估 etcd StatefulSet 的重启顺序。这个可能影响 apiserver 连接 etcd，应在 PR 文档里说明。
+如果使用 internal etcd，rotate mode 应复用既有 etcd CA 重新签发 etcd server/client cert。Secret 更新后仍要评估 etcd StatefulSet 和 apiserver 的重启顺序，因为 etcd server/client leaf cert 同时更新会影响 apiserver 连接 etcd。
 
 ## PR 切分建议
 
@@ -420,8 +430,7 @@ kubectl -n karmada-system get pod
 
 1. PR 1：引入 `CertMode`、抽取证书材料准备函数，默认安装行为不变。
 2. PR 2：实现 `--cert-mode=rotate`，只更新相关 Secrets，补 fake client 测试和 flag 文档。
-3. PR 3：如果维护者要求，补 caBundle 同步或 root CA rotation 支持。
-4. PR 4：website 文档，补 manual control-plane certificate rotation guide，关联 website#1014。
+3. PR 3：website 文档，补 manual control-plane certificate rotation guide，关联 website#1014。
 
 如果社区希望一个 PR 完成 #7693，也可以合并 PR 1/2，但不建议把 cert-manager 自动轮换、Helm chart 和 split Secret layout 混进去。
 
@@ -430,7 +439,7 @@ kubectl -n karmada-system get pod
 提交代码前最好在 issue 或 PR body 中明确这些问题：
 
 1. `--cert-mode` 默认值是否用 `install`，还是保持空值代表普通安装。
-2. 第一版是否支持 root CA rotation；如果支持，是否必须同步 caBundle。
+2. rotate mode 从哪里读取既有 CA private key：要求用户传 `--ca-cert-file` / `--ca-key-file`，还是优先从现有 Secret 中读取。
 3. rotate mode 是否应该要求 namespace 和现有 cert Secrets 已存在，避免用户传错 namespace 时创建无用 Secret。
 4. 是否更新本地 kubeconfig 文件，还是只更新集群内 kubeconfig Secrets。
 5. 是否自动输出 restart 命令；是否自动执行 rollout restart。
@@ -442,12 +451,14 @@ kubectl -n karmada-system get pod
 
 > 第一版不是重做 Secret layout，也不是 cert-manager 自动轮换，而是把 `karmadactl init` 已有的证书生成和 Secret 写入能力抽出来，提供一个 `--cert-mode=rotate` 路径，让用户能可靠地替换 `karmadactl init` 管理的证书 Secrets。
 
-这条路径和 website#1014 也能对齐：代码侧先提供可执行工具，后续文档侧补 manual certificate rotation guide，把“命令如何跑、哪些参数必须和原安装一致、哪些组件要重启、CA 变化时要注意什么”写清楚。
+更准确地说，第一版轮转的是组件身份证书，不轮转 CA/root certificates。CA 是底层信任链基石，变化会带来不兼容风险，不应混入这个功能。
+
+这条路径和 website#1014 也能对齐：代码侧先提供可执行工具，后续文档侧补 manual certificate rotation guide，把“命令如何跑、哪些参数必须和原安装一致、哪些组件要重启、为什么 CA 不轮转”写清楚。
 
 ## 下一步最小行动
 
 1. 从最新 `upstream/master` 新建干净 topic branch。
-2. 先做源码级最小重构：抽出 `prepareCertMaterial()`，保持 `RunInit()` 默认行为不变。
+2. 先做源码级最小重构：抽出证书材料准备边界，保持 `RunInit()` 默认行为不变。
 3. 增加 `CertMode` 和 validation，不急着改 Secret layout。
-4. 实现 rotate path，并用 fake client 测试证明只更新 Secrets、不创建 workloads。
-5. 在 PR body 中明确 CA 策略，必要时先问维护者是否要求第一版支持 root CA rotation。
+4. 实现 rotate path：读取既有 CA，重新签发组件身份证书，更新 Secrets。
+5. 用 fake client 测试证明 rotate 只更新 Secrets、不创建 workloads、不更新 caBundle。

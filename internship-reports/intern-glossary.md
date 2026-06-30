@@ -85,6 +85,8 @@
 | OWNERS | 代码评审责任配置 | 找 review owner、理解模块归属时需要查看 |
 | DCO / signoff | 开源提交签署规则 | 若项目要求，commit 需要 `Signed-off-by` |
 | cleanup | 清理 | e2e 或本地部署后要确认 cluster、context、Work、member resources 没有残留 |
+| 组件身份证书 / leaf certificate | 组件用于证明自己 TLS server/client 身份的证书，由 CA 签发，有具体 CN/O/SAN 和过期时间 | #7693 第一版证书轮换目标是重新签发这些组件身份证书，例如 apiserver server cert、client kubeconfig cert、front-proxy-client cert、etcd server/client cert |
+| CA / root certificate | 签发并背书其他证书的根或中间证书，是信任链基石 | 第一版证书轮换不轮转 CA/root certificates；改变 CA 会影响 kubeconfig、WebhookConfiguration、APIService、CRD conversion caBundle 和组件间 TLS 信任链，属于单独的信任根迁移问题 |
 
 ## 常见对照关系
 
@@ -97,6 +99,7 @@
 | OverridePolicy vs PropagationPolicy | propagation 决定放到哪里；override 决定在某个集群里怎么改 |
 | controller vs scheduler | controller 负责状态推进和对象创建；scheduler 负责放置和副本分配决策 |
 | status aggregation vs propagation | propagation 是把期望下发出去；status aggregation 是把实际状态收回来 |
+| 组件身份证书 vs CA/root 证书 | 组件身份证书是被轮转的对象；CA/root 证书是签发者和信任根，第一版不轮转、不更新 caBundle |
 
 ## 后续追加优先级
 
