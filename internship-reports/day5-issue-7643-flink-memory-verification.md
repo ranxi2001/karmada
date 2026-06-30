@@ -12,7 +12,9 @@
 
 - 仓库：`karmada-io/karmada`
 - 验证 worktree：`/home/karmada-issue-7643`
-- 分支：`verify/issue-7643`
+- 初始临时分支：`verify/issue-7643`
+- 证据分支：[`ranxi2001/karmada@verify/issue-7643-evidence`](https://github.com/ranxi2001/karmada/tree/verify/issue-7643-evidence)
+- 证据提交：[`46d0ba9be`](https://github.com/ranxi2001/karmada/commit/46d0ba9bef5781cd2364db7134659234e48846a8) `test: add flink memory conversion evidence`
 - 基线：`upstream/master`，commit `ffbade988`
 - 记录分支：`intern`
 
@@ -30,7 +32,7 @@
 
 ## 第一层：函数级验证
 
-临时新增测试文件：
+证据分支新增测试文件：
 
 - `/home/karmada-issue-7643/pkg/resourceinterpreter/customized/declarative/luavm/issue7643_verification_test.go`
 
@@ -62,7 +64,7 @@ PASS
 
 ## 第二层：默认 Flink interpreter 运行路径验证
 
-临时新增测试文件：
+证据分支新增测试文件：
 
 - `/home/karmada-issue-7643/pkg/resourceinterpreter/default/thirdparty/issue7643_verification_test.go`
 
@@ -145,6 +147,11 @@ So I cannot reproduce the reported incorrect total memory on current upstream/ma
 ````md
 I took a closer look at this on current upstream/master (`ffbade988`). Based on the verification below, I cannot reproduce the reported incorrect memory calculation.
 
+For reproducibility, I pushed the evidence tests to my fork:
+
+- Branch: https://github.com/ranxi2001/karmada/tree/verify/issue-7643-evidence
+- Commit: https://github.com/ranxi2001/karmada/commit/46d0ba9bef5781cd2364db7134659234e48846a8
+
 The concern in this issue is understandable. The suspected path is:
 
 ```mermaid
@@ -173,7 +180,7 @@ flowchart LR
 
 ### 1. Function-level conversion
 
-I added a temporary local test around `resource.Quantity` and the Lua conversion path.
+I added an evidence test around `resource.Quantity` and the Lua conversion path.
 
 Command:
 
@@ -198,7 +205,7 @@ The important detail is that `Quantity.Value()` returning `1` for `100m` does no
 
 ### 2. Default FlinkDeployment customization path
 
-I also loaded the current default `FlinkDeployment/customizations.yaml` and ran `GetComponents` with both JobManager and TaskManager memory set to `100m`.
+I also loaded the current default `FlinkDeployment/customizations.yaml` in the evidence branch and ran `GetComponents` with both JobManager and TaskManager memory set to `100m`.
 
 Command:
 
