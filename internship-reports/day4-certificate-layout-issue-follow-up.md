@@ -243,3 +243,171 @@ branch 和 #7690 的关系可以这样描述：
 4. 先补官方 cert framework 对照表，确认 CA 模型、组件覆盖范围、CN/O/SAN 和 Secret layout 是否一致。
 5. 补一个 split layout smoke test 记录，证明 `karmadactl init --secret-layout=split` 真能跑通。
 6. 准备命名表让 reviewer 确认 Secret name、volume name、mount path、data key，而不是只让 reviewer 从代码里猜。
+
+## #7693 方向纠偏：从 Secret layout 转向证书轮换
+
+晚上维护者新建了 [#7693 Add a certificate rotation capability to Karmada installation tools](https://github.com/karmada-io/karmada/issues/7693)，并把我 assign 到这个 issue。这个 issue 给出的方向比 #7690 更具体，也说明我们之前 Day 4 的重心放错了：
+
+> 当前最需要解决的不是先重新设计 Secret layout，而是复用安装工具已经具备的证书生成和 Secret 挂载能力，先把 `karmadactl init` 做成可执行的证书轮换入口。
+
+也就是说，#7690 仍然可以作为证书管理相关 proposal / task umbrella，但 #7693 才是现在适合落地的第一版实现任务。
+
+### 我们之前理解偏差在哪里
+
+之前的 `feature/cert-manager-layout` 思路主要在回答：
+
+- 证书应该如何按组件和用途拆分 Secret。
+- 是否要引入 plan-based certificate layout abstraction。
+- workload command、volume、mount path 是否应该从同一份 plan 生成。
+- 长期是否可以演进成更完整的 certificate management layer。
+
+#7693 关注的问题不同。维护者实际指出的是用户操作问题：
+
+- Karmada 组件多，证书和 Secret 多，手工轮换容易漏。
+- 不同安装方式的 Secret 名称和 mount path 不一样，用户很难手动对应。
+- 如果安装时使用了自定义证书参数，手动重新生成证书时很难保证参数一致。
+- 安装工具本来就知道怎么生成证书、创建 Secret、让组件挂载这些 Secret，所以应该把这部分能力复用为轮换能力。
+
+所以新的实现目标不是“先把 Secret 拆得更细”，而是“让同一种安装工具可以用同一套参数重新生成证书并替换相关 Secrets”。
+
+### 维护者方案的核心含义
+
+#7693 给出的第一版边界很清楚：
+
+```bash
+karmadactl init --cert-mode=rotate <other flags consistent with the original installation>
+```
+
+我的理解：
+
+1. `--cert-mode` 是 `karmadactl init` 的证书处理模式开关，默认仍然走现有安装流程。
+2. 当 `--cert-mode=rotate` 时，`karmadactl init` 不应该重新安装 Karmada 控制面，而是进入证书轮换流程。
+3. 轮换流程仍然复用原来的证书参数，例如 `--cert-validity-period`、`--ca-cert-file`、`--ca-key-file`、`--cert-external-ip`、`--cert-external-dns`、external etcd 证书路径、namespace、host cluster domain 等。
+4. 工具负责重新生成证书材料并更新相关 Kubernetes Secrets。
+5. Secrets 更新后，用户重启相关 Karmada 组件，让 Pod 重新挂载新 Secret 并加载新证书。
+6. 第一版只聚焦 `karmadactl init`，暂时不同时解决 Helm、operator、cert-manager、CRD/controller、自动热加载。
+
+这个方案的重点是降低用户操作复杂度：用户不需要理解每个证书文件最终在哪个 Secret、哪个 mount path、哪个 component command flag 里使用，只需要用和原安装一致的参数触发轮换。
+
+### 和当前代码的对齐点
+
+当前 `karmadactl init` 代码里已经天然有一个可以复用的分界线。`pkg/karmadactl/cmdinit/kubernetes/deploy.go` 的 `RunInit()` 大致顺序是：
+
+1. `genCerts()`：根据 flags/config 生成证书文件。
+2. 遍历 `certList`：把证书和 key 从 `KarmadaPkiPath` 读入 `CertAndKeyFileData`；external etcd 走 `readExternalEtcdCert()`，复用用户提供的外部 etcd CA/client cert/key。
+3. `prepareCRD()`：准备 CRD 包。
+4. `createKarmadaConfig()`：生成本地 kubeconfig。
+5. `CreateOrUpdateNamespace()`：创建 namespace。
+6. `createCertsSecrets()`：创建或更新组件 kubeconfig Secret、`etcd-cert`、`karmada-cert`、`karmada-webhook-cert`。
+7. `initKarmadaAPIServer()`：创建 etcd、apiserver、aggregated-apiserver 等 workload。
+8. `karmada.InitKarmadaResources()`：安装 CRD / 资源。
+9. `initKarmadaComponent()`：创建 controller-manager、scheduler、webhook 等 workload。
+
+#7693 的 rotate mode 应该复用第 1、2、6 步，必要时复用第 4 步的一部分，但不能继续执行第 7、8、9 步。
+
+更具体地说，当前 `createCertsSecrets()` 已经使用 `util.CreateOrUpdateSecret()`，这正好符合“replace related Secrets”的需求。最小实现不需要先引入 split Secret layout，也不需要改 deployment mount path；它只要在现有 layout 下重新生成同名 Secret 数据，就能让现有 Pod 在重启后拿到新证书。
+
+### 新的抽象边界
+
+相比之前的 `certmanager.Plan` / `secret-layout`，#7693 更适合抽出一个更小的边界：
+
+```text
+input flags/config
+  -> prepare certificate material
+  -> update certificate-related Secrets
+```
+
+可以把 `RunInit()` 里的证书准备逻辑抽成一个独立方法，例如：
+
+```text
+prepareCerts()
+  -> genCerts()
+  -> load generated cert/key files
+  -> read external etcd cert/key when external etcd is configured
+
+syncCertSecrets()
+  -> create/update component kubeconfig Secrets
+  -> create/update etcd cert Secret
+  -> create/update karmada cert Secret
+  -> create/update webhook cert Secret
+```
+
+然后 `RunInit()` 变成两个分支：
+
+```mermaid
+flowchart TD
+    A[karmadactl init flags/config] --> B[Complete and validate options]
+    B --> C[prepare certificate material]
+    C --> D{cert-mode}
+
+    D -->|default install| E[prepare CRDs and local kubeconfig]
+    E --> F[create/update namespace and cert Secrets]
+    F --> G[create/update etcd and apiserver workloads]
+    G --> H[install Karmada resources]
+    H --> I[create/update control-plane components]
+
+    D -->|rotate| J[update cert-related Secrets only]
+    J --> K[print restart guidance]
+    K --> L[user restarts related Karmada components]
+```
+
+这个抽象比之前的 Secret layout plan 更小，也更贴近维护者的需求。它先不改变证书分发结构，只把现有安装流程中“证书生成 + Secret 写入”这段能力变成可单独执行的路径。
+
+### 第一版实现边界
+
+我现在对 #7693 的第一版实现边界理解如下：
+
+| 项目 | 第一版处理方式 |
+| --- | --- |
+| 支持入口 | 只做 `karmadactl init`。 |
+| 新增参数 | 增加类似 `--cert-mode` 的 flag，默认保持现有安装行为，`rotate` 进入轮换流程。 |
+| config file | 如果社区认可，也应在 `KarmadaInitConfig` 中支持同等字段，避免 CLI flag 和 config file 能力不一致。 |
+| 证书生成 | 复用现有 `genCerts()` 和证书参数解析逻辑。 |
+| external etcd | 继续复用 `readExternalEtcdCert()`，不擅自重新生成外部 etcd 证书。 |
+| Secret 更新 | 复用 `createCertsSecrets()` / `CreateOrUpdateSecret()`，更新现有 layout 下的相关 Secrets。 |
+| workload 创建 | rotate mode 不创建或更新 Deployment、StatefulSet、Service、CRD。 |
+| 组件重启 | 第一版不自动重启组件，只输出 restart 提示。是否自动 rollout restart 需要社区确认。 |
+| Secret layout | 不在这个 PR 中引入 split layout；旧 prototype 只作为理解 Secret 映射的参考。 |
+| Helm/operator | 不在第一版处理，后续安装工具可以各自复用同样思路。 |
+
+### 需要提前确认的设计问题
+
+真正写 PR 前还有几个点需要在代码或 PR 描述中说清楚：
+
+1. `cert-mode` 的取值命名：是 `normal/rotate`、`install/rotate`，还是只允许空值和 `rotate`。
+2. rotate mode 是否应该要求 namespace 已存在。如果自动创建 namespace，用户传错 namespace 时可能悄悄创建一批无用 Secret；如果要求已存在，错误会更早暴露。
+3. rotate mode 是否要更新本地 `karmada-apiserver.config`。Issue 强调的是替换相关 Secrets，组件 kubeconfig Secrets 肯定要更新，本地 kubeconfig 文件是否顺手更新需要确认。
+4. 如果用户没有传原安装时使用的 `--cert-external-ip` / `--cert-external-dns`，新 apiserver 证书的 SAN 可能缺失。工具只能复用本次输入参数，无法自动知道历史安装参数，所以文档必须强调“other flags consistent with the original installation”。
+5. 使用用户自带 `--ca-cert-file` / `--ca-key-file` 时，rotate 应继续由同一个 CA 签发新 leaf cert；未指定时会生成新 CA，这会导致所有依赖 CA 的 client/server 证书一起变化，需要提醒用户必须重启所有相关组件。
+6. `createCertsSecrets()` 当前会同时更新多个组件 kubeconfig Secret，里面内嵌 client cert。轮换时这正是需要的，但测试必须覆盖这些 Secret 确实被更新。
+
+### 与旧 prototype 的关系
+
+旧的 `feature/cert-manager-layout` 不应该直接作为 #7693 的 PR 起点，因为它解决的是另一个问题，diff 也偏大。它仍然有参考价值：
+
+- 帮我们理解当前证书材料最终会落到哪些 Secret。
+- 帮我们理解 command flag、volume、mount path 和 Secret data key 的关系。
+- 帮我们知道后续如果做 split layout，应该避免把判断散落在部署代码里。
+
+但 #7693 的实现应该从最新 `upstream/master` 新建干净分支，先做一个小而可 review 的 PR：
+
+1. 新增证书模式字段和 flag。
+2. 抽取现有证书准备逻辑。
+3. 新增 rotate 分支，只更新证书相关 Secrets。
+4. 补单元测试和 fake client 测试，证明 rotate mode 不创建 workload。
+5. 更新 command-line flag 文档和必要使用说明。
+
+### 更新后的下一步
+
+证书方向现在应切换为：
+
+> 先实现 #7693 的 `karmadactl init --cert-mode=rotate`，让现有安装工具支持可执行的证书轮换。#7690 和 split Secret layout prototype 暂时作为背景材料，不再作为当前第一优先级 PR。
+
+具体行动：
+
+1. 从最新 `upstream/master` 新建干净分支，不能继续在旧 `feature/cert-manager-layout` 上堆。
+2. 先画出 `RunInit()` 的可抽取边界，保证 default install 行为不变。
+3. 增加 `CertMode` 字段、flag、config parsing 和 validation。
+4. 抽取 `prepareCertMaterial()` / `syncCertSecrets()` 之类的小函数，避免为了 rotate 复制整段 `RunInit()`。
+5. 用 fake client 测试 rotate mode：Secret 被更新，Deployment/StatefulSet/Service/CRD 不被创建。
+6. 准备 PR 时主关联 #7693，说明 #7690 是 tracking/proposal 背景，不再把 split layout 作为本 PR 目标。
