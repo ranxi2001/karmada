@@ -236,18 +236,64 @@ PASS
 
 建议在 issue 下回复验证证据，核心内容可以是：
 
-```md
+````md
 I verified this on upstream/master (`ffbade988`) with both a function-level check and the default FlinkDeployment third-party customization path.
 
-Findings:
-- `kube.getResourceQuantity("100m")` returns Lua number `0.1`.
-- When that value is converted back into `resource.Quantity`, JSON number `0.1` becomes `100m`, not `1`.
-- `Quantity.Value()` returns `1` for `100m` because it rounds up to the nearest integer byte. `MilliValue()` returns `100`, and `Equal(resource.MustParse("100m"))` is true.
-- Running the default FlinkDeployment customization with JM/TM memory `100m` produced component JSON with both memories as `"100m"`.
-- `helper.CalculateResourceUsage()` then produced `{"cpu":"300m","memory":"200m"}`.
+The key point is the conversion boundary between Lua and Go:
 
-So I cannot reproduce the reported incorrect total memory on current upstream/master. The proposed change may still be a readability improvement, but the verification output does not show a functional bug in the current conversion path.
+```text
+Lua:
+"100m" -> kube.getResourceQuantity("100m") -> 0.1
+
+Go:
+JSON number 0.1 -> resource.Quantity
 ```
+
+At the Go side, JSON number `0.1` is not kept as a plain float. It is unmarshaled into Kubernetes `resource.Quantity`, and semantically it becomes `100m`.
+
+So the resulting Go object is not:
+
+```text
+memory = 0.1
+```
+
+It is:
+
+```text
+memory = resource.Quantity("100m")
+```
+
+One confusing part is `Quantity.Value()`. For `resource.Quantity("100m")`, `Value()` returns `1` because it returns the rounded-up integer value in base units. That does not mean the final serialized resource value became `"1"`.
+
+The checks I observed are:
+
+```text
+resource.Quantity("100m").Value() == 1
+resource.Quantity("100m").String() == "100m"
+resource.Quantity("100m").MilliValue() == 100
+resource.Quantity("100m").Equal(resource.MustParse("100m")) == true
+```
+
+If the reported issue were happening, I would expect the component JSON to contain:
+
+```json
+"memory": "1"
+```
+
+But the actual default FlinkDeployment customization output is:
+
+```json
+"memory": "100m"
+```
+
+And `helper.CalculateResourceUsage()` produces:
+
+```json
+{"cpu":"300m","memory":"200m"}
+```
+
+So I cannot reproduce the reported incorrect total memory on current upstream/master. The proposed change may still be a readability improvement, because memory assignment does not need numeric conversion, but the verification output does not show a functional bug in the current conversion path.
+````
 
 发布前需要用户确认完整英文文本。不要擅自评论 upstream issue。
 
