@@ -382,6 +382,174 @@ python3 /home/karmada/.agents/skills/karmada-push-ci-check/scripts/check_push_ci
 4. 测试 helper 改用 `slices.Contains`。
 5. 复跑 `golangci-lint run ./pkg/karmadactl/cmdinit/...`，通过后再 amend / force-with-lease 推 fork。
 
+## PR 审阅准备
+
+日期：2026-06-30
+
+当前功能分支：`feature/cert-manager-layout`
+
+当前提交：`eb02bde96cbd88697bb808e2cb56137070d18a4c`
+
+fork push CI：已通过。18 个 check runs 中 16 个 success，2 个 skipped（`FOSSA`、`image-scanning`），0 个失败。
+
+### 审阅辅助图
+
+这些图用于和 reviewer / mentor 解释证书管理方向，但必须区分“当前 PR 已实现内容”和“后续演进方案”：
+
+| 图片 | 用途 | 说明 |
+| --- | --- | --- |
+| [现有证书管理数据流图](karmada证书管理数据流图.png) | 背景说明 | 解释当前内置证书生成、控制面证书使用链路和 agent 证书轮换链路 |
+| [Karmada 证书管理方案数据流图](Karmada证书管理方案-数据流图.png) | 长期方案 | 展示未来可能的策略 API、controller、cert-manager 集成、多集群 Secret 分发、监控告警 |
+| [Karmada 证书管理方案对比分析图](Karmada证书管理方案对比分析-数据流图.png) | review 对比 | 对比 built-in 方案和 cert-manager-layout 长期方案的差异、价值和边界 |
+
+> 重要边界：当前 PR 不是完整的 cert-manager 集成，也没有新增 CRD、controller 或证书轮换能力。当前 PR 做的是 `karmadactl init` 内部的证书布局抽象和可选 `split` Secret layout，为后续统一证书治理打基础。
+
+### 当前 PR 已实现内容
+
+1. 新增 `pkg/karmadactl/cmdinit/certmanager` 证书管理层，抽象 layout、证书身份、Secret plan、kubeconfig plan、组件 volume / mount / command path。
+2. `karmadactl init` 新增可选参数 `--secret-layout=legacy|split`，默认仍为 `legacy`。
+3. `legacy` 布局保持现有行为：继续使用聚合的 `karmada-cert`、`etcd-cert`、`karmada-webhook-cert`。
+4. `split` 布局下，为核心组件生成并分发组件级 Secret，例如 `karmada-apiserver-cert`、`karmada-apiserver-etcd-client-cert`、`karmada-aggregated-apiserver-cert`、`karmada-webhook-cert`、service account key pair 等。
+5. 部署层不再手写证书 Secret / mount path / command path，而是消费 `ComponentPlan`。
+6. split 布局下 kubeconfig Secret 使用组件对应 client cert，不再都复用 admin 风格的 `karmada` 证书。
+7. external etcd 场景保留外部 etcd 证书读取逻辑，不生成内部 etcd server identity / Secret。
+8. 保留一个 legacy-compatible `karmada-cert`，降低 addons 或旧逻辑读取证书材料的兼容风险。
+
+### 当前 PR 未实现内容
+
+| 未实现项 | 原因 |
+| --- | --- |
+| cert-manager CRD / Issuer / Certificate 集成 | 这是长期方案，当前 PR 先做 `karmadactl init` 的布局抽象 |
+| 证书自动轮换 | 当前 PR 只改变生成和分发布局，不改变证书生命周期控制器 |
+| Helm chart / operator 同步改造 | scope 太大，应该在后续 PR 分别处理 |
+| 控制面热加载或自动重启 | 当前组件仍按现有证书加载方式启动 |
+| 新的 Karmada API 类型 | 本 PR 只影响 CLI init 和内部安装逻辑 |
+
+### 代码修改文件解释
+
+| 文件 | 修改类型 | 解释给 reviewer 的重点 |
+| --- | --- | --- |
+| `pkg/karmadactl/cmdinit/certmanager/types.go` | 新增 | 定义证书布局计划的数据模型：`IdentitySpec`、`SecretSpec`、`KubeconfigSpec`、`ComponentPlan`、`MaterialRef` 等。这是抽象层的核心，不直接创建 Kubernetes 对象。 |
+| `pkg/karmadactl/cmdinit/certmanager/layout.go` | 新增 | 实现 `legacy` 和 `split` 两种 layout plan。legacy 保持现有聚合 Secret 行为；split 定义组件级 Secret、证书身份、kubeconfig client cert、volume mount 和 command path。 |
+| `pkg/karmadactl/cmdinit/certmanager/layout_test.go` | 新增 | 覆盖 legacy plan、split plan、external etcd split plan 和非法 layout，确保 plan 层可独立测试。 |
+| `pkg/karmadactl/cmdinit/kubernetes/cert_plan.go` | 新增 | Kubernetes 适配层：把 `certmanager.Plan` 转成 `corev1.Volume` / `VolumeMount`，生成 split 额外证书和 key pair，读取证书材料，并处理 `MaterialRef`。 |
+| `pkg/karmadactl/cmdinit/cmdinit.go` | 修改 | 注册 `--secret-layout` flag，默认 `legacy`，可选值来自 `certmanager.SupportedLayouts()`。 |
+| `pkg/karmadactl/cmdinit/config/types.go` | 修改 | 在 init config 中增加 `secretLayout` 字段，支持通过配置文件选择 layout。 |
+| `pkg/karmadactl/cmdinit/config/config_test.go` | 修改 | 覆盖 `secretLayout: split` 配置解析。 |
+| `pkg/karmadactl/cmdinit/kubernetes/deploy.go` | 修改 | `CommandInitOption` 增加 `SecretLayout`；`RunInit` 先构建 certificate plan，再生成证书、读取材料、创建 Secrets；`createCertsSecrets` 改为消费 `SecretSpec` 和 `KubeconfigSpec`。 |
+| `pkg/karmadactl/cmdinit/kubernetes/command.go` | 修改 | 各控制面组件 command 中证书路径从 plan 获取，避免在命令构造里散落 legacy/split 判断。 |
+| `pkg/karmadactl/cmdinit/kubernetes/deployments.go` | 修改 | Deployment 的 volumes / volumeMounts 从 `ComponentPlan` 获取，默认 legacy 路径不变，split 时切换为组件级 Secret。 |
+| `pkg/karmadactl/cmdinit/kubernetes/statefulset.go` | 修改 | etcd StatefulSet 的证书 volume / mount 从 plan 获取，保持 etcd data/config volume 逻辑不变。 |
+| `pkg/karmadactl/cmdinit/kubernetes/deploy_test.go` | 修改 | 新增 split Secret 创建测试，确认组件 Secret 和 kubeconfig Secret 能按 plan 创建。 |
+| `pkg/karmadactl/cmdinit/kubernetes/deployments_test.go` | 修改 | 新增 split 布局下 apiserver command path 和 Secret volume 测试。 |
+| `docs/command-line-flags/karmadactl_init.md` | 生成更新 | `hack/verify-command-line-flags.sh` 生成的新 flag 文档，展示 `--secret-layout`。 |
+
+### Reviewer 重点关注点
+
+| 关注点 | 希望 reviewer 帮忙确认 |
+| --- | --- |
+| 默认兼容性 | `--secret-layout` 默认 `legacy`，现有用户是否应完全无感。重点看 legacy command path、volume、Secret key 是否维持不变。 |
+| split 命名规范 | Secret 名称、volume 名称、mount path、data key 是否与 `artifacts/deploy/*.yaml` 和 #6051 期望方向一致。 |
+| 证书身份粒度 | component client cert 当前仍使用 `system:masters` group，是否需要在后续 PR 收窄权限。 |
+| external etcd | split + external etcd 时是否正确复用用户传入的 CA / client cert / key，不生成内部 etcd server Secret。 |
+| legacy-compatible `karmada-cert` | split 下保留兼容 Secret 是否合理，里面应该放完整 legacy 材料还是只保留必要 CA。 |
+| abstraction boundary | `certmanager` 是否是合适包名；plan 层和 Kubernetes 适配层的职责是否清晰。 |
+| release note | 新增用户可见 flag，release note 是否需要写明默认行为不变。 |
+
+### 本地验证和 fork CI
+
+本地已执行：
+
+```bash
+PATH="$(go env GOPATH)/bin:$PATH" golangci-lint run ./pkg/karmadactl/cmdinit/...
+PATH="$(go env GOPATH)/bin:$PATH" hack/verify-staticcheck.sh
+hack/verify-import-aliases.sh
+go test ./pkg/karmadactl/... -count=1
+hack/verify-command-line-flags.sh
+git diff --check
+```
+
+fork push CI：
+
+```text
+repo: ranxi2001/karmada
+branch: feature/cert-manager-layout
+sha: eb02bde96cbd88697bb808e2cb56137070d18a4c
+summary: 2 skipped, 4 success
+
+CI Workflow: success
+CLI: success
+Chart: success
+Operator: success
+FOSSA: skipped
+image-scanning: skipped
+```
+
+细分 check-run 结果：18 个 check runs，16 个 success，2 个 skipped，0 个 failed。
+
+### 拟 PR 文案（未发布）
+
+> 注意：下面只是准备稿。根据本地规则，不能在没有用户明确确认前创建 upstream PR。
+
+````md
+**What type of PR is this?**
+
+/kind feature
+
+**What this PR does / why we need it**:
+
+This PR adds a certificate Secret layout abstraction for `karmadactl init` and introduces an optional `--secret-layout=legacy|split` flag.
+
+The default behavior remains `legacy`, so existing `karmadactl init` users continue to use the current aggregated certificate Secrets.
+
+When `--secret-layout=split` is selected, generated certificate material is distributed into component-scoped Secrets. The Kubernetes deployment layer consumes a certificate plan for Secret names, data keys, volume mounts, and command-line certificate paths instead of hard-coding those details in each workload template.
+
+The PR also adds config-file support via `spec.secretLayout`, keeps a legacy-compatible `karmada-cert` Secret for compatibility, and handles external etcd by reusing user-provided etcd certificate material.
+
+**Which issue(s) this PR fixes**:
+
+N/A
+
+Part of #6051
+Related to #6670
+
+**Special notes for your reviewer**:
+
+- Scope: `karmadactl init` certificate generation and distribution only.
+- Not included: cert-manager CRDs, certificate rotation controller, Helm chart changes, operator changes, or hot reload/restart behavior.
+- Compatibility: `legacy` remains the default layout.
+- Review focus:
+  - Secret names, data keys, mount paths, and command paths for `split`.
+  - Whether keeping a legacy-compatible `karmada-cert` Secret in `split` is the right compatibility bridge.
+  - Whether component client certificate identities and groups should be narrowed in a follow-up.
+  - External etcd behavior in `split`.
+- AI assistance: Used Codex to inspect code paths, draft tests, and prepare this PR. I reviewed and validated the changes.
+
+Tests:
+
+```bash
+PATH="$(go env GOPATH)/bin:$PATH" golangci-lint run ./pkg/karmadactl/cmdinit/...
+PATH="$(go env GOPATH)/bin:$PATH" hack/verify-staticcheck.sh
+hack/verify-import-aliases.sh
+go test ./pkg/karmadactl/... -count=1
+hack/verify-command-line-flags.sh
+git diff --check
+```
+
+Fork push CI for `ranxi2001/karmada@eb02bde96cbd88697bb808e2cb56137070d18a4c` passed:
+
+- CI Workflow: success
+- CLI: success
+- Chart: success
+- Operator: success
+
+**Does this PR introduce a user-facing change?**:
+
+```release-note
+karmadactl: Added `--secret-layout=split` to `karmadactl init` to optionally distribute generated certificates into component-scoped Secrets while keeping the default legacy layout unchanged.
+```
+````
+
 ## 明日最小行动
 
 1. 把证书管理层设计先整理成更小的代码改动边界，避免直接在部署代码中散落 `split` 判断。
