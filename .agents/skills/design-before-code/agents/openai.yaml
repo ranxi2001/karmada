@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Before Code"
+  short_description: "Plan architecture, scope, and tests before implementation."
+  default_prompt: "Use design-before-code to analyze the architecture and file-level scope before editing code."
