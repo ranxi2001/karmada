@@ -1315,6 +1315,8 @@ https://github.com/karmada-io/website/issues/1014
 - Fork push CI:
   - Branch: `ranxi2001/karmada@feature/cert-mode-rotate`
   - Commit: `32e5539256168fb44ddef6b3db39434e5b39d227`
+  - Status: passed. GitHub checks show 16 successful and 2 skipped checks.
+  - Workflow summary from `karmada-push-ci-check`: 4 successful workflows (`CI Workflow`, `Chart`, `CLI`, `Operator`) and 2 skipped workflows (`FOSSA`, `image-scanning`).
   - Actions run set: https://github.com/ranxi2001/karmada/actions?query=branch%3Afeature%2Fcert-mode-rotate
 
 **Does this PR introduce a user-facing change?**:
@@ -1326,7 +1328,7 @@ https://github.com/karmada-io/website/issues/1014
 
 ### PR 创建前检查清单
 
-- [ ] fork push CI 全部完成后，把 `Fork push CI` 一节从 Actions 列表链接更新为明确的 passed 状态。
+- [x] fork push CI 全部完成后，把 `Fork push CI` 一节从 Actions 列表链接更新为明确的 passed 状态。
 - [ ] 再确认 `feature/cert-mode-rotate` 是否仍基于最新 `upstream/master`。
 - [ ] 如果 CI 结束后有失败项，先修分支，不要开 upstream PR。
 - [ ] 开 PR 前让用户确认 title、body、base/head branch。
