@@ -24,3 +24,5 @@ _output/
 # sub chart tgz
 charts/karmada/charts
 charts/karmada-operator/charts
+
+.agents/skills/gpt-image-draw
