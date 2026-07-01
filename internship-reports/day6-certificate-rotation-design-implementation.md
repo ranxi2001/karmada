@@ -1331,7 +1331,17 @@ https://github.com/karmada-io/website/issues/1014
 - [x] fork push CI 全部完成后，把 `Fork push CI` 一节从 Actions 列表链接更新为明确的 passed 状态。
 - [x] 再确认 `feature/cert-mode-rotate` 是否仍基于最新 `upstream/master`：`upstream/master` = `ffbade988fc3d6652daa504ff6cac37141e9f755`，是该分支祖先。
 - [x] 如果 CI 结束后有失败项，先修分支，不要开 upstream PR：当前无失败，`CI Workflow` / `Chart` / `CLI` / `Operator` 均 success。
-- [ ] 开 PR 前让用户确认 title、body、base/head branch。
+- [x] 开 PR 前让用户确认 title、body、base/head branch。
+
+### PR 提交结果
+
+- PR: [karmada-io/karmada#7697](https://github.com/karmada-io/karmada/pull/7697)
+- Title: `feat: support rotating init-managed certificates`
+- Base/head: `karmada-io/karmada:master <- ranxi2001:feature/cert-mode-rotate`
+- Commit: `32e5539256168fb44ddef6b3db39434e5b39d227`
+- 初始状态：`MERGEABLE`
+- DCO: passed
+- 上游 PR CI：已触发，创建后处于 running / queued 状态，需要继续观察。
 
 ## 给 mentor 的通俗解释和 PR 拆分计划
 
