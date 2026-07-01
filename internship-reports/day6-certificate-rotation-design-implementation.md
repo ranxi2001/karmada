@@ -863,3 +863,342 @@ flowchart LR
 5. 用测试证明 rotate 的副作用边界：只更新证书 Secret，不动 workload，不动 caBundle。
 
 这个设计和社区会议要讲的重点一致：第一版先解决“用户如何可靠地批量替换由 `karmadactl init` 管理的组件身份证书”，而不是一次性重做整个证书管理体系。
+
+## 实现后代码变动解释（feature/cert-mode-rotate）
+
+实现分支：
+
+- branch: `feature/cert-mode-rotate`
+- commit: `32e553925 feat: support rotating init managed certificates`
+- fork push CI 当前观察：已有大部分 check 成功，`FOSSA` / `image-scanning` skipped，剩余 `CI Workflow` / `CLI` / `Chart` / `Operator` 等仍在跑。
+
+这次实现严格按前面的文件级设计落地，变更集中在 `pkg/karmadactl/cmdinit` 和生成的 command-line flag 文档，没有修改 workload 模板、挂载路径、caBundle、Helm chart 或 operator。
+
+### 变更文件总览
+
+```mermaid
+flowchart TB
+    subgraph Entry["入口与配置"]
+        A["cmdinit.go<br/>新增 --cert-mode flag 和示例"]
+        B["config/types.go<br/>新增 spec.certMode"]
+        C["docs/command-line-flags/karmadactl_init.md<br/>生成 flag 文档"]
+    end
+
+    subgraph Flow["init 流程分流"]
+        D["kubernetes/deploy.go<br/>CertMode、Validate、Complete、RunInit 分流"]
+        E["kubernetes/cert_rotation.go<br/>新增 rotate 独立路径"]
+    end
+
+    subgraph Cert["证书底层 helper"]
+        F["cert/cert.go<br/>新增 PEM bytes 加载/编码 helper"]
+    end
+
+    subgraph Tests["测试"]
+        G["cmdinit_test.go<br/>flag 存在性"]
+        H["config_test.go<br/>certMode 解析"]
+        I["cert_test.go<br/>PEM helper"]
+        J["deploy_test.go<br/>rotate 副作用边界"]
+    end
+
+    A --> D
+    B --> D
+    D --> E
+    E --> F
+    A --> C
+    A --> G
+    B --> H
+    F --> I
+    E --> J
+```
+
+对应 `git diff --stat`：
+
+| 文件 | 变更性质 | 解释 |
+| --- | --- | --- |
+| `pkg/karmadactl/cmdinit/cmdinit.go` | 小改 | 增加 `--cert-mode` flag，默认 `install`；补 rotate 示例。 |
+| `pkg/karmadactl/cmdinit/config/types.go` | 小改 | 配置文件支持 `spec.certMode`，避免 CLI 和 config 能力不一致。 |
+| `pkg/karmadactl/cmdinit/kubernetes/deploy.go` | 中改 | 增加 mode validation；拆 `Complete()` / `RunInit()`；抽出 cert config 和 Secret spec 构造；新增 update-only Secret 同步。 |
+| `pkg/karmadactl/cmdinit/kubernetes/cert_rotation.go` | 新增 | rotate 主流程：读取既有 CA，重新签发 leaf cert，更新既有 Secrets。 |
+| `pkg/karmadactl/cmdinit/cert/cert.go` | 小改 | 增加从 PEM bytes 加载 cert/key、编码 private key 的 helper，避免 rotate 走落盘 `GenCerts()`。 |
+| `*_test.go` | 测试 | 覆盖 flag/config/PEM helper/rotate 副作用边界。 |
+| `docs/command-line-flags/karmadactl_init.md` | 生成文件 | 由 `hack/update-command-line-flags.sh` 生成。 |
+
+### 核心运行路径变化
+
+之前 `RunInit()` 只有一条安装路径：
+
+```mermaid
+flowchart TD
+    A["RunInit()"] --> B["genCerts()"]
+    B --> C["read cert files into CertAndKeyFileData"]
+    C --> D["prepare CRDs"]
+    D --> E["create local kubeconfig"]
+    E --> F["create namespace"]
+    F --> G["create cert Secrets"]
+    G --> H["create apiserver / etcd / components"]
+    H --> I["InitKarmadaResources(caBundle)"]
+```
+
+现在变成 mode 分流：
+
+```mermaid
+flowchart TD
+    A["RunInit(parentCommand)"] --> B{"certMode()"}
+    B -->|install / default| C["runInstall(parentCommand)<br/>原安装路径"]
+    B -->|rotate| D["runCertRotate()<br/>只做证书轮换"]
+
+    C --> C1["genCerts()"]
+    C1 --> C2["prepare CRDs / namespace / workloads"]
+    C2 --> C3["createCertsSecrets()<br/>create-or-update"]
+    C3 --> C4["InitKarmadaResources(caBundle)"]
+
+    D --> D1["buildInitCertConfigs()"]
+    D1 --> D2["prepareRotatedCertAndKeyData()"]
+    D2 --> D3["load existing CA material"]
+    D3 --> D4["sign new leaf certs"]
+    D4 --> D5["updateCertsSecrets()<br/>update-only"]
+
+    D -. "must not call" .-> C2
+    D -. "must not update" .-> C4
+```
+
+这张图是 reviewer 看 diff 的主线：`install` 是原路径，`rotate` 是新路径。新路径不进入 CRD、workload、caBundle 创建逻辑。
+
+### `Complete()` 的拆分解释
+
+原 `Complete()` 里混了两类动作：
+
+1. 通用动作：创建 rest config / kube client。
+2. 安装期动作：检查 NodePort 是否已存在、给 node 打 etcd label、解析 hostPath etcd selector、清理 `KarmadaDataPath`。
+
+rotate 不能执行安装期动作，因为 rotate 面对的是“已经安装好的 Karmada”。如果继续检查 NodePort，会因为 apiserver Service 已存在而失败；如果继续 node label 逻辑，会在轮换证书时修改节点；如果继续清理 data path，可能误删本地安装数据。
+
+实现后：
+
+```mermaid
+flowchart TB
+    A["Complete()"] --> B["completeCommon()"]
+    B --> C{"certMode()"}
+    C -->|install| D["completeInstall()"]
+    C -->|rotate| E["completeRotate()"]
+
+    B --> B1["RestConfig"]
+    B --> B2["KubeClientSet"]
+
+    D --> D1["isNodePortExist()"]
+    D --> D2["AddNodeSelectorLabels()"]
+    D --> D3["handleEtcdNodeSelectorLabels()"]
+    D --> D4["initializeCommandLineArgs()"]
+    D --> D5["initializeDirectory(KarmadaDataPath)"]
+
+    E --> E1["getKarmadaAPIServerIP()"]
+    E -. "skip" .-> D1
+    E -. "skip" .-> D2
+    E -. "skip" .-> D5
+```
+
+这里不是删除安装能力，而是把安装期副作用从通用路径里隔离出去。
+
+### “删除的代码”实际做了什么
+
+diff 里看起来有几处删除，实际都是“抽函数/分流”，不是删功能。
+
+#### 1. `genCerts()` 内部证书配置被抽出
+
+原来 `genCerts()` 内部直接构造：
+
+- etcd server/client cert config
+- karmada/admin cert config
+- apiserver cert config
+- front-proxy-client cert config
+
+然后立即调用 `cert.GenCerts()`。
+
+现在改为：
+
+```mermaid
+flowchart LR
+    A["buildInitCertConfigs()"] --> B["install: genCerts()"]
+    A --> C["rotate: runCertRotate()"]
+
+    B --> D["cert.GenCerts()<br/>安装期可生成 CA"]
+    C --> E["signLeafCert()<br/>只用既有 CA 签 leaf cert"]
+```
+
+解释：
+
+- 删除的是 `genCerts()` 里直接内联的 config 构造代码。
+- 新增的是 `buildInitCertConfigs()`，让 install 和 rotate 复用同一套 SAN / CN / validity 规则。
+- `install` 仍调用 `cert.GenCerts()`，默认安装行为不变。
+- `rotate` 不调用 `cert.GenCerts()`，因为 `GenCerts()` 在缺少 CA 文件时会生成新 root CA / front-proxy-ca / etcd-ca，这不符合本次“不轮转 CA”的设计。
+
+#### 2. `createCertsSecrets()` 内联创建逻辑被抽成 Secret spec
+
+原来 `createCertsSecrets()` 是边构造 Secret、边 `CreateOrUpdateSecret()`。
+
+现在拆成：
+
+```mermaid
+flowchart TD
+    A["certSecretSpecs()"] --> B["component kubeconfig Secrets"]
+    A --> C["etcd-cert"]
+    A --> D["karmada-cert"]
+    A --> E["karmada-webhook-cert"]
+
+    B --> F["install: createCertsSecrets()"]
+    C --> F
+    D --> F
+    E --> F
+
+    B --> G["rotate: updateCertsSecrets()"]
+    C --> G
+    D --> G
+    E --> G
+
+    F --> H["CreateOrUpdateSecret()"]
+    G --> I["preflight existing Secret ResourceVersion"]
+    I --> J["Update only"]
+```
+
+解释：
+
+- 删除的是 `createCertsSecrets()` 里重复的“构造后立即写入”代码。
+- 新增 `certSecretSpecs()` 统一构造 Secret 数据结构。
+- `install` 继续 create-or-update，保持原行为。
+- `rotate` 使用 update-only：先检查所有目标 Secret 已存在，再统一 update。这样用户传错 namespace 时不会创建一套无效 Secret，也避免失败时半更新。
+
+#### 3. 原 `RunInit()` 主体被改名为 `runInstall()`
+
+原 `RunInit()` 的主体没有被删，而是整体变成 `runInstall()`。
+
+```mermaid
+flowchart TD
+    A["old RunInit body"] --> B["new runInstall(parentCommand)"]
+    C["new RunInit(parentCommand)"] --> D{"certMode()"}
+    D -->|install| B
+    D -->|rotate| E["runCertRotate()"]
+```
+
+解释：
+
+- 删除的是 `RunInit()` 直接承载所有安装逻辑的形态。
+- 保留的是原安装逻辑本身。
+- 新增的是顶层 mode dispatch。
+
+### 新增 `cert_rotation.go` 的职责
+
+`cert_rotation.go` 是这次最核心的新文件。它不是新的证书管理系统，也不是 controller，只是 rotate mode 的独立实现。
+
+```mermaid
+flowchart TD
+    A["runCertRotate()"] --> B["buildInitCertConfigs()"]
+    B --> C["prepareRotatedCertAndKeyData()"]
+    C --> D["get existing karmada-cert"]
+    D --> E["load root CA"]
+    D --> F["load front-proxy-ca"]
+    E --> G["sign karmada leaf cert"]
+    E --> H["sign apiserver leaf cert"]
+    F --> I["sign front-proxy-client leaf cert"]
+
+    C --> J{"external etcd?"}
+    J -->|no| K["load etcd-ca<br/>sign etcd server/client leaf certs"]
+    J -->|yes| L["reuse external etcd cert material"]
+
+    G --> M["CertAndKeyFileData"]
+    H --> M
+    I --> M
+    K --> M
+    L --> M
+    M --> N["updateCertsSecrets()"]
+```
+
+关键点：
+
+- root CA、front-proxy CA、etcd CA 都只读取复用。
+- 新签发的是 leaf cert：`karmada`、`apiserver`、`front-proxy-client`、internal etcd 的 `etcd-server` / `etcd-client`。
+- 如果 CA private key 不存在，直接报错，不生成新 CA。
+- 如果用户传了 `--ca-cert-file` / `--ca-key-file`，会校验文件里的 CA cert 必须和现有 `karmada-cert` Secret 里的 CA cert 一致，避免拿另一套 CA 签出不被信任的 leaf cert。
+
+### Secret 更新边界
+
+rotate 只更新 init 管理的 Secret：
+
+```mermaid
+flowchart LR
+    A["rotated CertAndKeyFileData"] --> B["certSecretSpecs()"]
+    B --> C["karmada-cert"]
+    B --> D["etcd-cert"]
+    B --> E["karmada-webhook-cert"]
+    B --> F["karmada-*.config Secrets"]
+
+    B -. "not touched" .-> G["Deployments"]
+    B -. "not touched" .-> H["StatefulSets"]
+    B -. "not touched" .-> I["Services"]
+    B -. "not touched" .-> J["WebhookConfiguration / APIService / CRD caBundle"]
+```
+
+这也是测试的重点：不是只证明 Secret 能更新，而是证明 rotate 不会创建/更新 Deployment、StatefulSet、Service。
+
+### 为什么没有改这些文件
+
+| 文件 / 目录 | 没改原因 |
+| --- | --- |
+| `pkg/karmadactl/cmdinit/kubernetes/command.go` | 组件命令使用的证书路径和 kubeconfig 路径没有变化，Secret 名称和挂载路径保持兼容。 |
+| `pkg/karmadactl/cmdinit/kubernetes/deployments.go` | Deployment 仍挂载同名 Secret；第一版不自动重启、不改模板。 |
+| `pkg/karmadactl/cmdinit/kubernetes/statefulset.go` | internal etcd 仍挂载 `etcd-cert`；Secret 更新后由用户按顺序重启。 |
+| `pkg/karmadactl/cmdinit/karmada/deploy.go` | 不更新 APIService/Webhook/CRD caBundle，因为 CA 不轮转。 |
+| `charts/` / `operator/` | #7693 第一版聚焦 `karmadactl init`，不把 Helm/operator 混进来。 |
+
+### 测试覆盖解释
+
+```mermaid
+flowchart TB
+    A["Tests"] --> B["flag/config"]
+    A --> C["cert PEM helper"]
+    A --> D["rotate path"]
+    A --> E["generated docs"]
+    A --> F["lint/staticcheck"]
+
+    B --> B1["cmdinit_test.go: cert-mode flag exists"]
+    B --> B2["config_test.go / deploy_test.go: certMode parses"]
+
+    C --> C1["LoadCertAndKeyPEM valid PEM"]
+    C --> C2["invalid PEM returns error"]
+    C --> C3["nil private key rejected"]
+
+    D --> D1["rotate keeps CA unchanged"]
+    D --> D2["rotated leaf cert is signed by old CA"]
+    D --> D3["webhook cert follows new karmada cert"]
+    D --> D4["missing existing Secret fails"]
+    D --> D5["missing CA key fails without update"]
+    D --> D6["no Deployment/StatefulSet/Service action"]
+
+    E --> E1["hack/verify-command-line-flags.sh"]
+    F --> F1["golangci-lint cmdinit scope"]
+    F --> F2["verify-staticcheck"]
+```
+
+本地已跑过：
+
+```bash
+go test ./pkg/karmadactl/cmdinit/... -count=1
+go test ./pkg/karmadactl/... ./cmd/karmadactl/... ./cmd/kubectl-karmada/... -count=1
+hack/verify-command-line-flags.sh
+hack/verify-import-aliases.sh
+PATH="$(go env GOPATH)/bin:$PATH" golangci-lint run ./pkg/karmadactl/cmdinit/...
+PATH="$(go env GOPATH)/bin:$PATH" hack/verify-staticcheck.sh
+git diff --check
+```
+
+### 给 reviewer 的一句话解释
+
+这次 PR 不是重做 Karmada 证书体系，而是在现有 `karmadactl init` 证书生成和 Secret 数据结构上增加一个受限的 rotate mode：
+
+> `install` 仍保留原行为；`rotate` 只读取既有 CA，重新签发组件 leaf certificates，并 update 已存在的 init-managed Secrets，不生成新 CA、不更新 caBundle、不重建 workload。
+
+### 当前剩余需要 review 的点
+
+1. `--cert-mode=rotate` 这个 UX 是否符合维护者预期。
+2. rotate mode 默认从 Secret 读取 CA private key 是否可接受；如果社区更希望强制用户传本地 CA 文件，需要调整。
+3. external etcd 场景当前是复用已有 external etcd cert material，不主动生成；这是否符合预期。
+4. 是否需要在命令输出中打印更完整的手工 restart 提示。
