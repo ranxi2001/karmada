@@ -1202,3 +1202,97 @@ git diff --check
 2. rotate mode 默认从 Secret 读取 CA private key 是否可接受；如果社区更希望强制用户传本地 CA 文件，需要调整。
 3. external etcd 场景当前是复用已有 external etcd cert material，不主动生成；这是否符合预期。
 4. 是否需要在命令输出中打印更完整的手工 restart 提示。
+
+## PR 文案准备（feature/cert-mode-rotate）
+
+### PR 基本信息
+
+- Target repo: `karmada-io/karmada`
+- Base branch: `master`
+- Head branch: `ranxi2001:feature/cert-mode-rotate`
+- Head commit: `32e5539256168fb44ddef6b3db39434e5b39d227`
+- Related issue: [karmada-io/karmada#7693](https://github.com/karmada-io/karmada/issues/7693)
+- Related docs issue: [karmada-io/website#1014](https://github.com/karmada-io/website/issues/1014)
+
+### Suggested PR title
+
+```text
+feat: support rotating init-managed certificates
+```
+
+### Suggested PR body
+
+```markdown
+**What type of PR is this?**
+
+/kind feature
+
+**What this PR does / why we need it**:
+
+This PR adds a `--cert-mode` option to `karmadactl init` and implements `--cert-mode=rotate` for certificates managed by `karmadactl init`.
+
+The rotate path reuses existing CA certificates and private keys from the current certificate Secrets, or validates `--ca-cert-file` / `--ca-key-file` against the existing CA when they are provided. It then issues new component identity certificates and updates the existing init-managed certificate/config Secrets.
+
+The default mode remains `install`, so the existing installation behavior is preserved.
+
+This is intentionally scoped to `karmadactl init`. It does not rotate CA/root certificates, update WebhookConfiguration/APIService/CRD caBundle fields, recreate workloads, restart components automatically, or change Helm/operator/cert-manager certificate management.
+
+**Which issue(s) this PR fixes**:
+
+Fixes #7693
+
+<!--
+Related docs work:
+https://github.com/karmada-io/website/issues/1014
+-->
+
+**Special notes for your reviewer**:
+
+- Scope:
+  - Adds `--cert-mode` with supported values `install` and `rotate`.
+  - Adds `spec.certMode` support for the init config file.
+  - Keeps `install` as the default path.
+  - Updates existing init-managed Secrets during rotate: `karmada-cert`, `etcd-cert`, `karmada-webhook-cert`, and the component kubeconfig Secrets.
+
+- Implementation notes:
+  - `RunInit` now dispatches to the default install path or the new rotate path.
+  - `Complete` is split into common/install/rotate steps so rotate skips install-only side effects such as NodePort conflict checks, node selector mutation, and data path initialization.
+  - Rotate reuses existing CA material and only signs new leaf certificates.
+  - Missing CA private key fails instead of generating a new CA.
+  - If `--ca-cert-file` and `--ca-key-file` are provided, the provided CA certificate must match the CA in the existing `karmada-cert` Secret.
+  - Internal etcd renews `etcd-server` and `etcd-client` leaf certificates with the existing etcd CA.
+  - External etcd reuses provided or existing external etcd certificate material.
+
+- Intentionally not included:
+  - No CA/root CA rotation.
+  - No WebhookConfiguration/APIService/CRD caBundle updates.
+  - No workload recreation or automatic rollout restart.
+  - No Helm chart, operator, or cert-manager integration changes.
+
+- Tests:
+  - `go test ./pkg/karmadactl/cmdinit/... -count=1`
+  - `go test ./pkg/karmadactl/... ./cmd/karmadactl/... ./cmd/kubectl-karmada/... -count=1`
+  - `hack/verify-command-line-flags.sh`
+  - `hack/verify-import-aliases.sh`
+  - `PATH="$(go env GOPATH)/bin:$PATH" golangci-lint run ./pkg/karmadactl/cmdinit/...`
+  - `PATH="$(go env GOPATH)/bin:$PATH" hack/verify-staticcheck.sh`
+  - `git diff --check`
+
+- Fork push CI:
+  - Branch: `ranxi2001/karmada@feature/cert-mode-rotate`
+  - Commit: `32e5539256168fb44ddef6b3db39434e5b39d227`
+  - Actions run set: https://github.com/ranxi2001/karmada/actions?query=branch%3Afeature%2Fcert-mode-rotate
+
+**Does this PR introduce a user-facing change?**:
+
+```release-note
+`karmadactl init`: Added `--cert-mode=rotate` to rotate certificates managed by `karmadactl init`; users still need to restart related components for the new certificates to take effect.
+```
+```
+
+### PR 创建前检查清单
+
+- [ ] fork push CI 全部完成后，把 `Fork push CI` 一节从 Actions 列表链接更新为明确的 passed 状态。
+- [ ] 再确认 `feature/cert-mode-rotate` 是否仍基于最新 `upstream/master`。
+- [ ] 如果 CI 结束后有失败项，先修分支，不要开 upstream PR。
+- [ ] 开 PR 前让用户确认 title、body、base/head branch。
