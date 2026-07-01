@@ -433,3 +433,269 @@ automatic component restart, CA rotation, or caBundle migration.
 - 把 `kind` 路径、`karmadactl` 路径、组件镜像版本抽成变量。
 - 明确输出四段证据：before expiry、after expiry、after rotate、after restart recovery。
 - 继续保留 `hostPath` etcd，避免重启 etcd 时丢数据。
+
+## 追加实验：多节点 host cluster + rollout restart 恢复
+
+### 为什么补跑这一版
+
+上一版为了绕开单节点 kind 的调度限制，使用了 `delete pod` 来强制组件重启。这个做法可以证明“组件重启后会重新加载 rotate 后的新证书”，但不够接近用户实际可能执行的滚动重启。
+
+mentor 追问后，补跑一版更接近真实操作的验证：
+
+```text
+multi-node host kind cluster
+  -> 短证书安装 Karmada
+  -> 等待证书真实过期
+  -> 执行 --cert-mode=rotate
+  -> 使用 kubectl rollout restart 重启相关组件
+  -> 验证 Karmada API 和 member cluster 恢复
+```
+
+这版验证的关键区别：
+
+- host cluster 是 3 个 node：1 个 control-plane，2 个 worker。
+- 恢复动作使用 `rollout restart`，不再直接 delete pod。
+- baseline 前显式等待两个 push member cluster 都 `Ready=True`。
+- 最终 APIService 检查使用 rotated Karmada kubeconfig，避免上一版脚本里查错 host API 的问题。
+
+### 实验环境
+
+| 项目 | 内容 |
+| --- | --- |
+| 实验目录 | `/tmp/karmada-cert-rotate-multinode-observe/` |
+| 证据目录 | `/tmp/karmada-cert-rotate-multinode-observe/logs/` |
+| host cluster | `cert-rotate-mn-host`，3 nodes |
+| host nodes | `cert-rotate-mn-host-control-plane`、`cert-rotate-mn-host-worker`、`cert-rotate-mn-host-worker2` |
+| member clusters | `cert-rotate-mn-member1`、`cert-rotate-mn-member2` |
+| 初始证书有效期 | `--cert-validity-period=10m` |
+| 轮换后证书有效期 | `--cert-validity-period=8760h` |
+| etcd 存储 | `--etcd-storage-mode=hostPath` |
+| etcd node selector | `--etcd-node-selector-labels karmada.io/etcd=true` |
+| 重启动作 | `kubectl rollout restart` |
+
+### 多节点环境里的 etcd hostPath 细节
+
+多节点 + hostPath 有一个容易踩的点：etcd 必须固定在同一个 node，否则 StatefulSet 重启后可能调度到另一个 node，导致 hostPath 数据目录变了，看起来像 etcd 数据丢失。
+
+第一次把 label 加到了 control-plane node：
+
+```bash
+kubectl label node cert-rotate-mn-host-control-plane karmada.io/etcd=true
+```
+
+结果 etcd pending：
+
+```text
+0/3 nodes are available:
+1 node(s) had untolerated taint(s),
+2 node(s) didn't match Pod's node affinity/selector.
+```
+
+原因是 kind control-plane 默认有 taint，而 etcd pod 没有对应 toleration。修正方式是把 etcd label 放到 worker node：
+
+```bash
+kubectl label node cert-rotate-mn-host-control-plane karmada.io/etcd-
+kubectl label node cert-rotate-mn-host-worker karmada.io/etcd=true --overwrite
+```
+
+之后 etcd 正常调度到 worker：
+
+```text
+etcd-0   1/1 Running   cert-rotate-mn-host-worker
+```
+
+这个细节和 #7697 功能本身无关，但会影响本地多节点验证是否干净。
+
+### baseline
+
+证据文件：
+
+```text
+/tmp/karmada-cert-rotate-multinode-observe/logs/baseline-before-expiry.log
+```
+
+baseline 前先等待两个 member cluster 都 Ready。最终 baseline：
+
+```text
+NAME                     VERSION   MODE   READY
+cert-rotate-mn-member1   v1.36.1   Push   True
+cert-rotate-mn-member2   v1.36.1   Push   True
+```
+
+Karmada 控制面组件分布在两个 worker 上：
+
+```text
+etcd-0                                      1/1 Running   cert-rotate-mn-host-worker
+karmada-apiserver                          1/1 Running   cert-rotate-mn-host-worker2
+karmada-aggregated-apiserver               1/1 Running   cert-rotate-mn-host-worker2
+kube-controller-manager                    1/1 Running   cert-rotate-mn-host-worker
+karmada-controller-manager                 1/1 Running   cert-rotate-mn-host-worker
+karmada-scheduler                          1/1 Running   cert-rotate-mn-host-worker2
+karmada-webhook                            1/1 Running   cert-rotate-mn-host-worker2
+```
+
+初始 leaf certificates 过期时间：
+
+```text
+karmada.crt       notAfter=Jul  1 09:40:12 2026 GMT
+apiserver.crt     notAfter=Jul  1 09:40:12 2026 GMT
+etcd-client.crt   notAfter=Jul  1 09:40:12 2026 GMT
+```
+
+### 证书过期后的故障
+
+证据文件：
+
+```text
+/tmp/karmada-cert-rotate-multinode-observe/logs/after-expiry-observation.log
+```
+
+旧 kubeconfig 访问 Karmada API 失败：
+
+```text
+Unable to connect to the server: tls: failed to verify certificate:
+x509: certificate has expired or is not yet valid:
+current time 2026-07-01T17:40:42+08:00 is after 2026-07-01T09:40:12Z
+old_kubeconfig_get_clusters_rc=1
+```
+
+控制面组件出现异常：
+
+```text
+karmada-controller-manager   0/1 CrashLoopBackOff
+kube-controller-manager      0/1 Error
+karmada-scheduler            leader election failed repeatedly
+```
+
+日志里同样能看到访问 `karmada-apiserver.karmada-system.svc.cluster.local:5443` 时证书过期。
+
+### rotate 更新 Secret
+
+证据文件：
+
+```text
+/tmp/karmada-cert-rotate-multinode-observe/logs/karmadactl-rotate-after-expiry.log
+/tmp/karmada-cert-rotate-multinode-observe/logs/after-rotate-secret-dates.log
+```
+
+执行：
+
+```bash
+/root/go/bin/karmadactl --kubeconfig="$MAIN_KUBECONFIG" --namespace=karmada-system init \
+  --cert-mode=rotate \
+  --cert-validity-period=8760h \
+  --port 32443 \
+  --etcd-storage-mode=hostPath \
+  --etcd-node-selector-labels karmada.io/etcd=true \
+  --etcd-replicas=1 \
+  --v=4
+```
+
+rotate 成功后输出：
+
+```text
+Certificate Secrets in namespace "karmada-system" have been updated.
+Restart Karmada control plane components to load the rotated certificates.
+```
+
+leaf certificates 更新到 2027 年：
+
+```text
+karmada-cert/karmada.crt       notAfter=Jul  1 09:40:42 2027 GMT
+karmada-cert/apiserver.crt     notAfter=Jul  1 09:40:42 2027 GMT
+karmada-cert/etcd-client.crt   notAfter=Jul  1 09:40:42 2027 GMT
+etcd-cert/etcd-server.crt      notAfter=Jul  1 09:40:42 2027 GMT
+```
+
+CA 仍未变化：
+
+```text
+karmada-cert/ca.crt      notAfter=Jun 28 09:30:13 2036 GMT
+etcd-cert/etcd-ca.crt    notAfter=Jun 28 09:30:15 2036 GMT
+```
+
+### rollout restart 恢复
+
+证据文件：
+
+```text
+/tmp/karmada-cert-rotate-multinode-observe/logs/rollout-restart-to-load-new-certs.log
+/tmp/karmada-cert-rotate-multinode-observe/logs/recovery-verification.log
+```
+
+执行的恢复动作：
+
+```bash
+kubectl -n karmada-system rollout restart statefulset/etcd
+kubectl -n karmada-system rollout restart deployment/karmada-apiserver
+kubectl -n karmada-system rollout restart deployment/karmada-aggregated-apiserver
+kubectl -n karmada-system rollout restart deployment/kube-controller-manager
+kubectl -n karmada-system rollout restart deployment/karmada-controller-manager
+kubectl -n karmada-system rollout restart deployment/karmada-scheduler
+kubectl -n karmada-system rollout restart deployment/karmada-webhook
+```
+
+所有组件 rollout 成功：
+
+```text
+statefulset.apps/etcd restarted
+partitioned roll out complete: 1 new pods have been updated
+deployment "karmada-apiserver" successfully rolled out
+deployment "karmada-aggregated-apiserver" successfully rolled out
+deployment "kube-controller-manager" successfully rolled out
+deployment "karmada-controller-manager" successfully rolled out
+deployment "karmada-scheduler" successfully rolled out
+deployment "karmada-webhook" successfully rolled out
+```
+
+最终 pod 全部恢复 Running：
+
+```text
+etcd-0                                      1/1 Running
+karmada-apiserver                          1/1 Running
+karmada-aggregated-apiserver               1/1 Running
+kube-controller-manager                    1/1 Running
+karmada-controller-manager                 1/1 Running
+karmada-scheduler                          1/1 Running
+karmada-webhook                            1/1 Running
+```
+
+使用 rotated kubeconfig 验证 Karmada API：
+
+```text
+NAME                     VERSION   MODE   READY
+cert-rotate-mn-member1   v1.36.1   Push   True
+cert-rotate-mn-member2   v1.36.1   Push   True
+```
+
+Karmada APIService 可用：
+
+```text
+v1alpha1.cluster.karmada.io Available=True
+```
+
+### 追加实验结论
+
+多节点 host cluster 下，可以使用 `rollout restart` 完成证书轮换后的组件恢复。这个结果比上一版直接 delete pod 更接近用户实际操作。
+
+更准确的 PR 证据表述应该是：
+
+```text
+I also verified the runtime recovery path on a local multi-node kind host cluster.
+After the short-lived certificates expired, Karmada API access failed and control
+plane components became unhealthy. Running `karmadactl init --cert-mode=rotate`
+updated the init-managed leaf certificates while preserving CA certificates.
+After `kubectl rollout restart` for the related control plane components, all
+components returned to Running, both push-mode member clusters were Ready=True,
+and the Karmada APIService was Available=True.
+```
+
+仍然不能夸大的点：
+
+- #7697 没有自动检测证书过期。
+- #7697 没有自动执行 rotate。
+- #7697 没有自动 rollout restart。
+- #7697 没有做 CA rotation。
+- #7697 没有做 caBundle migration。
+
+这次验证证明的是：在用户手动执行 rotate 并重启相关组件的前提下，过期 leaf certificates 引发的控制面故障可以恢复。
