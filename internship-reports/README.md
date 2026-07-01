@@ -4,6 +4,12 @@
 
 记录方式以实习生视角为主：当天看了哪些文档，跑了哪些命令，理解了哪些概念，遇到哪些问题，以及下一步准备继续研究什么。
 
+## 当前总目标
+
+在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。
+
+这不是单纯的学习目标，而是社区贡献目标。后续日报和 TODO 优先围绕 upstream 可见证据组织：issue/PR 推进、CI 结果、review 响应、测试补强、会议提案和 mentor-facing 复盘。
+
 ## 日报列表
 
 - [Day 1：Karmada #7598 依赖升级 follow-up 和 upstream PR](day1-karmada-7598-default-version-pr.md)

@@ -4,10 +4,13 @@
 
 ## Goal
 
-当前主线：在 `intern` 分支建立 Karmada 项目实习学习仓库，先完成项目结构、核心概念、构建测试、社区流程和可贡献点的入门梳理，再逐步进入源码阅读、issue/PR triage、测试设计和小型 upstream 贡献。
+阶段目标：在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。
+
+当前主线：围绕 Karmada upstream 真实贡献建立稳定产出能力，不再停留在学习仓库搭建。重点是持续完成可 review、可合并、可复盘的社区工作：高质量 issue/PR triage、设计提案、函数级验证、测试补强、PR review 响应和社区会议表达。短期以 `karmadactl init` 证书轮换 PR 为主线，沉淀一套可复用的 Karmada 贡献流程，形成 mentor 可检查的社区影响力证据。
 
 ## Last Run
 
+- 2026-07-01：更新实习阶段目标：在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。目标拆解为：至少持续维护 1 条高质量 upstream feature 主线，形成可复查 issue/PR/CI/review 证据；参与 Karmada issue/PR 讨论和会议表达；把每次社区反馈转化为测试、文档或代码改进；避免只做本地学习而缺少 upstream 可见产出。
 - 2026-07-01：严格按 Day 6 文件级变更清单从 `upstream/master` 新建 upstream-facing 分支 `feature/cert-mode-rotate`，实现 `karmadactl init --cert-mode=rotate` 第一版。提交 `32e553925 feat: support rotating init managed certificates` 已推送到 `origin/feature/cert-mode-rotate` 触发 fork push CI。实现范围保持在 `pkg/karmadactl/cmdinit` 和生成的 `docs/command-line-flags/karmadactl_init.md`：新增 cert mode flag/config 字段、拆分 `Complete()` / `RunInit()`、新增 rotate 独立路径读取既有 CA 并重新签发 leaf cert、update-only 同步既有 cert Secrets；未修改 `command.go`、`deployments.go`、`statefulset.go`、Helm/operator、caBundle 或 workload 模板。本地验证已通过：`go test ./pkg/karmadactl/cmdinit/... -count=1`、`go test ./pkg/karmadactl/... ./cmd/karmadactl/... ./cmd/kubectl-karmada/... -count=1`、`hack/verify-command-line-flags.sh`、`hack/verify-import-aliases.sh`、`PATH="$(go env GOPATH)/bin:$PATH" golangci-lint run ./pkg/karmadactl/cmdinit/...`、`PATH="$(go env GOPATH)/bin:$PATH" hack/verify-staticcheck.sh`、`git diff --check`。
 - 2026-07-01：按用户要求把“先架构/文件级 scope 设计，再写代码”的开发模式沉淀为本地 skill `.agents/skills/design-before-code/`。该 skill 要求在非平凡代码任务前先读现有实现、产出 file scope matrix、no-change list、Mermaid current/proposed flow、函数级设计和测试矩阵；如果实现中发现 scope 扩大，必须先更新设计再继续。已通过 `quick_validate.py`。
 - 2026-07-01：按用户要求继续补充 `internship-reports/day6-certificate-rotation-design-implementation.md`，在末尾新增“代码级别文件变动设计”。内容包括文件触点总览、建议变更清单、第一版明确不改的文件、`RunInit()` / `Complete()` 拆分、CA 与 leaf cert 边界、Secret 更新边界、函数级草案、测试矩阵、实现顺序和 PR body 解释。当前设计结论保持不变：第一版聚焦 `karmadactl init --cert-mode=rotate`，只更新由 init 管理的证书 Secrets，复用既有 CA，不轮转 root CA，不更新 caBundle，不改 workload 模板。
@@ -49,6 +52,7 @@
 
 ## Next
 
+- 以“9 月前拿到 AgentCube Karmada 项目社区席位”为主目标管理后续工作：每周至少沉淀 1 个 upstream-visible 证据，包括 merged PR、reviewed PR、issue 验证、社区会议材料、maintainer feedback follow-up 或可复用测试/文档改进。
 - 继续观察 `origin/feature/cert-mode-rotate` commit `32e553925` 的 fork push CI。若失败，先按 job 分类：代码问题、lint/staticcheck 规则差异、CI 环境差异、flake 或 upstream-only gate；不要直接扩大代码 scope。
 - #7693 后续 PR 前需要准备英文 PR body 和 reviewer 说明，明确第一版 scope：只轮转组件 leaf certificates，复用既有 CA，update-only 同步 init-managed Secrets，不轮转 root CA、不更新 caBundle、不自动重启、不改 Helm/operator/workload 模板。开 upstream PR 前必须让用户确认完整英文文本和目标。
 - #7690 / `feature/cert-manager-layout` 暂时作为背景和 Secret 映射参考，不作为当前第一优先级 PR。旧 branch 已通过 fork push CI，但不要直接从它开 upstream PR。

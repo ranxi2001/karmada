@@ -1,6 +1,6 @@
 # 实习任务 TODO
 
-更新时间：2026-06-30
+更新时间：2026-07-01
 
 这个文档用于管理 Karmada 实习期间的后续任务。日报记录每天做了什么，TODO 记录现在还要做什么、优先级是什么、做到哪里、卡在哪里。
 
@@ -17,6 +17,7 @@
 
 | 优先级 | 任务 | 状态 | 难度 | 成本 | 预计时间 | 产出/证据 | 下一步 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| P0 | 9 月前拿到 AgentCube Karmada 项目社区席位 | DOING | 高 | 中 | 7-8 周 | upstream issue/PR/review/CI/会议材料证据链；每周 mentor 可检查总结 | 以证书轮换 PR 为第一条主线，持续把 review 评论转化为测试、文档或代码改进；每周至少沉淀 1 个 upstream-visible 证据 |
 | P0 | 建立 Karmada 实习基础仓库结构 | DONE | 低 | 低 | 0.5 天 | `AGENTS.md`、`PROGRESS.md`、`internship-reports/`、`.agents/skills/open-source-onboarding/`、[Day 1 日报](day1-karmada-7598-default-version-pr.md) | 后续按 dayN 文件继续记录 |
 | P0 | 迁移并 Karmada 化本地 skills | DONE | 中 | 低 | 0.5 天 | `.agents/skills/drawio-skill/`、`.agents/skills/karmada-pr-management/`、`.agents/skills/karmada-issue-discussion/`；4 个 skills 均通过 `quick_validate.py`，Karmada GitHub 脚本 smoke test 通过 | 后续画图、issue 分析、PR 准备分别使用这些 skills |
 | P0 | 配置 upstream 远程和分支卫生规则 | DONE | 低 | 低 | 0.5 天 | `upstream=https://github.com/karmada-io/karmada.git`；upstream PR 分支从 `upstream/master` 创建；`intern` 只放学习记录 | 后续 upstream 改动继续使用独立 topic branch |
@@ -48,6 +49,35 @@
 5. Day 5：源码深读 scheduler 和 placement policy。
 6. Day 6：社区 issue/PR triage，找一个低风险贡献点。
 7. Day 7：周总结，整理概念、证据、卡点、下一周目标。
+
+## 9 月社区席位目标拆解
+
+目标：在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。
+
+判断标准不是“本地学了多少”，而是是否形成 Karmada 社区可见、mentor 可复查的稳定贡献能力。
+
+### 可检查证据
+
+- upstream PR：至少有持续推进中的高质量 PR，最好能合并；如果未合并，也要有清晰 review 响应、CI 记录和拆分计划。
+- upstream issue：能独立完成 issue 真实性验证、复现/不可复现说明、英文评论草稿和后续行动建议。
+- review 响应：评论区每条有效意见都能转化为代码、测试、文档或清晰解释，避免只口头说明。
+- 测试能力：新增功能必须有函数级和关键路径测试；CI 失败要能定位到 lint、unit、e2e、环境差异或 flake。
+- 社区表达：能用英文/中文讲清楚提案 scope、non-goals、风险、后续 PR 拆分和需要 maintainer 决策的问题。
+- 复盘材料：每周有一份可给 mentor 看的短总结，链接到 issue/PR/commit/CI/report。
+
+### 每周节奏
+
+- 周初：选定 1 条 upstream 主线和 1 个备选小任务，明确 expected evidence。
+- 周中：推进代码、测试或 issue 验证，至少完成一次本地验证或社区反馈响应。
+- 周末：写 mentor-facing 总结，记录本周证据、未解决问题、下周最小行动。
+
+### 当前第一主线
+
+`karmadactl init` 证书轮换能力：
+
+- issue：[#7693](https://github.com/karmada-io/karmada/issues/7693)
+- PR：`feat: support rotating init-managed certificates`
+- 当前重点：等 CI 和 maintainer review；继续把 bot / maintainer 评论转化为测试或代码收敛；准备会议解释和后续拆分计划。
 
 ## 卡点记录模板
 
