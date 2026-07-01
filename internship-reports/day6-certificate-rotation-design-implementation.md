@@ -1203,6 +1203,40 @@ git diff --check
 3. external etcd 场景当前是复用已有 external etcd cert material，不主动生成；这是否符合预期。
 4. 是否需要在命令输出中打印更完整的手工 restart 提示。
 
+## 官方证书框架 11 项覆盖表
+
+参考文档：[Karmada 证书框架](https://karmada.io/zh/docs/administrator/security/cert-framework/)。
+
+这张表只回答一个问题：官方文章里列出的 11 类证书，我们当前 `feature/cert-mode-rotate` 分支覆盖轮换了哪些，哪些没覆盖。结论要按 `karmadactl init` 当前实际实现理解：文章描述的是目标证书框架，很多条目在标准框架里是独立证书；但当前 `karmadactl init` 仍复用 `karmada.crt/key` 和共享 kubeconfig Secret，没有完全做到每个组件独立证书。
+
+| 官方框架条目 | 当前覆盖状态 | 当前分支实际处理 | 没覆盖 / gap |
+| --- | --- | --- | --- |
+| 1. Karmada Root Certificate | 不覆盖 | 读取并复用 `ca.crt/key`，用于签发新的 leaf cert。 | 不轮转 root CA；不做信任根迁移；不更新依赖 root CA 的 caBundle。 |
+| 2. Karmada API Server | 覆盖 | 轮转 `apiserver.crt/key`；轮转访问 etcd 的 `etcd-client.crt/key`；轮转 front-proxy 使用的 `front-proxy-client.crt/key`；保留 `ca.crt` / `front-proxy-ca.crt` / `etcd-ca.crt`。 | 不轮转 `ca.crt/key`、`front-proxy-ca.crt/key`、`etcd-ca.crt/key`。 |
+| 3. Karmada Aggregated API Server | 部分覆盖 | 更新 `karmada-aggregated-apiserver.config`；当前 serving cert 使用共享 `karmada.crt/key`，所以会随共享 leaf cert 更新；访问 etcd 使用共享 `etcd-client.crt/key`，也会更新。 | 没有生成官方框架里的独立 aggregated-apiserver serving cert / client cert；不更新 APIService caBundle。 |
+| 4. Karmada Webhook | 部分覆盖 | 更新 `karmada-webhook.config`；更新 `karmada-webhook-cert` 的 `tls.crt/key`，当前来自新的共享 `karmada.crt/key`。 | 没有生成官方框架里的独立 webhook serving cert；不更新 MutatingWebhookConfiguration / ValidatingWebhookConfiguration caBundle。 |
+| 5. Karmada Search | 部分覆盖 | 更新 `karmada-search.config` 这个 kubeconfig Secret，内容使用新的共享 `karmada.crt/key`。 | 当前 `karmadactl init` 不部署独立 search 证书链；不覆盖 search 独立 serving cert / etcd client cert。 |
+| 6. Karmada Metrics Adapter | 部分覆盖 | 更新 `karmada-metrics-adapter.config` 这个 kubeconfig Secret，内容使用新的共享 `karmada.crt/key`。 | 当前 `karmadactl init` 不部署独立 metrics-adapter 证书链；不覆盖独立 serving cert。 |
+| 7. Karmada Scheduler Estimator | 不覆盖 | 无独立 estimator Secret 被更新。 | 官方框架里的 estimator server / client 证书不在当前 `karmadactl init` 管理范围内；当前 scheduler estimator 参数仍引用共享 `/etc/karmada/pki/ca.crt` 和 `karmada.crt/key`。 |
+| 8. ETCD | 覆盖 internal etcd；external etcd 只同步输入材料 | internal etcd：复用 `etcd-ca.crt/key`，重新签发 `etcd-server.crt/key` 和 `etcd-client.crt/key`，更新 `etcd-cert` 和 `karmada-cert`。external etcd：复用用户提供或现有 Secret 中的 external etcd CA/client cert material。 | 不轮转 `etcd-ca.crt/key`；不生成 external etcd server cert；外部 etcd 证书生命周期仍归用户或外部 etcd 管理。 |
+| 9. Karmada Controller Manager | 部分覆盖 | 更新 `karmada-controller-manager.config`，内容使用新的共享 `karmada.crt/key`。 | 没有生成官方框架里的独立 controller-manager client cert。 |
+| 10. Karmada Scheduler | 部分覆盖 | 更新 `karmada-scheduler.config`；scheduler 当前 gRPC estimator 参数使用共享 `karmada.crt/key`，因此共享 leaf cert 会更新。 | 没有生成官方框架里的独立 scheduler client cert / scheduler-estimator gRPC cert。 |
+| 11. Karmada Descheduler | 部分覆盖 | 更新 `karmada-descheduler.config`，内容使用新的共享 `karmada.crt/key`。 | 没有生成官方框架里的独立 descheduler cert。 |
+
+### 覆盖结论
+
+当前 PR 覆盖的是 `karmadactl init` 已经实际管理并通过 Secret 挂载/配置给组件使用的证书材料：
+
+- `karmada-cert`：保留 CA，轮转 `karmada.crt/key`、`apiserver.crt/key`、`front-proxy-client.crt/key`、internal `etcd-server/client.crt/key`。
+- `etcd-cert`：internal etcd 场景保留 `etcd-ca.crt/key`，轮转 `etcd-server.crt/key`。
+- `karmada-webhook-cert`：更新 `tls.crt/key`。
+- `karmada-*.config`：更新组件 kubeconfig Secret，使用新的共享 `karmada.crt/key`。
+
+当前 PR 没覆盖的是两类：
+
+1. 信任根：`ca.crt/key`、`front-proxy-ca.crt/key`、`etcd-ca.crt/key`。这些属于 CA/root certificates，更新它们会变成信任链迁移，不是这次 leaf certificate rotation。
+2. 官方标准框架中未来应独立化的 per-component cert：例如 aggregated-apiserver 独立 serving cert、webhook 独立 serving cert、search / metrics-adapter / scheduler-estimator / controller-manager / scheduler / descheduler 的独立证书。当前 `karmadactl init` 还没有完全按文章标准拆出这些独立证书，所以本 PR 只刷新现有共享证书和 kubeconfig Secret。
+
 ## PR 文案准备（feature/cert-mode-rotate）
 
 ### PR 基本信息
