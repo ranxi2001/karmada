@@ -699,3 +699,141 @@ and the Karmada APIService was Available=True.
 - #7697 没有做 caBundle migration。
 
 这次验证证明的是：在用户手动执行 rotate 并重启相关组件的前提下，过期 leaf certificates 引发的控制面故障可以恢复。
+
+## 为什么 rotate 后还需要重启相关组件
+
+这里需要区分两个动作：
+
+```text
+karmadactl init --cert-mode=rotate
+  -> 更新 Kubernetes Secret 里的证书和 kubeconfig 数据
+
+重启相关组件
+  -> 让正在运行的组件进程重新读取 Secret volume / kubeconfig 中的新证书
+```
+
+所以重启本身不是“生成新证书”的动作，也不是“修复过期证书”的动作。真正修复证书内容的是 rotate；重启解决的是运行中进程是否已经加载新证书的问题。
+
+Karmada 这些 init-managed 组件的运行要求，本质上是每个组件启动时都必须拿到一组仍然有效、且被对应 CA 信任的证书材料：
+
+| 组件 | 运行时依赖 | 证书来源 / 使用方式 |
+| --- | --- | --- |
+| `etcd` | etcd server cert、etcd CA | `--cert-file`、`--key-file`、`--trusted-ca-file` 指向 Secret volume 中的文件 |
+| `karmada-apiserver` | apiserver serving cert、etcd client cert、client CA、front-proxy client cert | `--tls-cert-file`、`--etcd-certfile`、`--client-ca-file` 等启动参数指向 `/etc/karmada/pki` |
+| `karmada-aggregated-apiserver` | kubeconfig client cert、etcd client cert、serving cert | 同时挂载 kubeconfig Secret 和 `karmada-cert` Secret |
+| `kube-controller-manager` | kubeconfig client cert、CA signing cert/key、service account key | 挂载 kubeconfig Secret 和 `karmada-cert` Secret |
+| `karmada-controller-manager` | kubeconfig client cert | 挂载组件 kubeconfig Secret |
+| `karmada-scheduler` | kubeconfig client cert，scheduler-estimator 相关 cert | 挂载组件 kubeconfig Secret 和 `karmada-cert` Secret |
+| `karmada-webhook` | kubeconfig client cert、webhook serving cert | 挂载组件 kubeconfig Secret 和 `karmada-webhook-cert` Secret |
+
+源码证据：
+
+- `pkg/karmadactl/cmdinit/kubernetes/command.go` 里组件启动参数直接指向证书文件或 kubeconfig 文件，例如 `--tls-cert-file`、`--etcd-certfile`、`--kubeconfig`、`--cert-dir`。
+- `pkg/karmadactl/cmdinit/kubernetes/deployments.go` 和 `pkg/karmadactl/cmdinit/kubernetes/statefulset.go` 里这些文件来自 Secret volume，例如 `karmada-cert`、`etcd-cert`、各组件 `*-kubeconfig` Secret、`karmada-webhook-cert`。
+- `pkg/karmadactl/cmdinit/kubernetes/deploy.go` 生成 kubeconfig Secret 时，把 client certificate/key 数据直接写进 kubeconfig 内容里，而不是只写一个外部文件路径。
+
+为什么不能只更新 Secret 就认为组件已经恢复：
+
+1. Kubernetes 可能把 Secret volume 的文件内容更新到容器文件系统，但这只说明文件层面的投影可能更新了。
+2. 运行中的 Go/Kubernetes 组件是否重新读取 kubeconfig、重建 REST client、重建 TLS transport、重载 server certificate，是每个组件自己的运行时行为，不是 Karmada `init` 资源层统一声明的能力。
+3. 当前 #7697 没有引入 watcher、controller、sidecar、checksum annotation 或自动 rollout 机制，也没有逐个证明所有组件都支持热加载这些证书。
+4. 因此文档和 PR 里更保守、也更符合运维预期的定义是：rotate 更新 Secret 后，用户需要重启相关组件，让新进程从 Secret volume / kubeconfig 读取新证书。
+
+如果证书已经过期，组件本身确实会不可用或部分不可用。本次运行态观测里已经看到：
+
+```text
+旧 kubeconfig 访问 Karmada API 失败；
+karmada-controller-manager 访问 apiserver 失败；
+kube-controller-manager 出现 Error；
+karmada-scheduler leader election 反复失败。
+```
+
+但这里的逻辑不是“因为组件不可用了，所以随便重启一下就能好”。如果 Secret 里仍然是旧的过期证书，重启后组件只会重新加载同一份过期证书，仍然失败。正确恢复顺序是：
+
+```text
+1. 用 rotate 重新签发 leaf certificates，并更新 init-managed Secrets。
+2. 重启 etcd / apiserver / controller-manager / scheduler / webhook 等相关组件。
+3. 新启动的进程读取新证书，TLS 握手和 kubeconfig 认证恢复。
+```
+
+这也是 #7697 对项目设计的边界定义：它提供的是 `karmadactl init` 管理范围内的 leaf certificate renewal path，不定义完整的自动证书生命周期管理系统。自动检测过期、自动 rotate、自动重启、CA rotation、caBundle migration 都是后续更大的设计问题，不能混进当前 PR 的基本恢复语义里。
+
+## Follow-up PR Comment Draft: 设计理念、实验结果和能力边界
+
+> 已由用户确认并发布到 PR #7697：
+> https://github.com/karmada-io/karmada/pull/7697#issuecomment-4853917542
+> 这条 comment 是对已发布 scope/data-flow comment 的补充，重点解释为什么当前 PR 只做 leaf certificate renewal 和 Secret update，不承诺自动加载新证书或自动恢复。
+
+````md
+I would like to add one more note about the design intent, runtime validation result, and the boundary between rotating certificate data and making running components load the new certificates.
+
+### Design intent
+
+This PR intentionally treats certificate rotation as a renewal and distribution operation for certificates managed by `karmadactl init`, not as a full automatic certificate lifecycle controller.
+
+I separate the problem into three steps:
+
+1. Re-issue init-managed leaf certificates by using trusted existing CA material.
+2. Update the init-managed Secret and kubeconfig data in the host cluster.
+3. Make already-running control plane processes consume the updated certificate files.
+
+This PR implements steps 1 and 2. For step 3, it prints restart guidance and expects the operator to restart the related components.
+
+This boundary is intentional for the first version. The Karmada components installed by `karmadactl init` use certificate files and kubeconfig files from Secret volumes through startup flags such as `--tls-cert-file`, `--etcd-certfile`, `--kubeconfig`, and `--cert-dir`. Updating the Secret refreshes the stored certificate data, but it does not by itself define a project-wide guarantee that every already-running process has rebuilt its TLS client/server configuration from the updated files.
+
+Because this PR does not introduce a watcher, sidecar, controller, checksum annotation, or automatic rollout mechanism, the safer operational contract is:
+
+```text
+rotate updates init-managed certificate data;
+component restart makes new processes load that updated data.
+```
+
+### Runtime validation
+
+I also validated the manual recovery path on a local multi-node kind host cluster.
+
+Validation setup:
+
+- Host cluster: 3 nodes.
+- Member clusters: 2 push-mode clusters.
+- Initial certificate validity: `10m`.
+- Rotated certificate validity: `8760h`.
+- Etcd storage: `hostPath`.
+- Restart action: `kubectl rollout restart`.
+
+Observed result:
+
+1. Before expiry, both member clusters were `Ready=True`, and all Karmada control plane pods were running.
+2. After the short-lived leaf certificates expired, the old kubeconfig could no longer access the Karmada API due to an x509 certificate expiry error.
+3. Control plane components became unhealthy or partially broken. For example, `karmada-controller-manager` and `kube-controller-manager` reported errors, and `karmada-scheduler` had repeated leader-election failures.
+4. Running `karmadactl init --cert-mode=rotate --cert-validity-period=8760h ...` updated the init-managed leaf certificates in Secrets.
+5. The CA certificates were unchanged, which matches the intended non-goal of not doing CA/root rotation.
+6. After `kubectl rollout restart` for `etcd`, `karmada-apiserver`, `karmada-aggregated-apiserver`, `kube-controller-manager`, `karmada-controller-manager`, `karmada-scheduler`, and `karmada-webhook`, all components returned to `Running`.
+7. With the rotated kubeconfig, both push-mode member clusters were `Ready=True`, and `v1alpha1.cluster.karmada.io` APIService was `Available=True`.
+
+### Capability boundary
+
+The runtime recovery path verified here is:
+
+```text
+rotate init-managed leaf certificate data
+  -> update init-managed Secrets and kubeconfigs
+  -> restart related components
+  -> new processes load the updated certificate data
+  -> Karmada control plane access recovers
+```
+
+This PR does not claim or implement:
+
+- automatic certificate expiry detection
+- automatic periodic certificate rotation
+- automatic component restart or rollout
+- guaranteed hot reload by every already-running component after Secret updates
+- CA/root certificate rotation
+- caBundle migration for WebhookConfiguration, APIService, or CRD conversion configs
+- Helm, operator, or cert-manager parity
+
+If the existing Secret data still contains expired certificates, restarting alone would not recover the system. The important sequence is: rotate first, then restart the related components so that they can load the renewed leaf certificates.
+
+This keeps the first implementation focused on a reviewable leaf certificate renewal path. A fully automatic certificate lifecycle workflow, especially one that includes restart orchestration or CA trust-root migration, should be handled as a separate follow-up design.
+````
