@@ -8,6 +8,7 @@
 
 ## Last Run
 
+- 2026-07-01：按用户要求开始准备社区会议提案。新增 `internship-reports/day7-certificate-rotation-community-proposal.md`，把 #7693 方案整理成可上会讲的 one-pager、英文 30 秒/3 分钟 talk track、scope/non-goals、Mermaid current/proposed flow、resource touch matrix、测试计划、PR 拆分和 maintainer open questions。核心会议主张：第一版聚焦 `karmadactl init --cert-mode=rotate`，只轮转组件身份证书/leaf certificates，复用既有 CA，不轮转 root CA、不更新 caBundle、不重建 workload；会议需要确认 CLI UX、CA private key 来源、是否只打印重启指导、external etcd 缺省行为。
 - 2026-06-30：按用户要求新增 `internship-reports/day6-certificate-rotation-design-implementation.md`，整理 `karmadactl init` 证书轮换方案设计与实现准备。已对齐 [website#1014](https://github.com/karmada-io/website/issues/1014)、[karmada#4787](https://github.com/karmada-io/karmada/issues/4787)、[karmada#5037](https://github.com/karmada-io/karmada/pull/5037)、[website#1016](https://github.com/karmada-io/website/pull/1016) 背景。关键实现判断：#7693 第一版应聚焦 `karmadactl init --cert-mode=rotate`，复用证书生成和 Secret 更新路径；`Complete()` 当前含安装期 NodePort 检查、Node mutation、data path 清理，rotate mode 不能原样复用；根据用户确认，第一版轮转的是组件身份证书/leaf certificates，CA/root certificates 是底层信任链基石，不轮转、不更新 caBundle。
 - 2026-06-30：跟进维护者新建的 upstream issue [#7693](https://github.com/karmada-io/karmada/issues/7693)。确认此前 Day 4 / #7690 / `feature/cert-manager-layout` 的重心偏向 split Secret layout 和长期证书管理抽象，而 #7693 给出的当前落地方向是先复用安装工具已有证书生成和 Secret 写入能力，为 `karmadactl init` 增加证书轮换模式，例如 `--cert-mode=rotate`。已更新 `internship-reports/day4-certificate-layout-issue-follow-up.md` 的剩余部分，补充“理解与对齐”：rotate mode 应复用 `genCerts()`、证书文件读取、`createCertsSecrets()` / `CreateOrUpdateSecret()`，但不继续执行 workload/CRD 创建；旧 split layout prototype 暂时只作为 Secret 映射参考。同步更新 TODO，把证书主线切到 #7693。
 - 2026-06-30：按用户要求为 #7643 创建可复查证据分支。使用 `/home/karmada-issue-7643` 从 `upstream/master@ffbade988` 切到 `verify/issue-7643-evidence`，新增两个 evidence tests：`pkg/resourceinterpreter/customized/declarative/luavm/issue7643_verification_test.go` 和 `pkg/resourceinterpreter/default/thirdparty/issue7643_verification_test.go`。测试不仅打印输出，也断言 `0.1 -> 100m`、默认 Flink components 保持 `"100m"`、`CalculateResourceUsage` 汇总 `"200m"`。已运行两条目标 `go test` 均通过，并提交/推送 fork 分支：`ranxi2001/karmada@verify/issue-7643-evidence`，commit `46d0ba9be test: add flink memory conversion evidence`。同步更新 Day 5，把证据分支和 commit 链接加入 upstream 评论草稿。
@@ -45,7 +46,7 @@
 
 ## Next
 
-- 证书方向当前主线改为 #7693：从最新 `upstream/master` 新建干净分支，实现 `karmadactl init --cert-mode=rotate`。第一版只复用现有证书生成和 Secret 更新路径，不引入 split Secret layout、Helm/operator、cert-manager、CRD/controller 或自动重启。
+- 证书方向当前主线改为 #7693：先用 Day 7 提案上社区会议确认 scope，再从最新 `upstream/master` 新建干净分支实现 `karmadactl init --cert-mode=rotate`。第一版只轮转组件身份证书，不引入 split Secret layout、Helm/operator、cert-manager、CRD/controller、root CA rotation、caBundle update 或自动重启。
 - #7693 PR 前先读 `pkg/karmadactl/cmdinit/kubernetes/deploy.go` 的 `RunInit()`、`Complete()`、`genCerts()`、`createCertsSecrets()` 和 config parsing，抽出 `load existing CA material -> renew component identity certs -> sync cert Secrets` 边界；测试重点是 rotate mode 更新 Secret 但不创建 Deployment/StatefulSet/Service/CRD、不生成新 CA、不更新 caBundle。
 - #7690 / `feature/cert-manager-layout` 暂时作为背景和 Secret 映射参考，不作为当前第一优先级 PR。旧 branch 已通过 fork push CI，但不要直接从它开 upstream PR。
 - 如需跟进 #7643 upstream，先发送 Day 5 中的英文 verification comment draft 给用户确认；当前不建议开重复 PR，因为 issue 已有 assignee，且验证结果不支持 functional bug 结论。
