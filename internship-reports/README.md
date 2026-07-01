@@ -19,6 +19,7 @@
 - [Day 5：#7643 FlinkDeployment memory 计算问题验证](day5-issue-7643-flink-memory-verification.md)
 - [Day 6：证书轮换方案设计与实现准备](day6-certificate-rotation-design-implementation.md)
 - [Day 7：`karmadactl init` 证书轮换社区会议提案](day7-certificate-rotation-community-proposal.md)
+- [Day 8：PR #7697 后续说明图和 follow-up PR 拆分回复](day8-after-pr7697-follow-up-pr-split.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
