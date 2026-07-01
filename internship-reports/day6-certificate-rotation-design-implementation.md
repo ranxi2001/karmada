@@ -1332,3 +1332,46 @@ https://github.com/karmada-io/website/issues/1014
 - [x] 再确认 `feature/cert-mode-rotate` 是否仍基于最新 `upstream/master`：`upstream/master` = `ffbade988fc3d6652daa504ff6cac37141e9f755`，是该分支祖先。
 - [x] 如果 CI 结束后有失败项，先修分支，不要开 upstream PR：当前无失败，`CI Workflow` / `Chart` / `CLI` / `Operator` 均 success。
 - [ ] 开 PR 前让用户确认 title、body、base/head branch。
+
+## 给 mentor 的通俗解释和 PR 拆分计划
+
+### 这次 PR 实际做了哪一部分
+
+这个 PR 给 `karmadactl init` 增加了一个新模式：
+
+```bash
+karmadactl init --cert-mode=rotate
+```
+
+它不是重新安装 Karmada，而是在已有 `karmadactl init` 安装上做证书续签和 Secret 替换。通俗说：
+
+> 这个 PR 解决的是 `karmadactl init` 安装出来的 Karmada 控制面证书过期后，用户没有可靠工具批量替换证书的问题。现在新增 `--cert-mode=rotate`，它会复用原来的 CA，只重新签发组件使用的身份证书，也就是 leaf certificates，然后更新已有的证书 Secret 和 kubeconfig Secret。更新后用户重启相关组件，新证书就会生效。
+
+代码上主要做了四件事：
+
+1. 新增入口参数：`--cert-mode` 支持 `install` 和 `rotate`，默认仍是 `install`，不改变原安装行为。
+2. 拆分安装路径和轮换路径：`RunInit()` 现在按 mode 分流，rotate 不执行创建 CRD、Deployment、StatefulSet、Service、NodePort 检查、node label 修改等安装期动作。
+3. 只换组件 leaf cert，不换 CA：复用已有 `ca` / `front-proxy-ca` / `etcd-ca`，重新签发 `karmada`、`apiserver`、`front-proxy-client`、internal etcd 的 `etcd-server` / `etcd-client` 等证书，并更新相关 Secret。
+4. 补测试和生成文档：覆盖 flag/config、PEM 加载、缺 CA key 报错、rotate 只更新 Secret、不创建 workload、命令行 flag 文档。
+
+一句话版：
+
+> 这是 `karmadactl init` 的第一版控制面证书轮换能力。它复用原 CA，批量更新已有 Secret 里的组件 leaf certificates，不做 CA 迁移、不改 caBundle、不重建组件，scope 比较小，风险可控。
+
+### 原始 issue 应该如何拆分实现
+
+原始 issue [karmada-io/karmada#7693](https://github.com/karmada-io/karmada/issues/7693) 的方向是给 Karmada 安装工具增加证书轮换能力。这个范围可以很大，如果一次做完，容易变成跨 CLI、Helm、operator、cert-manager、文档和 CA 迁移的大 PR。更稳的拆分是：
+
+| 阶段 | PR | 目标 | 说明 |
+| --- | --- | --- | --- |
+| 1 | 当前 PR：`karmadactl init --cert-mode=rotate` | 给 `karmadactl init` 增加最小可用的控制面证书轮换能力 | 只更新 init-managed Secrets；只轮转 leaf cert；不轮转 CA；不改 caBundle；不重建 workload。 |
+| 2 | 文档 PR：manual rotation guide | 在 website 侧补用户操作文档 | 对齐 [karmada-io/website#1014](https://github.com/karmada-io/website/issues/1014)，说明命令怎么跑、哪些参数必须和原安装一致、哪些组件需要重启、为什么 CA 不轮转。 |
+| 3 | `karmadactl init` follow-up | 按 reviewer 反馈增强 UX | 可能包括更清晰的 restart 提示、dry-run/preflight、输出将更新的 Secret 列表、external etcd 场景补充说明。 |
+| 4 | 官方证书框架对齐 | 逐步补 per-component 独立证书 | 官方证书框架里有 aggregated-apiserver、webhook、search、metrics-adapter、scheduler-estimator 等独立证书；当前 `karmadactl init` 还大量复用 `karmada.crt/key`，后续可单独做证书结构对齐。 |
+| 5 | Helm / operator 轮换能力 | 扩展到其他安装方式 | Helm chart 和 operator 的证书来源、Secret layout、生命周期不同，不应混入当前 CLI PR。 |
+| 6 | 自动化轮换 / cert-manager integration | 自动签发和自动更新 | 这属于更高层能力，可能需要 cert-manager/trust-manager、rollout 策略和文档配套。 |
+| 7 | CA/root 迁移设计 | 处理信任根轮换 | CA 轮转不是普通续期，会影响 kubeconfig、WebhookConfiguration、APIService、CRD conversion caBundle 和组件信任链，需要单独设计双信任或迁移窗口。 |
+
+所以当前 PR 在整个 issue 里的定位是：
+
+> 先把 `karmadactl init` 管理的 leaf certificate rotation 打通，解决用户最直接的“证书过期后怎么批量替换 Secret”问题；其余更大范围的证书框架对齐、其他安装器、自动化轮换和 CA 迁移，拆成后续 PR 分别推进。
