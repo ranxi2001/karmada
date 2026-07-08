@@ -1,6 +1,6 @@
 # 实习任务 TODO
 
-更新时间：2026-07-01
+更新时间：2026-07-06
 
 这个文档用于管理 Karmada 实习期间的后续任务。日报记录每天做了什么，TODO 记录现在还要做什么、优先级是什么、做到哪里、卡在哪里。
 
@@ -30,7 +30,9 @@
 | P1 | 分析 Karmada 社区 issue / PR 动态 | DONE | 中 | 低 | 0.5-1 天 | [Day 1 日报](day1-karmada-7598-default-version-pr.md)；分析 #7598 并提交 upstream PR #7666 | 继续观察 #7666 CI 和 review |
 | P1 | 调研证书管理相关 issue / PR 并拆任务 | DONE | 中 | 低 | 0.5 天 | [Day 3 证书管理任务整理](day3-certificate-management-task-triage.md) | 优先跟进 #6051 Helm 证书命名规范；先做差距表，不直接改代码 |
 | P1 | 准备证书 layout upstream 提案 | DONE | 中 | 低 | 0.5 天 | [Upstream issue #7690](https://github.com/karmada-io/karmada/issues/7690)；[Day 3 发布记录](day3-certificate-management-task-triage.md#upstream-issue-发布记录) | 等 maintainer review；回复前不急着开 PR |
-| P1 | 实现 `karmadactl init` 证书轮换能力 | DOING | 中 | 中 | 1-2 天 | [Upstream issue #7693](https://github.com/karmada-io/karmada/issues/7693)；[Day 6 设计与实现准备](day6-certificate-rotation-design-implementation.md)；[Day 7 社区会议提案](day7-certificate-rotation-community-proposal.md) | 先在社区会议确认 scope：`--cert-mode=rotate`、只轮转组件身份证书、复用既有 CA、不更新 caBundle；重点确认 CA key 来源和是否只打印重启指导 |
+| P1 | 实现 `karmadactl init` 证书轮换能力 | DOING | 中 | 中 | 1-2 天 | [Upstream issue #7693](https://github.com/karmada-io/karmada/issues/7693)；[Upstream PR #7697](https://github.com/karmada-io/karmada/pull/7697)；[Day 6 设计与实现准备](day6-certificate-rotation-design-implementation.md)；[Day 7 社区会议提案](day7-certificate-rotation-community-proposal.md)；[Day 9 CI 复盘记录](day9-community-issue-pr-ci-watch.md) | CI 已全绿；下一步等 maintainer review、`lgtm` 和 approval；如 reviewer 追问 reload/重启边界，结合 Day 8/Day 9 证据回复 |
+| P1 | 跟进 estimator / FlinkDeployment / ResourceQuota e2e flake | REVIEW | 中 | 低 | 0.5-1 天 | [Upstream issue #7719](https://github.com/karmada-io/karmada/issues/7719)；`kind/flake` label 已生效；[Day 9 CI 复盘记录](day9-community-issue-pr-ci-watch.md#本地尝试flinkdeployment-crd-cleanup-同步屏障原型)；#7697 失败 job 与 rerun 通过证据；#7692 同类 e2e flake 修复模板；本地 diagnostic 已复现旧 cleanup 边界；fork 分支 `test/estimator-flink-crd-flake` commit `f2e7c434b` 已通过 fork CI | 下一步开独立 upstream PR `Fixes #7719`；不混入 #7697 |
+| P1 | 升级 GitHub Actions Ubuntu runner | REVIEW | 低 | 低 | 0.5 天 | [Upstream PR #7728](https://github.com/karmada-io/karmada/pull/7728)；[Day 10 调研记录](day10-ci-ubuntu-runner-upgrade.md)；分支 `chore/update-github-runner-ubuntu-24`；commit `0f62fd62b`；fork push CI 中 Chart/CLI/Operator 及 CI lint/codegen/compile/unit 已通过 | 观察 upstream PR #7728 CI；如失败先分类 runner 差异、代码问题、fork 环境差异或 e2e flake |
 | P1 | 准备 `karmadactl init` split Secret layout PR | BLOCKED | 中 | 中 | 0.5-1 天 | [Day 3 PR 审阅准备](day3-certificate-management-task-triage.md#pr-审阅准备)；[Day 4 gap 分析](day4-certificate-layout-issue-follow-up.md)；fork push CI 已通过 | 根据 #7693 维护者方向，旧 split layout prototype 暂时不作为第一优先级 PR；后续只作为证书 Secret 映射参考 |
 | P1 | 验证 #7643 FlinkDeployment memory issue 是否真实存在 | DONE | 中 | 低 | 0.5 天 | [Day 5 验证报告](day5-issue-7643-flink-memory-verification.md)；临时函数级和默认 Flink interpreter 测试日志 | 若要回复 upstream issue，先让用户确认英文评论；当前结论是不建议开重复 PR |
 | P1 | 对照 #6051 梳理 Helm 证书 Secret / volume / mount path 差距 | TODO | 中 | 低 | 0.5-1 天 | Helm 证书命名差距表、英文 issue 评论草稿 | 阅读 `charts/karmada/templates/`、`charts/karmada/values.yaml` 和 #6051 Task two 示例 |

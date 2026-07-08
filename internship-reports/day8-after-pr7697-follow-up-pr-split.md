@@ -837,3 +837,138 @@ If the existing Secret data still contains expired certificates, restarting alon
 
 This keeps the first implementation focused on a reviewable leaf certificate renewal path. A fully automatic certificate lifecycle workflow, especially one that includes restart orchestration or CA trust-root migration, should be handled as a separate follow-up design.
 ````
+
+## 2026-07-06 CI 失败排查：e2e v1.34.0
+
+### 失败项
+
+PR #7697 当前只有一个失败 check：
+
+```text
+e2e test (v1.34.0)
+Run: https://github.com/karmada-io/karmada/actions/runs/28499042349
+Job: https://github.com/karmada-io/karmada/actions/runs/28499042349/job/84472927003
+Head SHA: 152ab454265ac683f55f04a166e9de9aedaad94c
+```
+
+同一轮里已经通过的关键 check：
+
+```text
+codegen                 pass
+compile                 pass
+lint                    pass
+unit test               pass
+e2e test (v1.35.0)      pass
+e2e test (v1.36.1)      pass
+Test on Kubernetes      pass for v1.34.0/v1.35.0/v1.36.1 matrices
+```
+
+### 失败用例
+
+失败发生在 base e2e 的 estimator / ResourceQuota 场景：
+
+```text
+[EstimatorAssumption] ResourceQuota plugin assumption testing
+[It] FlinkDeployment should be unschedulable when assumed workloads exhaust ResourceQuota
+test/e2e/suites/base/estimator_test.go:288
+```
+
+直接失败点：
+
+```text
+test/e2e/framework/resourcebinding.go:47
+Timed out after 420.000s.
+Expected false to equal true
+```
+
+也就是 `WaitResourceBindingFitWith()` 等待某个 `ResourceBinding` 满足预期调度条件，但 420 秒内没有等到。
+
+失败对象：
+
+```text
+namespace: karmadatest-6cw8j
+ResourceBinding: flinkdeployment-5fc2b-flinkdeployment
+PropagationPolicy: pp-dcjxp
+ResourceQuota: rq-xprm6
+```
+
+### 关键日志
+
+测试先创建 FlinkDeployment CRD，并将 CRD 传播到 `member1`。随后创建第一个 FlinkDeployment 和对应 PropagationPolicy，期望该 workload 能被调度到 `member1`。
+
+但 scheduler 日志显示当时调度失败，因为 scheduler 认为 `member1` 还没有 `flink.apache.org/v1beta1/FlinkDeployment` API：
+
+```text
+Cluster(member1) not fit as missing API(flink.apache.org/v1beta1, kind=FlinkDeployment)
+Cluster "member1" is not fit, reason: cluster(s) did not have the API resource
+ResourceBinding(karmadatest-6cw8j/flinkdeployment-5fc2b-flinkdeployment) scheduled to clusters []
+ScheduleBindingFailed:
+0/3 clusters are available: 1 cluster(s) did not have the API resource,
+2 cluster(s) did not match the placement cluster affinity constraint.
+```
+
+之后测试一直等该 `ResourceBinding` 变成 `Scheduled=True`，但没有等到，最后超时。超时后清理资源，controller-manager 日志里能看到 policy / resource 被删除。
+
+### 初步判断
+
+这个失败不像 #7697 证书轮换代码直接造成的功能失败：
+
+- #7697 改动范围集中在 `pkg/karmadactl/cmdinit` 和生成的 `docs/command-line-flags/karmadactl_init.md`。
+- 失败用例在 `test/e2e/suites/base/estimator_test.go`，属于 scheduler-estimator / ResourceQuota assumption 场景。
+- compile、lint、unit、codegen 均通过。
+- 同一 e2e suite 在 Kubernetes v1.35.0 和 v1.36.1 都通过。
+- 如果 `karmadactl init` 安装路径被 #7697 普遍破坏，预期会看到更多控制面启动或全局 e2e 失败，而不是单个 estimator 场景在 v1.34.0 下超时。
+
+更可能的分类：
+
+```text
+CI flake / e2e timing issue.
+```
+
+具体像是 FlinkDeployment CRD 已经传播到 member cluster，但 scheduler 使用的 cluster APIEnablements / discovery 状态在该调度时刻还没反映出这个新 API，导致第一次 FlinkDeployment ResourceBinding 被判定为 `member1 missing API`，随后没有在超时时间内重新达到期望调度条件。
+
+### 建议下一步
+
+建议先 rerun 失败的 `e2e test (v1.34.0)` job，而不是改 #7697 代码。
+
+如果 rerun 仍稳定失败，再进一步查：
+
+- `member1` 上 FlinkDeployment CRD 何时真正 Established。
+- Karmada cluster APIEnablements 何时包含 `flink.apache.org/v1beta1/FlinkDeployment`。
+- scheduler 是否应该在 APIEnablements 更新后重新 enqueue 该 ResourceBinding。
+- 这个 estimator e2e 是否需要在创建 CRD 后等待 Karmada cluster status discovery 完成，而不只是等待 member cluster 上 CRD present。
+
+### 已触发新一轮 CI
+
+由于当前账号没有 upstream Actions 的 rerun 权限，按用户确认改用空提交触发新一轮 CI。
+
+在 `/home/karmada` 的 `feature/cert-mode-rotate` worktree 上创建 signed-off 空提交：
+
+```text
+93eaf7e57515c959fe30fa2aba387ce10029046d test: trigger ci
+```
+
+并推送到 fork 分支：
+
+```text
+origin/feature/cert-mode-rotate
+```
+
+推送后 PR #7697 head 已更新为 `93eaf7e57515c959fe30fa2aba387ce10029046d`，新的 upstream PR CI 已开始排队/运行：
+
+```text
+CI Workflow: 28762872757
+Chart:       28762872753
+CLI:         28762872770
+Operator:    28762872747
+DCO:         pass
+```
+
+fork push CI 也同步触发：
+
+```text
+CI Workflow: 28762870959
+Chart:       28762870940
+CLI:         28762870936
+Operator:    28762870928
+```

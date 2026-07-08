@@ -20,6 +20,8 @@
 - [Day 6：证书轮换方案设计与实现准备](day6-certificate-rotation-design-implementation.md)
 - [Day 7：`karmadactl init` 证书轮换社区会议提案](day7-certificate-rotation-community-proposal.md)
 - [Day 8：PR #7697 后续说明图和 follow-up PR 拆分回复](day8-after-pr7697-follow-up-pr-split.md)
+- [Day 9：社区 issue / PR 扫描与 PR #7697 CI 等待](day9-community-issue-pr-ci-watch.md)
+- [Day 10：GitHub Actions Ubuntu runner 升级调研与候选 PR](day10-ci-ubuntu-runner-upgrade.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
