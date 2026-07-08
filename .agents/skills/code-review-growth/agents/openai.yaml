@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review Growth"
+  short_description: "Grow repeatable code review judgment"
+  default_prompt: "Use $code-review-growth to review this PR and update the review pattern library if a new lesson appears."

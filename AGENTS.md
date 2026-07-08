@@ -49,6 +49,7 @@ At the end of each task, classify useful outcomes before stopping:
 - Temporary state that helps the next few runs goes into `PROGRESS.md`.
 - Evidence, source-reading notes, debugging process, benchmark context, and mentor-facing records go into `internship-reports/`.
 - Repeatable workflows with five or more steps go into `.agents/skills/<skill-name>/SKILL.md`.
+- Code review workflows and reusable missed-review lessons go into `.agents/skills/code-review-growth/`; use it when reviewing PRs or analyzing maintainer review comments.
 
 Do not store raw chat history. Keep conclusions concise, cite file paths or command evidence when useful, and replace outdated rules instead of letting contradictory notes accumulate.
 
