@@ -18,17 +18,17 @@ PR [#7697](https://github.com/karmada-io/karmada/pull/7697) 已经进入 review 
 
 当前准备了两张图：
 
-1. 英文主图：`Karmada Certificate Rotation - Data Flow Change.png`
-2. 中文/中英混合辅助图：`karmada证书pr7697变动.png`
+1. 英文主图：`day8-karmada-certificate-rotation-data-flow-change.png`
+2. 中文/中英混合辅助图：`day8-karmada-certificate-pr7697-change.png`
 
 建议 PR comment 使用英文主图：
 
-![Karmada Certificate Rotation - Data Flow Change](Karmada%20Certificate%20Rotation%20-%20Data%20Flow%20Change.png)
+![Karmada Certificate Rotation - Data Flow Change](day8-karmada-certificate-rotation-data-flow-change.png)
 
 上传到 fork `intern` 分支后，可在 GitHub comment 中使用这个 raw URL：
 
 ```text
-https://raw.githubusercontent.com/ranxi2001/karmada/intern/internship-reports/Karmada%20Certificate%20Rotation%20-%20Data%20Flow%20Change.png
+https://raw.githubusercontent.com/ranxi2001/karmada/intern/internship-reports/day8-karmada-certificate-rotation-data-flow-change.png
 ```
 
 > 注释：图中底部 Change Summary 的 metadata 表达应按当前实现理解为 Secret update 时保留 existing metadata。当前 PR 不引入证书 rotation controller，也不新增自动 watcher / audit / monitoring 机制。
@@ -74,7 +74,7 @@ CA rotation 是 trust-root migration 问题。
 ```md
 I prepared a data-flow diagram to make the scope of this PR easier to review:
 
-![Karmada Certificate Rotation - Data Flow Change](https://raw.githubusercontent.com/ranxi2001/karmada/intern/internship-reports/Karmada%20Certificate%20Rotation%20-%20Data%20Flow%20Change.png)
+![Karmada Certificate Rotation - Data Flow Change](https://raw.githubusercontent.com/ranxi2001/karmada/intern/internship-reports/day8-karmada-certificate-rotation-data-flow-change.png)
 
 This PR adds a new certificate rotation path to `karmadactl init` through `--cert-mode=rotate`.
 
