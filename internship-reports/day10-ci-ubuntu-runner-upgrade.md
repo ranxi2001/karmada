@@ -411,6 +411,121 @@ Thanks for the pointer. I opened the follow-up PRs:
 - karmada-io/website#1036
 ```
 
+## PR #7728 合并后 master CI 复盘
+
+PR #7728 已合并：
+
+- merge commit：[`3d4d14d746de507164abf40c1017b1f2b0e47e3a`](https://github.com/karmada-io/karmada/commit/3d4d14d746de507164abf40c1017b1f2b0e47e3a)
+- merged at：2026-07-09 06:19:50 UTC
+- master push `CI Workflow` run：[`28998390044`](https://github.com/karmada-io/karmada/actions/runs/28998390044)，conclusion `failure`
+
+合并后的失败不是所有 workflow 失败，而是 `CI Workflow` 里的两个 e2e matrix job 失败：
+
+- [`e2e test (v1.36.1)` job `86054168903`](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168903)
+- [`e2e test (v1.34.0)` job `86054168911`](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168911)
+
+同一 run 中已通过的 job：
+
+- `codegen`
+- `lint`
+- `compile`
+- `unit test`
+- `e2e test (v1.35.0)`
+
+同一 merge commit 触发的其他 workflow 也通过：
+
+- `Chart`
+- `CLI`
+- `Operator`
+- `FOSSA`
+- `image-scanning`
+- `latest chart to DockerHub`
+- `latest image to DockerHub`
+- `latest image to SWR`
+
+### v1.36.1 失败：Remedy flake 复现
+
+失败 spec：
+
+```text
+remedy testing
+test with nil decision matches remedy
+[It] Create an immediately type remedy, then remove it [Serial]
+test/e2e/suites/base/remedy_test.go:152
+```
+
+失败位置：
+
+```text
+test/e2e/framework/cluster.go:318
+Timed out after 420.000s.
+Expected false to equal true
+```
+
+代码路径：
+
+- 测试创建 `Remedy`，等待 `Cluster.Status.RemedyActions` 出现 `TrafficControl`。
+- 然后删除 `Remedy`，等待 `TrafficControl` 从 `Cluster.Status.RemedyActions` 消失。
+- 本次卡在删除后的等待：`member1` 的 `TrafficControl` action 420s 内没有被清掉。
+
+历史关联：
+
+- 已有 closed flake issue：[`karmada-io/karmada#5323`](https://github.com/karmada-io/karmada/issues/5323)
+- issue 标题与本次失败 spec 一致：`[flaky test] remedy testing test with nil decision matches remedy [It] Create an immediately type remedy, then remove it`
+- 当时维护者评论为 “This flake maybe has been fixed.”，本次属于旧 flake 复现。
+
+### v1.34.0 失败：FlinkDeployment / estimator flake 复现
+
+失败 spec：
+
+```text
+[EstimatorAssumption] NodeResource plugin assumption testing
+[It] FlinkDeployment should be unschedulable when assumed workloads exhaust cluster resources [Serial]
+test/e2e/suites/base/estimator_test.go:419
+```
+
+失败位置：
+
+```text
+test/e2e/framework/resourcebinding.go:47
+Timed out after 420.001s.
+Expected false to equal true
+```
+
+关键日志：
+
+```text
+Failed to get ResourceBinding(karmadatest-cdn7t/flinkdeployment-czxhf-flinkdeployment), err: resourcebindings.work.karmada.io "flinkdeployment-czxhf-flinkdeployment" not found
+Failed to get ResourceBinding(karmadatest-cdn7t/flinkdeployment-62qpd-flinkdeployment), err: resourcebindings.work.karmada.io "flinkdeployment-62qpd-flinkdeployment" not found
+Failed to get ResourceBinding(karmadatest-cdn7t/flinkdeployment-zxmgw-flinkdeployment), err: resourcebindings.work.karmada.io "flinkdeployment-zxmgw-flinkdeployment" not found
+Failed to get ResourceBinding(karmadatest-cdn7t/flinkdeployment-8v7jl-flinkdeployment), err: resourcebindings.work.karmada.io "flinkdeployment-8v7jl-flinkdeployment" not found
+Failed to get ResourceBinding(karmadatest-cdn7t/flinkdeployment-tm6gt-flinkdeployment), err: resourcebindings.work.karmada.io "flinkdeployment-tm6gt-flinkdeployment" not found
+Failed to get ResourceBinding(karmadatest-cdn7t/deploy-mnjx6-deployment), err: resourcebindings.work.karmada.io "deploy-mnjx6-deployment" not found
+```
+
+历史关联：
+
+- open flake issue：[`karmada-io/karmada#7719`](https://github.com/karmada-io/karmada/issues/7719)
+- #7719 分析的是 FlinkDeployment e2e cleanup / APIEnablements 异步收敛 race。
+- 本次失败同样发生在 `estimator_test.go` 的 FlinkDeployment assumption 流程，并卡在 `WaitResourceBindingFitWith` 等待 ResourceBinding。
+
+### 判断
+
+当前证据更支持“合并后 master push CI 遇到两个 e2e flake”，不是 Ubuntu 24.04 runner 升级导致的确定性失败：
+
+- PR #7728 head commit `de3b6be675bbf8ad12f91052f7d0fb53c5b592a5` 在 upstream PR CI 全绿，`CI Workflow` run [`28915976137`](https://github.com/karmada-io/karmada/actions/runs/28915976137) 的 e2e v1.34/v1.35/v1.36 均通过。
+- 同一 head commit 的 fork push CI 也全绿，`CI Workflow` run [`28915975049`](https://github.com/ranxi2001/karmada/actions/runs/28915975049) 通过。
+- 合并后失败只集中在两个 e2e spec；lint、codegen、compile、unit test 和 v1.35 e2e 通过。
+- 失败 spec 都有已知或历史 flake 线索：FlinkDeployment 对应 #7719，Remedy 对应 #5323。
+- merge commit 只修改 workflow runner label，没有修改 Go 代码、controller 逻辑或 e2e 测试逻辑。
+
+建议：
+
+1. 先重跑 master push run 的 failed jobs，验证两个 e2e flake 是否复现。
+2. 如果 v1.34.0 FlinkDeployment 再次失败，可继续推进 #7719 的独立 e2e flake 修复 PR。
+3. 如果 Remedy spec 再次失败，建议重新打开或新建 flake issue，引用 #5323 和本次 job `86054168903`。
+4. 暂不建议为 PR #7728 修改 workflow 代码；当前没有证据指向 `ubuntu-24.04` runner label 本身有确定性兼容问题。
+
 ## PR 草稿方向
 
 标题：
