@@ -1133,65 +1133,6 @@ Fork push CI:
 I can send this as a focused e2e flake fix if this issue direction makes sense.
 ````
 
-### 独立 PR 草稿
+### 独立 PR #7732
 
-> 状态：草稿已准备，尚未发布 upstream PR。发布前需要用户确认目标分支和英文正文。
-
-Title:
-
-```text
-test(e2e): wait for FlinkDeployment CRD cleanup
-```
-
-Body:
-
-````markdown
-**What type of PR is this?**
-
-/kind flake
-
-**What this PR does / why we need it**:
-
-Several e2e suites create and propagate the same `flinkdeployments.flink.apache.org` CRD, then clean it up asynchronously. The scheduler's APIEnablement plugin also relies on `Cluster.Status.APIEnablements` to decide whether a member cluster supports `flink.apache.org/v1beta1/FlinkDeployment`.
-
-This PR waits for the propagated FlinkDeployment CRD to disappear from member clusters and for `Cluster.Status.APIEnablements` to stop reporting `FlinkDeployment` as enabled after the source CRD has been removed from the Karmada control plane. This keeps the next test from observing stale CRD/APIEnablement state from the previous test.
-
-**Which issue(s) this PR fixes**:
-
-Fixes #7719
-
-**Special notes for your reviewer**:
-
-This follows the same synchronization-barrier pattern as #7692: wait for the external member-cluster state that the test depends on instead of changing production code or adding sleeps.
-
-Local diagnostic evidence showed that the old cleanup boundary could return after the control-plane CRD disappeared while member-cluster CRD/APIEnablement state was still converging:
-
-```text
-control-plane CRD disappeared after 1s
-after 00s: APIEnablements still reported FlinkDeployment and member CRDs still existed
-after 02s: member CRDs disappeared, but APIEnablements still reported FlinkDeployment
-after 04s: APIEnablements also converged
-```
-
-Validation:
-
-- `git diff --check`
-- `go test ./test/e2e/suites/base -run '^$' -count=0`
-
-Fork push CI on `ranxi2001/karmada@test/estimator-flink-crd-flake`:
-
-- Commit: [f2e7c434bad6d4a970265af79a157afb61e6182e](https://github.com/ranxi2001/karmada/commit/f2e7c434bad6d4a970265af79a157afb61e6182e)
-- [CI run 28774018375](https://github.com/ranxi2001/karmada/actions/runs/28774018375): `Chart`, `CLI`, `Operator`, `lint`, `codegen`, `compile`, `unit test`, `e2e v1.34`, `e2e v1.35`, and `e2e v1.36` passed.
-
-**Does this PR introduce a user-facing change?**:
-
-```release-note
-NONE
-```
-````
-
-后续如果 maintainer 问“为什么 rotate 后还要重启组件”，可以更具体地说：
-
-- 对于 token，Karmada 可以在特定路径上通过 transport wrapper 做运行态 refresh，如 #7663。
-- 对于 #7697 覆盖的 X.509 leaf certs，当前 PR 没有为每个组件实现统一 watcher、transport reload、serving cert reload 或 rollout orchestration。
-- 因此 #7697 的能力边界仍应定义为更新证书数据；组件是否自动加载新证书取决于各组件自身的 reload 机制或后续 PR。
+该方向后来整理为 upstream PR [#7732](https://github.com/karmada-io/karmada/pull/7732)。本节原有的发布前 PR body 草稿已经删除，避免与 GitHub 上的最终正文和后续 CI 状态形成重复版本；最终文件 scope、验证结果和代码复查归档在 [Day 11](day11-ci-flake-statistics.md#7719-修复-pr-7732)。

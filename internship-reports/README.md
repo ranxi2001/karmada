@@ -23,7 +23,6 @@
 - [Day 9：社区 issue / PR 扫描与 PR #7697 CI 等待](day9-community-issue-pr-ci-watch.md)
 - [Day 10：GitHub Actions Ubuntu runner 升级调研与候选 PR](day10-ci-ubuntu-runner-upgrade.md)
 - [Day 11：Karmada CI Flake 专项统计](day11-ci-flake-statistics.md)
-- [#7719 FlinkDeployment e2e flake 修复 PR 设计](pr7719-flinkdeployment-flake-fix-plan.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

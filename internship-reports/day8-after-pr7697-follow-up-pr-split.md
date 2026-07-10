@@ -67,14 +67,16 @@ CA rotation 是 trust-root migration 问题。
 
 如果把 CA rotation、caBundle、Helm/operator、自动重启、监控审计全放进 #7697，会让第一版 PR 失焦，也更难 review。#7697 应该先提供一个可工作的、低风险的 init-managed leaf certificate rotation path。
 
-## Suggested PR Comment Draft
+## 已发布的 PR Scope Comment
 
-> 发布前需要用户确认。不要直接发 upstream PR comment。
+> 已由用户确认并发布到 PR #7697：
+> <https://github.com/karmada-io/karmada/pull/7697#issuecomment-4851795706>
+> 以下保留最终发布文本；图片使用 GitHub user attachment，避免依赖 fork 分支中的 raw 文件路径。
 
 ```md
 I prepared a data-flow diagram to make the scope of this PR easier to review:
 
-![Karmada Certificate Rotation - Data Flow Change](https://raw.githubusercontent.com/ranxi2001/karmada/intern/internship-reports/day8-karmada-certificate-rotation-data-flow-change.png)
+![Karmada Certificate Rotation - Data Flow Change](https://github.com/user-attachments/assets/2b9c0efb-2fad-4f93-b05e-df9e4cdfeba1)
 
 This PR adds a new certificate rotation path to `karmadactl init` through `--cert-mode=rotate`.
 

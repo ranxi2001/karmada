@@ -212,7 +212,7 @@ PR #7728 当前只有一个失败项：
 
 下一步：观察 `de3b6be675bbf8ad12f91052f7d0fb53c5b592a5` 对应的 upstream PR checks，重点看 `CI Workflow / e2e test (v1.35.0)` 是否再次失败。
 
-## PR body 更新草稿
+## PR #7728 最终 Body 更新
 
 用途：原 PR body 仍写着 fork push CI 的 e2e jobs are still running。原实现提交 `0f62fd62b05802961447601da9000403139b600d` 的 fork push CI 已完成，需要把 validation 段更新为最终状态，并说明最新 `de3b6be675bbf8ad12f91052f7d0fb53c5b592a5` 是空提交，仅用于重触发 PR CI。
 
@@ -273,8 +273,8 @@ NONE
 更新结果：
 
 - 用户确认后已更新 PR #7728 body。
-- `gh pr edit 7728 --repo karmada-io/karmada --body-file internship-reports/pr7728-updated-body.md` 因当前 token 缺少 `read:org` scope，在 GraphQL 查询 PR 元信息时失败。
-- 改用 REST API 成功更新：`gh api repos/karmada-io/karmada/pulls/7728 -X PATCH -F body=@internship-reports/pr7728-updated-body.md`。
+- `gh pr edit 7728 --repo karmada-io/karmada --body-file <temporary-body-file>` 因当前 token 缺少 `read:org` scope，在 GraphQL 查询 PR 元信息时失败。
+- 改用 REST API `PATCH /repos/karmada-io/karmada/pulls/7728` 成功更新；临时 body 文件的最终内容已经保留在本节，不再单独存档。
 - 更新后的 PR body 已包含原实现提交 `0f62fd62b05802961447601da9000403139b600d` 的完整 fork push CI 结果，并说明最新 `de3b6be675bbf8ad12f91052f7d0fb53c5b592a5` 是 signed-off empty commit，仅用于重触发 PR CI，不改变 diff。
 
 ## 维护者 follow-up：dashboard 仓库
@@ -328,7 +328,7 @@ Dashboard branch：
 - fork branch：`ranxi2001/dashboard:chore/update-github-runner-ubuntu-24`
 - commit：`8f6ba046914e3e1bcc3a4d94f33912c10e33c64f`
 - title draft：`ci: update GitHub runners to Ubuntu 24.04`
-- PR body draft：`internship-reports/pr-dashboard-ubuntu24-body.md`
+- published PR：[`karmada-io/dashboard#643`](https://github.com/karmada-io/dashboard/pull/643)
 
 Dashboard changes：
 
@@ -354,7 +354,7 @@ Website branch：
 - fork branch：`ranxi2001/website:chore/update-github-runner-ubuntu-24`
 - commit：`24e7dd4515225a9462b47e04a7ca79285a586964`
 - title draft：`ci: update GitHub runners to Ubuntu 24.04`
-- PR body draft：`internship-reports/pr-website-ubuntu24-body.md`
+- published PR：[`karmada-io/website#1036`](https://github.com/karmada-io/website/pull/1036)
 
 Website changes：
 
@@ -526,91 +526,8 @@ Failed to get ResourceBinding(karmadatest-cdn7t/deploy-mnjx6-deployment), err: r
 3. 如果 Remedy spec 再次失败，建议重新打开或新建 flake issue，引用 #5323 和本次 job `86054168903`。
 4. 暂不建议为 PR #7728 修改 workflow 代码；当前没有证据指向 `ubuntu-24.04` runner label 本身有确定性兼容问题。
 
-## PR 草稿方向
+## 收尾状态
 
-标题：
-
-```text
-ci: update GitHub runners to Ubuntu 24.04
-```
-
-正文要点：
-
-- `/kind cleanup`
-- GitHub runner-images 已宣布 `ubuntu-22.04` 将于 2026-09-17 开始 deprecation，并在 2027-04-17 unsupported。
-- Karmada 当前 `.github/workflows` 仍有 30 处固定 `ubuntu-22.04`。
-- 本 PR 将所有 GitHub workflow runner 统一更新到固定的 `ubuntu-24.04`，延续项目现有固定 runner label 的方式，避免 `ubuntu-latest` 自动迁移风险。
-- 参考历史 PR #3699：Karmada 上一次 runner image 升级也是跨 workflow 统一更新。
-
-测试段落应在 fork CI 完成后补充最终结果。
-
-## Upstream PR 草稿
-
-> 状态：已按以下标题和正文创建 upstream PR [#7728](https://github.com/karmada-io/karmada/pull/7728)。PR 创建后 DCO 已通过，upstream CI 正在运行。
-
-Title:
-
-```text
-ci: update GitHub runners to Ubuntu 24.04
-```
-
-Body:
-
-````md
-**What type of PR is this?**
-
-/kind cleanup
-
-**What this PR does / why we need it**:
-
-This PR updates GitHub-hosted Ubuntu runners from `ubuntu-22.04` to `ubuntu-24.04` across the workflow files under `.github/workflows`.
-
-GitHub Actions runner-images has announced that `ubuntu-22.04` will begin deprecation on September 17, 2026 and become fully unsupported on April 17, 2027:
-
-https://github.com/actions/runner-images/issues/14254
-
-`ubuntu-24.04` is the current GA Ubuntu runner image, while `ubuntu-26.04` is still in preview. This keeps Karmada on a fixed Ubuntu runner label instead of switching to `ubuntu-latest`, so workflow environments remain explicit and predictable.
-
-This follows the same repository-wide runner image update pattern as #3699.
-
-**Which issue(s) this PR fixes**:
-
-None
-
-**Special notes for your reviewer**:
-
-Changed files:
-
-- Updated all `runs-on: ubuntu-22.04` labels under `.github/workflows` to `runs-on: ubuntu-24.04`.
-- No workflow logic, job matrix, action version, script, or test command was changed.
-
-Validation:
-
-- `git grep -n "ubuntu-22.04" HEAD -- .github/workflows || true`
-- `git diff --check upstream/master...HEAD`
-- Parsed all `.github/workflows/*.yml` and `.github/workflows/*.yaml` with Python `yaml.safe_load`
-
-Fork push CI on `ranxi2001/karmada:chore/update-github-runner-ubuntu-24`, commit `0f62fd62b05802961447601da9000403139b600d`:
-
-- `Chart`: passed
-- `CLI`: passed
-- `Operator`: passed
-- `CI Workflow`: lint, codegen, compile, and unit test passed; e2e jobs are still running
-- `FOSSA`: skipped by workflow condition
-- `image-scanning`: skipped by workflow condition
-
-This PR was prepared with AI assistance.
-
-**Does this PR introduce a user-facing change?**:
-
-```release-note
-NONE
-```
-````
-
-## 下一步
-
-1. 继续观察 upstream PR #7728 CI，不需要再轮询 fork CI。
-2. 如果 upstream CI 失败，先判断是 `ubuntu-24.04` 环境差异、Karmada 代码问题、fork 环境差异还是 e2e flake。
-3. 如果 reviewer 要求补充依据，可引用 #3699 和 runner-images #14254。
-4. 不在当前 `intern` 分支混入 upstream workflow 改动；代码分支保持在 `/tmp/karmada-ci-ubuntu24`。
+- Karmada PR [#7728](https://github.com/karmada-io/karmada/pull/7728) 已合并；最终 body 和 fork CI 证据已经保留在“PR #7728 最终 Body 更新”一节，发布前的重复草稿不再保留。
+- Dashboard PR [#643](https://github.com/karmada-io/dashboard/pull/643) 和 Website PR [#1036](https://github.com/karmada-io/website/pull/1036) 的 scope、分支、验证与创建结果已经保留在本报告，不再单独保存临时 body 文件。
+- #7728 merge 后 master CI 的 Remedy 与 FlinkDeployment 失败已分别归入 Day 11 的 flake 台账，不视为 runner label 更新的确定性回归。

@@ -55,3 +55,12 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Compare failing path against the diff, other matrix results, rerun behavior, logs, and artifacts before changing code.
 - Evidence to gather: Failed job URL, head SHA, failing test path, logs around first error, related artifacts, and prior flake issues.
 - Test or fix cue: Classify as code issue, fork environment difference, missing history/tag, CI flake, or upstream-only gate; rerun or isolate before patching unrelated code.
+
+## Verify Assertion-Control-Flow Comments Before Patching
+
+- Pattern: AI review comments about assertion helpers can be false when they assume ordinary Go control flow instead of framework-specific retry/fail semantics.
+- Seen in: `karmada-io/karmada#7732`, Gemini comment on `gomega.Eventually(func(g gomega.Gomega) ...)`.
+- Miss symptom: Reviewer claims a failed `g.Expect(err).NotTo(HaveOccurred())` continues to a nil dereference, but Gomega's passed-in `Gomega` failure aborts the current poll and retries.
+- Review check: For assertion/retry frameworks, confirm whether failures return, panic, call `FailNow`, or are intercepted by the framework before accepting a panic/control-flow finding.
+- Evidence to gather: Framework docs or vendored source plus a focused temporary test with side effects after the disputed assertion.
+- Test or fix cue: In Gomega, `Eventually` callbacks that take `gomega.Gomega` retry after assertion failure; returning `(bool, error)` is still a clear style, but not necessarily a nil-panic fix.
