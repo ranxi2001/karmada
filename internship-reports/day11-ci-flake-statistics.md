@@ -1,175 +1,194 @@
 # Day 11：Karmada CI Flake 专项统计
 
-日期：2026-07-09
+- 报告日期：`2026-07-09`
+- 统计窗口：`2026-06-26 00:00 UTC` 至 `2026-07-09`
+- 最新状态快照：`2026-07-10 17:08 CST`
 
-## 目标与结论
+> 本报告把“当前该关注什么”放在前面。历史统计口径、PR 文案、详细样本和数据采集过程统一放在附录。
 
-mentor 要求统计 Karmada CI flake 情况。本报告不把所有失败都算成 flake，而是优先找“有证据说明失败不是业务代码引入”的高置信样本，并整理成后续能推进 issue / PR 的台账。
+## 一页结论
 
-当前结论：
+1. **当前第一优先级是 PR #7732。** #7719 已从 flake 证据推进到修复 PR；代码复查没有发现 correctness finding，核心 lint、unit、e2e v1.34-v1.36 均通过。当前等待 Chart/Operator workflow rerun 收尾和 human `lgtm`/approval。
+2. **本窗口确认了 3 类高置信 flake。** 分别是 FlinkDeployment cleanup/APIEnablements 竞态、Remedy status cleanup 超时、aggregated API/etcd 短暂失稳。
+3. **失败数量不能直接当成 flake 数量。** 598 条 upstream run 中有 32 条 failed run，但其中还包含真实代码问题、lint、release、chart template 和 image scan；只有 4 个 upstream 样本达到本报告的高置信标准。
+4. **下一项最值得补证据的是 schedule workflow。** 已有 37 行 schedule/compatibility e2e 或 setup 非成功 job，但缺少 Ginkgo failure summary，尚不能按 spec 或根因归类。
+5. **Remedy 暂不急着发新 issue。** 当前只有一次与历史 #5323 高度一致的新复现；再出现一次时，再准备 reopen 或新 issue 的证据包。
 
-- 统计窗口内 upstream Actions 共覆盖 598 条 run，其中 32 条失败；失败主要集中在 e2e / setup / Kubernetes test。
-- 已确认或高置信 flake 有 3 类、4 个 upstream 样本；另有 1 个个人 fork CI 补充样本。
-- 这 3 类都有 issue 或 PR 链路：#7719、#5323、#6841 / #7388、#7697、#7728。
-- 当前最适合直接推进的是 #7719：有独立 issue、本地 diagnostic、候选修复和 fork CI 证据。
+| 关注项 | 当前判断 | 下一动作 |
+| --- | --- | --- |
+| [`#7732`](https://github.com/karmada-io/karmada/pull/7732) | 修复方向成立，代码复查无 finding；等待 CI rerun 和 human review | 观察 pending checks、`lgtm`、approval，不因无关 CI interruption 改代码 |
+| Remedy / [`#5323`](https://github.com/karmada-io/karmada/issues/5323) | 历史 flake 疑似复现一次 | 保留 job 链接；第二次复现后再发社区更新 |
+| Schedule / compatibility | 数量多但根因未知 | 下载最近 artifacts，按 Ginkgo spec、setup 阶段和控制面故障聚类 |
+| Aggregated API / etcd transient | 高置信环境或控制面瞬时失稳 | 挂到 [`#6841`](https://github.com/karmada-io/karmada/issues/6841) 台账，不修改无关业务代码 |
 
-> 分析：这里的“失败率”不是“flake 率”。失败可能来自真实代码问题、release publish、lint、chart template、CI 环境或 e2e 时序问题。只有满足明确证据的失败，才进入“高置信 flake”。
+## 最新关注
 
-## 简化口径
+### #7719 修复 PR #7732
 
-| 项目 | 本报告口径 |
+状态快照：
+
+| 项目 | 状态 |
 | --- | --- |
-| 统计仓库 | [`karmada-io/karmada`](https://github.com/karmada-io/karmada) |
-| 时间窗口 | `2026-06-26 00:00 UTC` 到 `2026-07-09` |
-| 数据来源 | GitHub Actions run / job metadata，必要时补 job log 和 artifact |
-| 覆盖数量 | 598 条 upstream Actions run |
-| 高置信 flake | 同一变更 rerun 或空提交 trigger 后转绿；或失败与 PR diff 无关，并落在已知 e2e 异步等待 / control-plane transient 边界 |
-| 暂不计入 flake | lint、release publish、chart template、image scan，或缺少日志只能看到 job 失败的样本 |
+| PR | [`karmada-io/karmada#7732`](https://github.com/karmada-io/karmada/pull/7732)，open，非 draft |
+| Head | `1240559dd34cc0eedd0ec6cffe97b5c0076660dc` |
+| Merge state | GitHub 显示 mergeable；Tide 仍缺 `approved` / `lgtm` |
+| Human review | 暂无 human review；现有 review 来自 bot 和作者回复 |
+| 核心 CI | DCO、lint、codegen、compile、unit、e2e v1.34/v1.35/v1.36 已通过 |
+| 安装 workflows | 先前取消的 Chart v1.34、Operator v1.35 已触发 workflow rerun；`17:08 CST` 快照下各有一个 job pending |
 
-个人 fork push CI 不计入 upstream 598 条 run 的总量统计；只在能补强同类现象时作为“补充样本”记录。
+当前判断：
 
-## 关键数字
+- 不需要再修改 helper 来回应 Gemini 的 nil pointer 评论；该评论已通过 Gomega 控制流测试证明不成立。
+- pending checks 是对先前 cancelled workflows 的重新执行，当前没有指向 `test/e2e/` diff 的失败证据。
+- 最小行动是等待 rerun 结束和 human review。只有出现新的、与 diff 相关的失败时才重新进入代码分析。
 
-| 指标 | 数量 | 说明 |
-| --- | ---: | --- |
-| Upstream Actions runs | 598 | 本窗口实际覆盖数量 |
-| Failed runs | 32 | run 级失败，不等于 flake |
-| 非成功 job rows | 72 | 从失败 run 展开后的 job 行数 |
-| e2e / setup / Kubernetes test job rows | 56 | 本次分析重点 |
-| 高置信 flake 类型 | 3 | FlinkDeployment、Remedy、control-plane transient |
-| 高置信 upstream 样本 | 4 | 都有 issue / PR 链路 |
-| fork CI 补充样本 | 1 | `test/flinkdeployment-crd-cleanup` v1.34 control-plane transient |
-| rerun / trigger 后直接转绿样本 | 5 | 2 个 upstream 原生 rerun，2 个空提交 trigger，1 个 fork job rerun |
+### Remedy 再次出现
 
-失败集中度：
+- 样本：[`run 28998390044 / job 86054168903`](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168903)。
+- 失败点：删除 Remedy 后，`Cluster.Status.RemedyActions` 中的 `TrafficControl` 长时间不消失。
+- 历史关联：closed issue [`#5323`](https://github.com/karmada-io/karmada/issues/5323) 的标题与 spec 路径高度一致。
+- 当前动作：继续观察。再次出现时记录 head SHA、Kubernetes 版本、first error 和 rerun 结果，再决定 reopen 还是新建 issue。
 
-- 按 workflow 看，失败最多的是 `CI Workflow`，共 16 条 failed run。
-- 按 job 类型看，e2e / setup / Kubernetes test 有 56 行非成功 job，是主要噪声来源。
-- schedule 相关失败有 37 行 e2e / setup / Kubernetes test job，说明只看 PR CI 不足以判断 master 稳定性。
+### Schedule 与 compatibility 失败
 
-## Rerun / Trigger 证据
+- 统计窗口内有 37 行 schedule/compatibility e2e 或 setup 非成功 job。
+- 当前数据只能说明“稳定性信号明显”，不能说明 37 行都是 flake，也不能归因到同一个根因。
+- 下一步优先下载最近两次 `CI Schedule Workflow` 和 `APIServer compatibility` artifacts，提取 Ginkgo failure summary、first hard failure 和 control-plane logs。
 
-这部分只回答一个问题：是否存在“没有业务代码修复，重跑或空提交后直接转绿”的证据。
+### 持续更新触发条件
 
-| 类型 | 数量 | 样本 | 结论 |
-| --- | ---: | --- | --- |
-| GitHub 原生 rerun 后转绿 | 2 | [`28212061472`](https://github.com/karmada-io/karmada/actions/runs/28212061472)、[`28256528352`](https://github.com/karmada-io/karmada/actions/runs/28256528352) | 可作为 e2e / Kubernetes test transient 证据 |
-| 空提交 trigger 后转绿 | 2 | [`#7697`](https://github.com/karmada-io/karmada/pull/7697) 的 [`93eaf7e`](https://github.com/ranxi2001/karmada/commit/93eaf7e57515c959fe30fa2aba387ce10029046d)、[`#7728`](https://github.com/karmada-io/karmada/pull/7728) 的 [`de3b6be`](https://github.com/ranxi2001/karmada/commit/de3b6be675bbf8ad12f91052f7d0fb53c5b592a5) | 两个空提交均为 `files=0/additions=0/deletions=0`，后续 CI 全绿 |
-| fork job rerun 后转绿 | 1 | `test/flinkdeployment-crd-cleanup` 的 [`run 29006012630`](https://github.com/ranxi2001/karmada/actions/runs/29006012630) attempt 2 | 不计入 upstream 598 条 run 总数，但证明该 fork validation failure 是 transient |
-| 原生 rerun 但不算 flake | 8 | workflow approval、release 失败、cancelled 等 | 不用于证明 e2e flake |
+只在以下事件发生时更新报告正文：
 
-> 分析：原生 rerun 和空提交 trigger 的意义不同，但都能证明“这次失败不一定需要代码修复”。#7697 和 #7728 的空提交尤其有价值，因为 commit API 确认没有文件变更。
+- #7732 checks、review、labels 或 state 发生变化。
+- Remedy spec 再次复现。
+- schedule/compatibility artifacts 已能归到具体 spec 或 setup 根因。
+- 新一周统计窗口完成，关键数字发生变化。
+
+普通 queued/running 波动、无日志的单个 cancelled job、与 diff 无关的 bot 评论不单独扩写正文。
 
 ## 已确认或高置信 Flake
 
 ### 1. FlinkDeployment / estimator ResourceBinding 等待超时
 
-相关 issue：
-
-- [`#7719 FlinkDeployment e2e cleanup can leave stale APIEnablements`](https://github.com/karmada-io/karmada/issues/7719)，open，`kind/flake`
-
-证据：
-
 | 时间 | Run / Job | 关联 PR | 失败表现 |
 | --- | --- | --- | --- |
-| 2026-07-01 | [`run 28499042349 / job 84472927003`](https://github.com/karmada-io/karmada/actions/runs/28499042349/job/84472927003) | [`#7697`](https://github.com/karmada-io/karmada/pull/7697) | `[EstimatorAssumption] ResourceQuota plugin assumption testing` 等待 `FlinkDeployment` 对应 `ResourceBinding` 超时 |
-| 2026-07-09 | [`run 28998390044 / job 86054168911`](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168911) | [`#7728`](https://github.com/karmada-io/karmada/pull/7728) merge 后 master push | `[EstimatorAssumption] NodeResource plugin assumption testing` 等待多个 `flinkdeployment-*-flinkdeployment` 的 `ResourceBinding` 出现超时 |
+| 2026-07-01 | [`run 28499042349 / job 84472927003`](https://github.com/karmada-io/karmada/actions/runs/28499042349/job/84472927003) | [`#7697`](https://github.com/karmada-io/karmada/pull/7697) | ResourceQuota assumption 用例等待 FlinkDeployment `ResourceBinding` 超时 |
+| 2026-07-09 | [`run 28998390044 / job 86054168911`](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168911) | [`#7728`](https://github.com/karmada-io/karmada/pull/7728) merge 后 master push | NodeResource assumption 用例反复找不到多个 FlinkDeployment `ResourceBinding` |
+
+关键证据：
+
+- scheduler 曾报告 `member1` missing `flink.apache.org/v1beta1/FlinkDeployment` API。
+- 本地 diagnostic 证明旧 cleanup 在 control plane CRD 消失后即可返回，此时 member CRD 和 `Cluster.Status.APIEnablements` 仍可能保留数秒。
+- #7697 没有修改 estimator/Flink 路径，同一代码通过空提交重触发后全绿。
+- #7728 只改 runner label，PR CI 全绿，合并后的独立 master push 再次命中同类 Flink timeout。
+
+结论：高置信 e2e timing flake。跟踪 issue 为 [`#7719`](https://github.com/karmada-io/karmada/issues/7719)，修复 PR 为 [`#7732`](https://github.com/karmada-io/karmada/pull/7732)。
+
+### 2. Remedy status cleanup 超时
+
+| 时间 | Run / Job | 失败表现 |
+| --- | --- | --- |
+| 2026-07-09 | [`run 28998390044 / job 86054168903`](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168903) | `remedy testing ... Create an immediately type remedy, then remove it` 等待 `TrafficControl` 从 cluster status 消失超时 |
 
 日志特征：
 
-- `resourcebindings.work.karmada.io "...-flinkdeployment" not found`
-- `Timed out after 420.000s` 或 `420.001s`
-- 失败点落在 `test/e2e/framework/resourcebinding.go:47`
+- `Cluster(member1) remedyActions: map[TrafficControl:{}]` 重复出现。
+- `Timed out after 420.000s`。
+- 失败点为 `test/e2e/framework/cluster.go:318`。
 
-当前判断：
+结论：与历史 [`#5323`](https://github.com/karmada-io/karmada/issues/5323) 高度一致，但本窗口只有一次新样本，先观察第二次复现。
 
-- 高置信 e2e timing flake。
-- #7697 同一提交 rerun 后全绿，说明不是证书轮换代码路径导致。
-- #7719 已经记录更完整的原因：FlinkDeployment CRD cleanup 只等 CRD object，未同步等待 `Cluster.Status.APIEnablements` 收敛，可能让下一轮 estimator test 看到过期 API 状态。
-- 当前修复分支为 `test/flinkdeployment-crd-cleanup`，commit `1240559dd34cc0eedd0ec6cffe97b5c0076660dc`；本地 `git diff --check` 和 focused `go test` 已通过。第一次 fork CI 只在 v1.34 命中另一类 control-plane transient flake，rerun 后通过，最终 fork push CI 全绿。
+### 3. Aggregated API / control plane transient
 
-### 2. Remedy 删除后 `TrafficControl` 未从 Cluster status 收敛
-
-相关 issue：
-
-- [`#5323 [flaky test] remedy testing test with nil decision matches remedy ...`](https://github.com/karmada-io/karmada/issues/5323)，closed，`kind/flake`
-
-证据：
-
-| 时间 | Run / Job | 关联 PR | 失败表现 |
+| 时间 | Run / Job | 关联变更 | 失败表现 |
 | --- | --- | --- | --- |
-| 2026-07-09 | [`run 28998390044 / job 86054168903`](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168903) | [`#7728`](https://github.com/karmada-io/karmada/pull/7728) merge 后 master push | `remedy testing test with nil decision matches remedy / Create an immediately type remedy, then remove it` 超时 |
+| 2026-07-08 | [`run 28912823833 / job 85774432012`](https://github.com/karmada-io/karmada/actions/runs/28912823833/job/85774432012) | #7728 PR CI | `clusters.cluster.karmada.io` 返回 503，`karmadactl exec` 超时，AfterSuite 连锁失败 |
+| 2026-07-09 | [`fork run 29006012630 / job 86080188511`](https://github.com/ranxi2001/karmada/actions/runs/29006012630/job/86080188511) | #7732 fork validation | `etcdserver: request timed out` 后出现 API connection refused、leader election lost 和 cleanup 连锁超时 |
 
-日志特征：
+关键证据：
 
-- `Cluster(member1) remedyActions: map[TrafficControl:{}]` 重复出现
-- `Timed out after 420.000s`
-- 失败点落在 `test/e2e/framework/cluster.go:318`
+- 最早硬失败来自 etcd/control-plane，而不是后续报错的业务 spec。
+- 同一 run 中出现 aggregated apiserver 停止 serving、多控制面容器退出和 API connection refused。
+- #7728 rerun 后通过；#7732 fork v1.34 failed job 在 attempt 2 通过。
 
-当前判断：
+结论：高置信 CI 资源或 control-plane transient flake。fork 样本不计入 upstream 598 条 run 的统计总数，只用于补强分类证据。
 
-- 高置信 e2e flake，且和历史 issue #5323 标题完全匹配。
-- #5323 关闭时认为“maybe has been fixed”，但 2026-07-09 master push CI 中同名用例重新出现。
-- 建议先继续收集第二次复现。如果再次出现，可新开 issue 或在 #5323 下补充复现链接，请 maintainer 决定 reopen 还是新建 tracking issue。
+## 持续关注台账
 
-### 3. Aggregated API / control plane 短暂不可用导致多用例连锁失败
-
-相关 issue：
-
-- 可先挂到 [`#6841 Flaky E2E tests – tracking intermittent failures`](https://github.com/karmada-io/karmada/issues/6841)
-- 与 [`#7388 e2e: Multiple tests failing exclusively on Kubernetes v1.35.0`](https://github.com/karmada-io/karmada/issues/7388) 有部分现象相似，但本次不是只在 v1.35 长期复现，暂不直接归并。
-
-证据：
-
-| 时间 | Run / Job | 关联 PR | 失败表现 |
+| 编号 | 状态 | 本报告中的作用 | 下一检查点 |
 | --- | --- | --- | --- |
-| 2026-07-08 | [`run 28912823833 / job 85774432012`](https://github.com/karmada-io/karmada/actions/runs/28912823833/job/85774432012) | [`#7728`](https://github.com/karmada-io/karmada/pull/7728) PR CI | `karmadactl get` 读 `clusters.cluster.karmada.io` 返回 `503 ServiceUnavailable`，`karmadactl exec` 超时，`SynchronizedAfterSuite` 也失败 |
+| [`#7732`](https://github.com/karmada-io/karmada/pull/7732) | open, `kind/flake` | 当前首要修复 PR | checks 完成、human `lgtm`/approval、merge state |
+| [`#7719`](https://github.com/karmada-io/karmada/issues/7719) | open, `kind/flake` | Flink cleanup/APIEnablements 根因与证据入口 | 随 #7732 合并状态更新 |
+| [`#5323`](https://github.com/karmada-io/karmada/issues/5323) | closed | Remedy 同名历史 flake | 第二次新复现后决定 reopen/new issue |
+| [`#6841`](https://github.com/karmada-io/karmada/issues/6841) | open, `kind/flake` | e2e 间歇失败 umbrella | schedule/control-plane 新样本归档 |
+| [`#7388`](https://github.com/karmada-io/karmada/issues/7388) | open, `kind/flake` | v1.35 环境/兼容性历史参照 | 仅在失败持续集中于 v1.35 时关联 |
+| [`#7692`](https://github.com/karmada-io/karmada/pull/7692) | open | 同类异步同步屏障参考 | 不与 #7732 重复实现 |
+| [`#7697`](https://github.com/karmada-io/karmada/pull/7697) | open | 第一次 Flink failure 和空提交转绿证据 | 不把 flake 修复混入证书 PR |
+| [`#7728`](https://github.com/karmada-io/karmada/pull/7728) | merged | runner 更新与第二次 Flink/Remedy 样本 | 只作为历史证据，不归因给 runner label |
 
-补充样本：
+## 附录 A：统计口径与关键数字
 
-| 时间 | Run / Job | 关联分支 | 失败表现 |
-| --- | --- | --- | --- |
-| 2026-07-09 | [`run 29006012630 / job 86080188511`](https://github.com/ranxi2001/karmada/actions/runs/29006012630/job/86080188511) | fork validation branch `ranxi2001:test/flinkdeployment-crd-cleanup` for [`#7719`](https://github.com/karmada-io/karmada/issues/7719) | `e2e test (v1.34.0)` 中最早硬失败为 `ClusterPropagationPolicy suspend` 更新时报 `etcdserver: request timed out`；随后 Karmada/member API 大量 `connection refused`，FlinkDeployment cleanup 在控制面失稳后超时 |
+### 统计口径
 
-> 注释：这个样本来自个人 fork push CI，不计入上面 `karmada-io/karmada` 598 条 run 的总量统计；但它复现了同类控制面 transient failure，可作为 PR 前验证阶段的 flake 证据保留。
+| 项目 | 口径 |
+| --- | --- |
+| 仓库 | [`karmada-io/karmada`](https://github.com/karmada-io/karmada) |
+| 时间窗口 | `2026-06-26 00:00 UTC` 至 `2026-07-09` |
+| 数据源 | GitHub Actions run/job metadata，必要时补 job log 和 artifact |
+| 高置信 flake | rerun/空提交后转绿；或 failure 与 diff 无关并落在已验证的异步等待、control-plane transient 边界 |
+| 不直接计入 | lint、release、chart template、image scan，或只有失败状态而没有日志的样本 |
 
-日志特征：
+> “Failed run 比例”不是“flake 率”。本报告只把证据足够的样本列为高置信 flake。
 
-- `Error from server (ServiceUnavailable): the server is currently unable to handle the request (get clusters.cluster.karmada.io)`
-- `timed out waiting for command ... karmadactl ... exec ... echo hello`
-- `Summarizing 5 Failures`
-- `etcdserver: request timed out`
-- `dial tcp ...: connect: connection refused`
-- `leader election lost`
+### 关键数字
 
-补充证据：
+| 指标 | 数量 | 说明 |
+| --- | ---: | --- |
+| Upstream Actions runs | 598 | 统计窗口覆盖总量 |
+| Failed runs | 32 | run 级失败，不等于 flake |
+| 非成功 job rows | 72 | 从失败 run 展开后的 job 行数 |
+| e2e/setup/Kubernetes test rows | 56 | 主要分析对象 |
+| Schedule/compatibility rows | 37 | 数量高，但根因尚未归类 |
+| 高置信 flake 类型 | 3 | FlinkDeployment、Remedy、control-plane transient |
+| 高置信 upstream 样本 | 4 | 都能关联 issue/PR 和具体日志 |
+| Fork CI 补充样本 | 1 | 不计入 upstream 总数 |
+| Rerun/trigger 后转绿样本 | 5 | 2 个 upstream rerun、2 个空提交、1 个 fork rerun |
 
-- Day 10 artifact 分析里看到同一时间段 etcd `DeadlineExceeded`、aggregated apiserver 停止 serving 后重启恢复。
-- #7728 只改 workflow runner label；同一 PR 后续 rerun 全绿。
-- `test/flinkdeployment-crd-cleanup` 第一次 fork CI attempt 中 lint、codegen、compile、unit、e2e v1.35、e2e v1.36 均通过；只有 e2e v1.34 失败。artifact 显示 `09:26:12-09:26:19` 多个控制面容器退出，`karmada-controller-manager` 记录 `leader election lost`，之后才出现 FlinkDeployment cleanup timeout。失败 job `86080188511` rerun 后，attempt 2 的 job `86098566248` 已通过，整个 fork push CI 最终 success。
+失败集中度：`CI Workflow` 有 16 条 failed run；e2e/setup/Kubernetes test 共 56 行非成功 job，是本窗口的主要噪声来源。
 
-当前判断：
+## 附录 B：Rerun / Trigger 证据
 
-- 高置信 CI 资源或 control-plane transient flake，不是 Ubuntu 24.04 runner 升级的确定性失败。
-- 若后续再次出现，应该单独统计 “aggregated apiserver / etcd transient 503” 类别，不能只归到某个 e2e 用例名。
-- fork validation branch 上的样本不应直接修改 Day 11 的 upstream 失败率数字，但可以作为“PR 前 CI 也会命中同类控制面失稳”的补充证据。
+| 类型 | 数量 | 样本 | 用法 |
+| --- | ---: | --- | --- |
+| GitHub 原生 rerun 后转绿 | 2 | [`28212061472`](https://github.com/karmada-io/karmada/actions/runs/28212061472)、[`28256528352`](https://github.com/karmada-io/karmada/actions/runs/28256528352) | 证明 e2e/Kubernetes test 可能 transient |
+| 空提交 trigger 后转绿 | 2 | #7697 的 [`93eaf7e`](https://github.com/ranxi2001/karmada/commit/93eaf7e57515c959fe30fa2aba387ce10029046d)、#7728 的 [`de3b6be`](https://github.com/ranxi2001/karmada/commit/de3b6be675bbf8ad12f91052f7d0fb53c5b592a5) | 两个 commit 均为 `files=0/additions=0/deletions=0` |
+| Fork job rerun 后转绿 | 1 | [`run 29006012630`](https://github.com/ranxi2001/karmada/actions/runs/29006012630) attempt 2 | 只作 control-plane transient 补充样本 |
+| Rerun 但不算 flake | 8 | workflow approval、release failure、cancelled 等 | 不用于证明业务 e2e flake |
 
-## #7719 修复 PR #7732
+## 附录 C：PR #7732 文案与技术复查
 
-Upstream PR：[`karmada-io/karmada#7732`](https://github.com/karmada-io/karmada/pull/7732)，head `1240559dd34cc0eedd0ec6cffe97b5c0076660dc`。
+### PR 文案摘要
 
-### 设计范围
+- Title：`test(e2e): wait for FlinkDeployment CRD cleanup`
+- Kind：`/kind flake`
+- Issue：`Fixes #7719`
+- 用户影响：`NONE`
+- 核心说明：旧 cleanup 只等待 control plane CRD 消失；PR 补齐 member CRD 和 `Cluster.Status.APIEnablements` 收敛等待。
+- 非目标：不修改 scheduler、estimator、resource interpreter、CRD propagation controller 或生产行为。
+- AI disclosure：用于日志分析、diff 对比和 PR 文案整理，最终代码由提交者审阅验证。
+
+GitHub 上的 [PR #7732 正文](https://github.com/karmada-io/karmada/pull/7732) 是最终文案来源，本报告不再维护第二份完整 body。
+
+### 文件范围
 
 | 文件 | 作用 |
 | --- | --- |
 | `test/e2e/framework/customresourcedefine.go` | 新增等待 CRD 从 member cluster `APIEnablements` 消失的 helper |
-| `test/e2e/suites/base/estimator_test.go` | 覆盖 ResourceQuota 与 NodeResource 两个 FlinkDeployment cleanup |
-| `test/e2e/suites/base/federatedresourcequota_test.go` | 补齐 multi-components FlinkDeployment cleanup |
-| `test/e2e/suites/base/schedule_multi_template_test.go` | 补齐 ScheduleMultiTemplate FlinkDeployment cleanup |
+| `test/e2e/suites/base/estimator_test.go` | 覆盖 ResourceQuota 与 NodeResource 两个 cleanup |
+| `test/e2e/suites/base/federatedresourcequota_test.go` | 补齐 multi-components cleanup |
+| `test/e2e/suites/base/schedule_multi_template_test.go` | 补齐 ScheduleMultiTemplate cleanup |
 
-非目标：不修改 scheduler、estimator、resource interpreter、CRD propagation controller 或任何生产行为，也不顺带整理其他 CRD 的 cleanup。
-
-最终 cleanup barrier：
+### 同步屏障
 
 ```text
 control plane CRD disappeared
@@ -178,128 +197,67 @@ control plane CRD disappeared
   -> next test performs a fresh propagation/readiness wait
 ```
 
-### 代码复查
+### 代码复查结论
 
-- 仓库内 4 个 FlinkDeployment CRD 创建路径均已覆盖，没有遗漏。
-- Ginkgo `DeferCleanup` 按 LIFO 执行：先清 workload/policy，再删 ClusterPropagationPolicy，最后删除源 CRD并等待 member 状态，顺序不会重现第一版原型的确定性 cleanup timeout。
-- helper 接受 `APIUnknown` 是合理的：前一步已经直接确认 member CRD 为 NotFound，下一轮 setup 仍必须等到 `APIEnabled` 才能继续。
-- Gemini 认为 `Eventually(func(g gomega.Gomega) ...)` 中断言失败后会继续 nil dereference；临时测试证明断言会终止当前 poll 并让 `Eventually` 重试，因此该评论不是 correctness bug。除非 maintainer 偏好显式返回 error，否则无需为此改代码。
-- 当前没有发现需要修改的 correctness finding。
+- 4 个 FlinkDeployment CRD 创建路径均已覆盖。
+- Ginkgo `DeferCleanup` LIFO 顺序正确：先清 workload/policy，再删 ClusterPropagationPolicy，最后删除源 CRD并等待 member 状态。
+- helper 接受 `APIUnknown` 是合理的：member CRD 已直接确认为 NotFound，下一轮 setup 仍必须等到 `APIEnabled`。
+- Gemini 的 nil pointer finding 不成立：注入的 `gomega.Gomega` 断言失败会中止当前 poll 并让 `Eventually` 重试。
+- 没有发现需要修改的 correctness finding。
 
-### 验证与剩余状态
+### 验证
 
 - `git diff --check upstream/master...upstream/pr-7732`：通过。
 - `go test ./test/e2e/framework ./test/e2e/suites/base -run '^$' -count=0`：通过。
-- topic worktree 干净，commit 包含 `Signed-off-by`，`upstream/master` 是 PR head 的祖先。
-- fork push CI：CI Workflow、Chart、CLI、Operator 最终通过。
-- upstream lint、codegen、compile、unit test、e2e v1.34/v1.35/v1.36 通过。
-- upstream Chart v1.34 和 Operator v1.35 各有一个 job 被取消，annotation 只有 `The operation was canceled.`；本 PR 只修改 `test/e2e/`，同矩阵其他版本与 fork workflows 通过，因此归类为 CI/process interruption，而不是代码 finding。
+- Topic worktree 干净，commit 包含 `Signed-off-by`，base 是 PR head 的祖先。
+- Fork push CI 的 CI Workflow、Chart、CLI、Operator 最终通过。
+- Upstream 核心 lint、codegen、compile、unit、e2e v1.34-v1.35-v1.36 通过。
 
-剩余风险：原竞态依赖 CRD propagation、member discovery 和 cluster status collection 的异步时序，没有稳定触发原 timeout 的自动化回归测试；但本地 diagnostic 已直接证明旧 cleanup 会提前返回，现有证据足以支撑同步屏障。下一步等待 human `lgtm`/approval；若 maintainer 要求 checks 全绿，再请求 rerun cancelled jobs。
+剩余风险：原竞态依赖多个异步控制器和 discovery/status 时序，没有稳定触发原 timeout 的自动化回归测试；本地 diagnostic 已直接证明旧 cleanup 会提前返回。
 
-## 疑似 Flake / 待补日志
+## 附录 D：待补日志样本
 
-### 1. setup e2e / setup operator e2e test environment
+### Setup failures
 
-相关历史：
-
-- [`#3667 Flaking test: setup e2e test environment`](https://github.com/karmada-io/karmada/issues/3667)
-- [`#3682 fix: repair flaking test job of setup e2e test environment`](https://github.com/karmada-io/karmada/pull/3682)
-- [`#3699 upgrade CI ubuntu image`](https://github.com/karmada-io/karmada/pull/3699)
-
-本轮样本：
-
-| 时间 | Workflow / Job | Run / Job | 关联 PR / 分支 | 当前证据 |
-| --- | --- | --- | --- | --- |
-| 2026-07-06 | CI Workflow / `e2e test (v1.34.0)` | [`run 28818641938 / job 85466088131`](https://github.com/karmada-io/karmada/actions/runs/28818641938/job/85466088131) | [`#7721`](https://github.com/karmada-io/karmada/pull/7721) | `setup e2e test environment` step 失败，日志需补 artifact |
-| 2026-07-07 | Operator / `Test on Kubernetes (v1.35.0)` | [`run 28863480122 / job 85607622872`](https://github.com/karmada-io/karmada/actions/runs/28863480122/job/85607622872) | [`#7721`](https://github.com/karmada-io/karmada/pull/7721) | `setup operator e2e test environment` step 失败，日志需补 artifact |
-| 2026-07-06 | Operator / `Test on Kubernetes (v1.34.0)` | [`run 28761483062 / job 85277656027`](https://github.com/karmada-io/karmada/actions/runs/28761483062/job/85277656027) | master push after [`#7716`](https://github.com/karmada-io/karmada/pull/7716) | setup step 失败，日志需补 artifact |
-| 2026-06-28 | CLI / `Test on Kubernetes (v1.36.1)` | [`run 28322104916 / job 83905699582`](https://github.com/karmada-io/karmada/actions/runs/28322104916/job/83905699582) | [`#7678`](https://github.com/karmada-io/karmada/pull/7678) | `setup init e2e test environment` step 失败，日志需补 artifact |
-
-当前判断：
-
-- 这类失败很可能属于环境准备 flake，但本轮通过 `gh` 取到的日志不足，不能直接写确定原因。
-- 下一步要从 Actions UI 下载 artifacts 或重新拉日志，重点看 kind cluster create、image pull、disk pressure、Docker build、kube-apiserver readiness。
-
-### 2. Schedule workflow 大量 e2e matrix 失败
-
-本轮 schedule 失败集中在：
-
-- `CI Schedule Workflow`：4 个 run，17 个 e2e job 失败，覆盖 v1.27.3、v1.28.0、v1.29.0、v1.30.0、v1.31.0。
-- `APIServer compatibility`：4 个 run，20 个 e2e job 失败，覆盖 `master`、`release-1.16`、`release-1.17`、`release-1.18` 与多个 Kubernetes version 组合。
-
-代表性 run：
-
-| Workflow | Run | 失败 job 概况 | 关联 issue |
+| 时间 | Workflow / Job | Run / Job | 当前证据 |
 | --- | --- | --- | --- |
-| CI Schedule Workflow | [`28297782357`](https://github.com/karmada-io/karmada/actions/runs/28297782357) | v1.27.3 / v1.28.0 / v1.29.0 / v1.30.0 / v1.31.0 e2e failed | [`#6841`](https://github.com/karmada-io/karmada/issues/6841) |
-| CI Schedule Workflow | [`28750372834`](https://github.com/karmada-io/karmada/actions/runs/28750372834) | v1.27.3 / v1.28.0 / v1.29.0 / v1.30.0 e2e failed | [`#6841`](https://github.com/karmada-io/karmada/issues/6841) |
-| APIServer compatibility | [`28300711541`](https://github.com/karmada-io/karmada/actions/runs/28300711541) | v1.27.3 master、v1.30.0 master / release branches failed | [`#6841`](https://github.com/karmada-io/karmada/issues/6841) |
-| APIServer compatibility | [`28753707990`](https://github.com/karmada-io/karmada/actions/runs/28753707990) | v1.28.0 / v1.30.0 / v1.32.0 compatibility matrix failed | [`#6841`](https://github.com/karmada-io/karmada/issues/6841) |
+| 2026-07-06 | CI / e2e v1.34 | [`28818641938 / 85466088131`](https://github.com/karmada-io/karmada/actions/runs/28818641938/job/85466088131) | setup e2e step 失败，需补 artifact |
+| 2026-07-07 | Operator / v1.35 | [`28863480122 / 85607622872`](https://github.com/karmada-io/karmada/actions/runs/28863480122/job/85607622872) | setup operator step 失败，需补 artifact |
+| 2026-07-06 | Operator / v1.34 | [`28761483062 / 85277656027`](https://github.com/karmada-io/karmada/actions/runs/28761483062/job/85277656027) | master push setup failure，需补 artifact |
+| 2026-06-28 | CLI / v1.36 | [`28322104916 / 83905699582`](https://github.com/karmada-io/karmada/actions/runs/28322104916/job/83905699582) | setup init e2e failure，需补 artifact |
 
-当前判断：
+相关历史：[`#3667`](https://github.com/karmada-io/karmada/issues/3667)、[`#3682`](https://github.com/karmada-io/karmada/pull/3682)、[`#3699`](https://github.com/karmada-io/karmada/pull/3699)。当前证据不足，不能直接写成确定 flake。
 
-- schedule 失败数量多，是 mentor 值得关注的 CI 稳定性信号。
-- 但缺少 Ginkgo failure summary，不能把这些失败直接归到具体 spec 或具体 PR。
-- #6841 是当前最合适的 umbrella；#7388 只适合作为 “v1.35-only compatibility regression” 的历史对照，不应强行套到所有 schedule 失败。
+### Schedule/compatibility 代表样本
 
-## 暂不归为 Flake 的失败
-
-| 类型 | 样本 | 判断 |
+| Workflow | Run | 失败概况 |
 | --- | --- | --- |
-| lint | [`run 28706816762 / job 85133752460`](https://github.com/karmada-io/karmada/actions/runs/28706816762/job/85133752460)、[`run 28410342955 / job 84181794733`](https://github.com/karmada-io/karmada/actions/runs/28410342955/job/84181794733) | 更可能是代码静态检查或格式问题，不按 flake 统计 |
-| Chart template | [`run 28369536076 / job 84043597099`](https://github.com/karmada-io/karmada/actions/runs/28369536076/job/84043597099) | `Run chart-testing (template)` 失败，需看 PR diff，不直接归 e2e flake |
-| Release publish / upload | `v1.19.0-alpha.1` release 相关 runs `28418213942`、`28418213914`、`28418214110` | release 资产构建、上传、发布链路问题，不是 e2e flake |
-| Image scanning | [`run 28307314200 / job 83865734420`](https://github.com/karmada-io/karmada/actions/runs/28307314200/job/83865734420) | Dockerfile build / image scan 路径，暂不纳入 e2e flake |
+| CI Schedule Workflow | [`28297782357`](https://github.com/karmada-io/karmada/actions/runs/28297782357) | v1.27-v1.31 多个 e2e failed |
+| CI Schedule Workflow | [`28750372834`](https://github.com/karmada-io/karmada/actions/runs/28750372834) | v1.27-v1.30 多个 e2e failed |
+| APIServer compatibility | [`28300711541`](https://github.com/karmada-io/karmada/actions/runs/28300711541) | master/release branches 多组合失败 |
+| APIServer compatibility | [`28753707990`](https://github.com/karmada-io/karmada/actions/runs/28753707990) | v1.28/v1.30/v1.32 compatibility failures |
 
-## 相关 PR / Issue 台账
+分类时必须先找 first hard failure，不能把 AfterSuite、cleanup 或 API connection refused 的后续错误当成根因。
 
-| 编号 | 类型 | 状态 | 关系 |
-| --- | --- | --- | --- |
-| [`#6841`](https://github.com/karmada-io/karmada/issues/6841) | issue | open, `kind/flake` | umbrella：间歇性 e2e failures 追踪；schedule 失败和 aggregated API 503 可先归到这里 |
-| [`#7388`](https://github.com/karmada-io/karmada/issues/7388) | issue | open, `kind/flake` | v1.35.0 专项环境 / 兼容性失败历史；本轮 #7728 PR CI v1.35 transient failure 可作为相似现象参考 |
-| [`#7719`](https://github.com/karmada-io/karmada/issues/7719) | issue | open, `kind/flake` | FlinkDeployment cleanup / stale APIEnablements；本轮最高价值、最可推进的 flake 修复方向 |
-| [`#7691`](https://github.com/karmada-io/karmada/issues/7691) | issue | open, `kind/flake` | ClusterResourceBinding cleanup 前缺少 propagation synchronization；同类异步等待问题 |
-| [`#7692`](https://github.com/karmada-io/karmada/pull/7692) | PR | open, `kind/flake`, `kind/failing-test` | 修复 #7691，增加 cleanup 前 member cluster `ClusterRole` present 等待；可作为 #7719 修复模式参考 |
-| [`#5323`](https://github.com/karmada-io/karmada/issues/5323) | issue | closed, `kind/flake` | Remedy 同名用例历史 flake；2026-07-09 master push CI 疑似复现 |
-| [`#3667`](https://github.com/karmada-io/karmada/issues/3667) | issue | closed, `kind/flake` | setup e2e test environment 历史 flake |
-| [`#3682`](https://github.com/karmada-io/karmada/pull/3682) | PR | merged, `kind/flake` | 历史 setup e2e repair |
-| [`#3699`](https://github.com/karmada-io/karmada/pull/3699) | PR | merged, `kind/flake` | 历史 Ubuntu runner 升级，用于解决当时 kind / e2e CI flake |
-| [`#5263`](https://github.com/karmada-io/karmada/pull/5263) | PR | merged, `kind/flake` | e2e 失败后打印 binding 和相关对象，说明社区已经在补 flake 可观测性 |
-| [`#4427`](https://github.com/karmada-io/karmada/pull/4427) | PR | merged, `kind/flake` | 单个 k8s version e2e 失败时避免整个 CI fast fail，方便收集更多 matrix 信号 |
-| [`#7697`](https://github.com/karmada-io/karmada/pull/7697) | PR | open | 证书轮换 PR；曾命中 FlinkDeployment flake，后来同 commit rerun 通过，是 #7719 的重要证据 |
-| [`#7728`](https://github.com/karmada-io/karmada/pull/7728) | PR | merged | Ubuntu 24.04 runner 升级；PR CI rerun 全绿，merge 后 master push 命中 Remedy + Flink 两个 e2e flake |
-| [`#7732`](https://github.com/karmada-io/karmada/pull/7732) | PR | open, `kind/flake` | 修复 #7719；4 个 FlinkDeployment cleanup 路径补齐 member CRD 与 APIEnablements 收敛等待，代码复查无 correctness finding |
+## 附录 E：暂不归为 Flake
 
-## 当前结论
+| 类型 | 样本 | 原因 |
+| --- | --- | --- |
+| lint | runs `28706816762`、`28410342955` | 更可能是代码静态检查或格式问题 |
+| Chart template | run `28369536076` | 需结合 PR diff，不能仅凭 job failure 判 flake |
+| Release publish/upload | `v1.19.0-alpha.1` 相关 runs | 属发布资产链路，不是 e2e |
+| Image scanning | run `28307314200` | 属镜像构建/扫描路径 |
 
-1. 近期失败的主要体感来自 e2e，而不是 lint / unit / compile。
-2. 能确认到具体原因的高价值 flake 有三类：FlinkDeployment estimator 等待超时、Remedy status cleanup 超时、aggregated API / etcd transient 503。
-3. 原生 rerun 后直接转绿的 upstream 样本有 2 条，空提交 trigger CI 后直接转绿的高置信样本有 2 个：#7697 和 #7728；另有 1 个 fork validation job rerun 后转绿的补充样本。
-4. #7719 已推进为 PR #7732：已有 issue、日志证据、本地 diagnostic、最终全绿的 fork push CI 和完整代码复查；当前等待 human review。
-5. Remedy 复现与历史 #5323 高度一致，但目前只有 1 次新样本，建议继续观察或补第二次样本再发 upstream。
-6. schedule workflow 失败数量大，但根因证据不足；下一轮专项应优先下载 artifacts，把 schedule 的 37 个失败 job 归并到具体 Ginkgo spec 或 setup 阶段。
+## 附录 F：数据获取流程
 
-## 下一步
-
-- 跟进 #7732 human review；除非 reviewer 提出具体 correctness 问题，不因无关 cancelled checks 扩大代码修改。
-- 对 `run 28998390044 / job 86054168903` 的 Remedy 失败保留链接；如果一周内再次出现，准备英文 issue/comment，引用 #5323。
-- 补 schedule workflow artifacts：优先最近两次 `CI Schedule Workflow` 和 `APIServer compatibility`，按 spec 名称聚类。
-- 若 mentor 需要每周统计，沉淀脚本到 `.agents/skills/karmada-pr-management/` 或单独 `ci-flake-triage` skill，自动输出 run/job/spec/issue 映射。
-- 不在 upstream issue 里一次性贴太多未经确认的推测；发评论前先把英文文本给用户确认。
-
-## 附录：数据获取方式
-
-正文只保留结论和关键数字；这里记录复查入口。
-
-中间文件：
+### 中间文件
 
 - `/tmp/karmada-actions-all-1000-20260626-20260709.json`
 - `/tmp/karmada-actions-failures-20260626-20260709.json`
 - `/tmp/karmada-failed-jobs-clean-20260626-20260709.tsv`
 - `/tmp/karmada-flake-keylines-20260626-20260709.txt`
 
-核心命令：
+### 核心命令
 
 ```bash
 gh run list --repo karmada-io/karmada \
@@ -317,8 +275,17 @@ gh run view <run-id> --repo karmada-io/karmada --json jobs
 gh run view <run-id> --repo karmada-io/karmada --job <job-id> --log
 ```
 
-限制：
+PR #7732 的持续状态检查：
 
-- 部分较早的 job 日志通过 `gh run view --job --log` 返回空内容，只能基于 workflow / job / step metadata 归类。
-- schedule workflow 的失败不绑定具体 PR diff，只能作为 master 分支持续稳定性的信号。
-- release、publish、lint、chart template 失败保留在总失败统计里，但不直接计入 e2e flake。
+```bash
+gh pr checks 7732 --repo karmada-io/karmada
+gh api repos/karmada-io/karmada/pulls/7732/reviews --paginate
+gh api repos/karmada-io/karmada/pulls/7732/comments --paginate
+```
+
+### 限制
+
+- 部分较早 job 的日志通过 `gh run view --job --log` 返回空内容，只能先基于 workflow/job/step metadata 归类。
+- Schedule workflow 不绑定具体 PR diff，只能作为 master 分支持续稳定性的信号。
+- Fork CI 不进入 upstream 598 条 run 总量，只能作为补充证据。
+- Release、publish、lint、chart template 和 image scanning failure 保留在失败统计里，但不直接进入高置信 flake。
