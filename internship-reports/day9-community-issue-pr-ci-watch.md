@@ -1030,6 +1030,8 @@ Published issue:
 https://github.com/karmada-io/karmada/issues/7719
 ```
 
+> 后续更新：2026-07-09 已补充 #7728 merge 后 master push 的第二次 FlinkDeployment timeout，以及 #7697/#7728 空提交 `files=0`、重触发后 CI 通过的证据。最终 issue 以 GitHub 正文为准，新增证据同时归档在 [Day 11](day11-ci-flake-statistics.md#1-flinkdeployment--estimator-resourcebinding-等待超时)，不再单独保留临时 body 文件。
+
 Body:
 
 ````markdown
