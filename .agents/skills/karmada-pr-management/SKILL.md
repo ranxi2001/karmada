@@ -27,6 +27,7 @@ Use this skill for Karmada upstream PR work: branch prep, fork push CI, pre-PR d
 - Treat fork branch push CI plus code-change explanation as PR preflight. After pushing a topic branch to `origin` and before opening an upstream PR, inspect the diff, tests, CI state, deleted/extracted code, scope, and reviewer-facing rationale locally.
 - Keep internship reports, raw benchmark results, and Chinese-only notes out of upstream PRs unless explicitly intended.
 - For other contributors' PRs, do not draft comments or review suggestions until you have read the PR body, changed files, relevant docs/tests, and existing human review discussion.
+- For `/kind flake` work, also use `code-review-growth`; its Flake Root-Cause Gate is the canonical evidence and stop policy.
 - Prefer script-first PR analysis. If status checks, file summaries, review comment filtering, CI state, or branch hygiene checks are repeated across PRs, improve `.agents/skills/karmada-pr-management/scripts/` and update this skill.
 
 ## Upstream Posting Gate
@@ -152,6 +153,7 @@ Prepare a local explanation in the internship report, PR draft, or review notes 
 - Behavior compatibility: default path, upgrade impact, feature gate or config impact, and failure modes.
 - Tests and evidence: local commands, fork push CI status, commit SHA, and any skipped or blocked checks.
 - Reviewer notes: risky areas, open questions, and the exact parts where maintainer feedback is needed.
+- Flake evidence when applicable: first hard failure, an `E3` timestamp/code timeline, Mermaid sequence diagram with evidence for every causal arrow, why recovery does not self-heal, the exact invariant introduced, and `E4` counterfactual validation or its explicit limitation.
 
 If this explanation exposes broad unrelated changes, split the branch or reduce scope before opening the PR. If fork CI fails, analyze the failure first and avoid opening a PR only to ask maintainers to debug basic validation.
 
@@ -164,6 +166,7 @@ Before editing code:
 - If the issue is actively assigned to someone else, do not start an overlapping PR; choose review/testing feedback or ask whether help is needed.
 - Check whether the change touches API types, generated clients, CRDs, Helm charts, operator, CLI, scheduler, controllers, docs, or e2e tests.
 - For non-trivial features, run the design-before-code workflow first and keep the planned file scope narrow.
+- For `/kind flake`, do not edit synchronization or product logic at `E0-E2`. Reach `E3` in the `code-review-growth` gate first; use `E2` only for diagnostic instrumentation. Seek `E4` before posting, or document why it is impractical and obtain maintainer direction.
 - Pick one primary PR kind from the official template:
   - `/kind bug`
   - `/kind feature`
@@ -212,6 +215,7 @@ Use the smallest relevant test set first, then broader checks if needed.
 | CLI / `karmadactl` | `go test ./pkg/karmadactl/... ./cmd/karmadactl/... ./cmd/kubectl-karmada/...` |
 | Operator | `go test ./operator/...` |
 | Aggregated API server / search / metrics | targeted package tests under `pkg/` and `cmd/` |
+| Flake fix | controlled reproduction or focused regression for the proven causal edge, plus the directly affected package/e2e tests |
 | Helm chart | render/install verification through chart workflow or local Helm command if available |
 | Docs only | link/context check plus no code tests unless docs include generated output |
 | Broad Go change | `make test` |
@@ -238,7 +242,8 @@ Use this workflow before analyzing, reviewing, replying to, or building on someo
 4. Read human review comments and author replies before bot comments.
 5. Check whether later commits already addressed an earlier review comment.
 6. Compare the proposed comment against the current PR text/code.
-7. Record evidence locally before posting: PR number, commit SHA, files/sections read, key observations, unresolved questions, and comment purpose.
+7. For a flake PR, independently verify the code-backed causal timeline, retry/requeue path, recovery event, and patch counterfactual; green CI alone is not a correctness argument.
+8. Record evidence locally before posting: PR number, commit SHA, files/sections read, key observations, unresolved questions, and comment purpose.
 
 Useful commands:
 
@@ -317,9 +322,10 @@ When review comments arrive:
 3. Group actionable comments by category: correctness, tests, style, docs, generated code, scope.
 4. Prioritize human maintainer/reviewer comments; validate AI reviewer comments yourself before acting.
 5. Treat bot comments as process or validation state.
-6. Decide whether each fix belongs in the current PR, a temporary validation branch, or a separate PR from `upstream/master`.
-7. Apply fixes locally, validate, then update the PR with a clean history.
-8. Reply directly and specifically after user approval when the reply is upstream-facing.
+6. For a flake review, do not recommend `/lgtm` or `/approve` until the causal chain and the edge cut by the patch are source-proven; success across CI matrices does not replace RCA.
+7. Decide whether each fix belongs in the current PR, a temporary validation branch, or a separate PR from `upstream/master`.
+8. Apply fixes locally, validate, then update the PR with a clean history.
+9. Reply directly and specifically after user approval when the reply is upstream-facing.
 
 Useful response format:
 
@@ -351,6 +357,7 @@ python3 .agents/skills/karmada-issue-discussion/scripts/thread_brief.py <pr-numb
 - Do not create self-fork PRs just to run CI; use Karmada's existing push-triggered fork CI.
 - Do not open an upstream PR before fork push CI state and pre-PR diff explanation are prepared locally.
 - Do not treat fork push CI success as sufficient PR readiness without explaining file-level changes, deleted code, tests, and residual risk.
+- Do not open or endorse a flake fix whose rationale stops at rerun success, timing correlation, or a generic wait. Require the `code-review-growth` `E3` causal timeline and an invariant-specific patch.
 - Do not ignore the official PR template.
 - Do not comment on or mention maintainers in read-only PR analysis unless the user approves and upstream input is genuinely needed.
 - Do not merge unrelated formatting with behavior changes.

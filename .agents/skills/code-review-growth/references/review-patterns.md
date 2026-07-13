@@ -54,7 +54,16 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Miss symptom: A long e2e job fails in unrelated cleanup/control-plane code while narrower jobs and other matrix versions pass.
 - Review check: Compare failing path against the diff, other matrix results, rerun behavior, logs, and artifacts before changing code.
 - Evidence to gather: Failed job URL, head SHA, failing test path, logs around first error, related artifacts, and prior flake issues.
-- Test or fix cue: Classify as code issue, fork environment difference, missing history/tag, CI flake, or upstream-only gate; rerun or isolate before patching unrelated code.
+- Test or fix cue: Classify as code issue, fork environment difference, missing history/tag, CI flake, or upstream-only gate; rerun or isolate before patching unrelated code. A green rerun proves nondeterminism only, not root cause or patch correctness.
+
+## Flake Fixes Require A Source-Level Causal Timeline
+
+- Pattern: Flake classification evidence and fix evidence are different; a timing experiment can suggest a race while still describing the wrong consumer, state direction, or retry behavior.
+- Seen in: `karmada-io/karmada#7719` and PR `#7732`, where the proposed cleanup barrier was valid but the original explanation needed maintainer logs and scheduler queue tracing to establish the real 420-second failure chain.
+- Miss symptom: A rerun turns green and a local experiment exposes stale state, so a wait is added without proving which state the consumer reads, why one bad observation becomes terminal, or why the later recovery event does not self-heal.
+- Review check: Build a timestamped sequence from producer through authoritative/member state, reflected cache/status, consumer decision, retry/`Forget`, recovery event, and event-filter/requeue behavior. Read helper implementations; do not infer observed state from names.
+- Evidence to gather: First hard-failure logs, controller create/delete timestamps, cache/status collection timestamps, consumer plugin input, error classification, queue transition, update-event predicates, and count of later enqueue/schedule attempts.
+- Test or fix cue: Require an `E3` code-backed Mermaid timeline before patch design and an `E4` reproduction, regression, or observable baseline-versus-patch counterfactual when feasible. A reasoned counterfactual is design evidence, not causal validation. The patch must name the exact causal edge it cuts; otherwise add diagnostics and keep the proposal labeled as a hypothesis.
 
 ## Verify Assertion-Control-Flow Comments Before Patching
 
@@ -64,3 +73,39 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: For assertion/retry frameworks, confirm whether failures return, panic, call `FailNow`, or are intercepted by the framework before accepting a panic/control-flow finding.
 - Evidence to gather: Framework docs or vendored source plus a focused temporary test with side effects after the disputed assertion.
 - Test or fix cue: In Gomega, `Eventually` callbacks that take `gomega.Gomega` retry after assertion failure; returning `(bool, error)` is still a clear style, but not necessarily a nil-panic fix.
+
+## Per-Item Skip Conditions Must Not Stop Aggregate Collection
+
+- Pattern: A helper can use a sentinel such as `nil` to mean “exclude this item,” while its caller incorrectly treats the sentinel as a reason to stop processing all later items.
+- Seen in: `karmada-io/karmada#7757`, cluster resource modeling stopped at the first saturated node.
+- Miss symptom: Aggregate output depends on input iteration order and silently omits valid items after one locally unusable item.
+- Review check: For loops that build summaries from caches or collections, classify every `break`, `return`, and sentinel result as item-local or collection-global; remember informer/map iteration may be unordered.
+- Evidence to gather: Helper contract/logging, mutations before the sentinel return, collection ordering guarantees, and a case with an invalid/saturated item before a valid item.
+- Test or fix cue: Use `continue` for item-local exclusion; add order-invariance tests with the skipped item before and after valid items.
+
+## Cleanup Absence Is Meaningful Only After Presence
+
+- Pattern: In eventually consistent tests, an initial `NotFound` does not prove cleanup succeeded unless the test first observed that the resource was created.
+- Seen in: `karmada-io/karmada#7692`, ClusterResourceBinding e2e propagation and cleanup race.
+- Miss symptom: Cleanup passes while propagation is still in flight, and the delayed controller action creates the resource after the test has moved on.
+- Review check: For every create-then-delete flow, verify the test establishes `requested -> observed present -> delete requested -> observed absent`, rather than only `requested -> observed absent`.
+- Evidence to gather: Controller and test timestamps around source deletion, derived object creation, Work deletion, and the first successful absence poll.
+- Test or fix cue: Add a bounded presence barrier before cleanup, then retain the disappearance barrier; use failure artifacts to confirm the ordering rather than relying only on a green rerun.
+
+## Certificate Private Keys May Have Non-TLS Consumers
+
+- Pattern: A file named after a TLS certificate may also be reused as a JWT, ServiceAccount, or application signing key, so rotating the leaf key can invalidate credentials outside the X.509 trust chain.
+- Seen in: `karmada-io/karmada#7697`, where `karmada.key` is both a leaf key and the kube-apiserver/kube-controller-manager ServiceAccount signing key.
+- Miss symptom: CA certificates remain unchanged and TLS leaf verification looks correct, but existing tokens fail after restart or during a rolling update because old and new replicas trust different signing keys.
+- Review check: Search every consumer of each rotated private-key path, including process flags, mounted Secrets, JWT signing, service-account controllers, webhooks, and sidecars; do not infer usage only from the filename.
+- Evidence to gather: Key-generation path, all command-line flags referencing the key, verifier key sets, rollout order, token lifetime, and whether old/new verification overlap exists.
+- Test or fix cue: Preserve the shared signing key when only renewing its certificate, or design explicit old/new verification overlap; add a regression test for pre-rotation tokens and mixed-version replicas.
+
+## Local Artifacts Must Be Bound To The Remote Target Before Refresh
+
+- Pattern: A command can select remote state through one kubeconfig/context while separately using a default local data path, so rewriting a local config without proving identity can mix credentials from two clusters.
+- Seen in: `karmada-io/karmada#7697`, where rotating remote cluster B could otherwise preserve cluster A's local API server URL while embedding B's CA and admin credentials.
+- Miss symptom: Both the remote Secret update and local file write are individually valid, but the resulting local kubeconfig combines an endpoint from one control plane with trust/client material from another.
+- Review check: For commands that read remote state and refresh local artifacts, list every independent selector (remote kubeconfig/context, namespace, data path, filename) and identify the stable cluster identity checked before mutation.
+- Evidence to gather: Selected remote CA or cluster ID, local artifact endpoint and embedded/referenced CA, path defaults, and the ordering of local/remote writes on mismatch.
+- Test or fix cue: Compare a stable identity such as parsed CA DER before rewriting, fail before any local or remote mutation on mismatch, and add a two-cluster regression test asserting both states remain unchanged.

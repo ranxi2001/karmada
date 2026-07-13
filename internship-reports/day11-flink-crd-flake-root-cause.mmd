@@ -1,0 +1,34 @@
+%%{init: {"theme":"base","themeCSS":"svg { background-color: #ffffff; }","themeVariables":{"background":"#ffffff","primaryColor":"#f4f7fb","primaryTextColor":"#111827","primaryBorderColor":"#64748b","lineColor":"#475569","signalColor":"#334155","signalTextColor":"#111827","actorBkg":"#f4f7fb","actorBorder":"#64748b","actorTextColor":"#111827","noteBkgColor":"#fff7d6","noteBorderColor":"#d8a305","noteTextColor":"#111827"}}}%%
+sequenceDiagram
+    autonumber
+    participant Prev as Previous Flink e2e
+    participant CP as Karmada control plane
+    participant M1 as member1 API
+    participant SC as Status controller
+    participant CS as Cluster.Status.APIEnablements
+    participant Next as Next estimator e2e
+    participant Sch as Scheduler
+
+    rect rgb(255, 255, 255)
+    Prev->>CP: Delete source CRD (07:29:39.686, job log)
+    CP-->>Prev: WaitCRDDisappeared returns (job log/framework helper)
+    CP->>M1: Propagated delete (07:29:41.371, objectwatcher)
+    Note over CS: Previous collection still says APIEnabled
+    Next->>CP: Create source CRD (07:29:45.622, job log)
+    Next->>CP: Create CPP (07:29:51.505, job log)
+    Next->>CS: WaitCRDPresentOnClusters (07:29:51.516)
+    CS-->>Next: Stale APIEnabled, returns by 07:29:51.525
+    SC->>M1: Discovery collection (07:29:52.150)
+    M1-->>SC: Flink API absent (ServerGroupsAndResources, 07:29:52.150)
+    SC->>CS: setCurrentClusterStatus, update observed 07:29:52.191
+    CP->>M1: Re-create CRD (07:29:52.514, objectwatcher)
+    Next->>CP: Create FlinkDeployments and policy (07:29:56.552-56.560, job log)
+    CP->>Sch: ResourceBinding enters active queue (07:29:56.592, scheduler log)
+    Sch->>CS: APIEnablement.Filter (07:29:56.592)
+    CS-->>Sch: Not APIEnabled (scheduler log 07:29:56.592)
+    Sch->>Sch: FitError -> ignoreErr -> Forget (helper.go/scheduler.go)
+    SC->>CS: Sync 07:30:02.187, APIEnabled update observed 07:30:02.212
+    CS-->>Sch: Cluster status-only update (updateCluster)
+    Sch->>Sch: generation/labels unchanged, no binding requeue (event_handler.go)
+    Next-->>Next: Timeout after 420s (07:36:56.570, job log)
+    end

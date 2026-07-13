@@ -10,6 +10,14 @@
 
 ## Last Run
 
+- 2026-07-13：复核 `@RainbowMango` 在 issue #7719 的 root cause analysis 及 PR #7732 最终状态。原始 job/component logs 证明：下一用例 `WaitCRDPresentOnClusters` 在 `07:29:51.516-51.525` 约 9ms 内命中上一轮 stale `APIEnabled`，而新 member CRD 到 `07:29:52.514` 才创建；status controller 在中间窗口采到 API 缺失，scheduler 唯一一次 scheduling 返回普通 `FitError`，随后 `ignoreErr=true -> err=nil -> Forget`；`07:30:02.212` 的 APIEnablements status-only 恢复不改变 generation，`updateCluster` 不 requeue binding，因此冻结到 420s timeout。纠正旧分析错误：presence helper 和 scheduler plugin 都读 `Cluster.Status.APIEnablements`，scheduler 不直接检查 member API。维护者据此 `/lgtm`、`/approve`，PR 于 `2026-07-13T07:24:54Z` 合并为 `d0714678`，issue 同步关闭。Day 11 已加入 observed facts、code-proven chain、Mermaid 和 causal edge；`code-review-growth`、`karmada-issue-discussion`、`karmada-pr-management` 已加入 E0-E4 flake RCA gate，禁止从 rerun/timing correlation 直接提出补丁。三个 skill 均通过 `quick_validate.py`；fresh-agent forward test 将 rerun + timing window + green CI 正确判为 E2，并拒绝 fix/endorse。本轮未执行 upstream-facing action。
+- 2026-07-13：按用户要求对 PR #7697 final local head `4b6fa135f` 补做真实证书过期恢复测试。使用隔离 kind `v0.32.0` / Kubernetes `v1.36.1` 双节点 host cluster，以 `10m` leaf 安装并等待真实 `NotAfter`；过期后默认 kubeconfig `/readyz`、curl TLS、controller-manager/kube-controller-manager/scheduler 日志均复现 x509 expired。`100000h` CA 边界负例在任何写入前失败，Secret resourceVersion 和本地 kubeconfig hash 不变。随后用匹配原安装的 SAN/domain/etcd flags rotate 到 `8760h`，7 个 workload rollout 成功；最终 `/readyz=ok`、APIService `Available=True`、全部 workload desired/updated/ready `1/1/1`。机器断言证明三个 CA 和 `karmada.key` 不变，leaf 已更新，本地 kubeconfig 保留 `127.0.0.1:33443`/context/`0640` 且 client cert 与新 Secret 一致，过期前创建的 SA token 在恢复后仍 HTTP 200。完整时间线、失败命令和辅助脚本竞态见 Day 13；证据日志暂存 `/tmp/pr7697-expiry-final/logs/`。未 push、未评论、未改变 PR 状态。
+- 2026-07-13：继续维护 XXL upstream PR #7697。先为 4 个 P1 添加失败回归测试，再在 `/home/karmada` 完成本地 hardening：保留兼作 ServiceAccount JWT signing key 的 `karmada.key`；刷新同一 CA 所属的本地 admin kubeconfig并保留 server/context/无关条目，跨集群 CA mismatch、损坏文件和 cert/key mismatch 均在 Secret update 前失败；对 root/front-proxy/internal-etcd CA 做 CA role、时间和 leaf lifetime 预检；修正原安装 flags 文档并断言 3-replica etcd、custom domain、external DNS/IP SAN。独立 review 补出跨集群 kubeconfig 污染风险并已加 CA guard；该漏审点已沉淀为 `Local Artifacts Must Be Bound To The Remote Target Before Refresh` review pattern。剩余 P2 是 external-etcd PEM/pair 校验、多 Secret 部分更新，以及原子 rename 不保留自定义 owner/group/ACL/xattrs。本地 signed-off commit 已创建并 rebase 到 `upstream/master@3d4d14d74`；线程审计后补 3 条 helper doc comments 并 amend 为 clean head `4b6fa135f`。range-diff 证明原 3 个有效 commit patch-equivalent并删除空 CI-trigger commit。最终聚焦测试、`go test ./pkg/karmadactl/cmdinit/... -count=1`（kubernetes `106.358s`）、目标 lint、command flags verifier 和 diff check 全部通过，rebase 后逻辑聚焦测试为 `37.823s`，amend 后 `TestValidateCAForLeaf`、lint/docs 再次通过。最终 `go test ./pkg/karmadactl/... ./cmd/karmadactl/... ./cmd/kubectl-karmada/... -count=1` 也通过（kubernetes `127.318s`），import-alias verifier 通过。远端仍为 `93eaf7e`，未 push、未执行 upstream action；下一步等用户批准 Day 13 的 lease-protected force-push。Day 13 是直到 merge 的唯一状态入口。
+- 2026-07-13：复核 upstream PR #7732 的最新维护状态和 `WaitCRDDisappearedFromClusterStatus` 语义。`@RainbowMango` 于 `2026-07-13T03:00:03Z` 提交包含 `/assign` 的 `COMMENTED` review，GitHub event 确认他已把自己设为 PR assignee；当前 requested reviewers 仍为 `@Vacant2333` 和 `@XiShanYongYe-Chang`，尚无 `lgtm/approve`。helper 每 5 秒读取 Karmada `Cluster` 状态，最长 420 秒，直到目标 FlinkDeployment GVK 不再被 `Cluster.Status.APIEnablements` 报告为 `APIEnabled`；`APIDisabled` 和 `APIUnknown` 均可收敛，与 scheduler 只允许 `APIEnabled` 集群的语义一致。这是等成员集群 CRD 对象删除之后的第三层状态收敛 barrier，防止下一个 e2e 用例读到旧 API 能力缓存。
+- 2026-07-13：按用户“先推进 flake 相关 issue”的要求完整 review upstream PR #7692。补丁在第一个 ClusterResourceBinding e2e `It` 结束前增加 member `ClusterRole` present barrier，解决旧 cleanup 把“尚未传播”的首次 `NotFound` 错当成“已清理”的竞态。独立失败产物 run `28397071031` / job `84140026710` 显示 cleanup 于 `19:57:47.708` 开始，`member2` 直到 `19:57:48.083` 才创建目标 ClusterRole，与 #7691 描述完全一致。`git diff --check`、e2e package compile test 和当前 upstream CI 通过；无阻塞性 finding，但单次 CI 不是 flake 消失的统计证明。用户确认 exact text 后已发布 [comment review #4681354181](https://github.com/karmada-io/karmada/pull/7692#pullrequestreview-4681354181)；GitHub API 回读确认作者 `ranxi2001`、状态 `COMMENTED`、正文和失败时序完整。通用经验“异步 cleanup 中只有先观察到 presence，后续 absence 才能证明真正删除”已补入 `code-review-growth` pattern library。
+- 2026-07-13：用户确认最终原文后，已在 upstream issue #7757 发布复现/review 评论：https://github.com/karmada-io/karmada/issues/7757#issuecomment-4953788174 。评论基于 `upstream/master@3d4d14d74`，说明 `AllocatableModeling.Count` 的 `expected=1 actual=0` 是 resource-model node count、不是 Pod slot 数；记录 `break -> continue` 后临时回归测试和现有相关单测均通过，限定影响为相关动态副本估算路径，建议顺序不变性/all-saturated 测试，并按用户要求 `cc @RainbowMango` 请求维护者确认语义。GitHub API 回读确认评论作者 `ranxi2001`、目标 #7757、正文和 mention 正确；Day 12 已从草稿改为发布记录。
+- 2026-07-13：按用户要求简单 review upstream issue #7757 并核对作者公开贡献背景。源码确认 `getNodeAvailable()` 的 `nil` 只表示单个节点 Pod slot 已满，而调用方 `break` 会终止整个 modeling 循环；client-go cache 的 map 遍历无顺序保证，因此结果会随节点顺序变化。独立临时 worktree 回归测试在当前代码得到 `expected=1 actual=0`，仅改 `break -> continue` 后通过，相关现有单测也通过；临时 worktree 已删除。影响限定为使用 `ReplicaRequirements` 的动态副本估算路径，不是所有调度。作者是 Karmada 新贡献者、尚无 merged Karmada PR，且 #7638/#7643 的原始 bug 判断均未成立，因此应提高其 PR 的证据要求；但 #7757 本身已有独立证据支持。详细 review 已补入 Day 12，循环控制经验补入 `code-review-growth` pattern library；评论随后已按用户确认发布，见上一条。
+- 2026-07-13：扫描 `karmada-io/karmada` 最近 30 天的 40 个 open issues 及近期 open PR，逐项核对 assignee、`/assign`、关联 PR、真人/bot review 与 CI。结论是当前没有“维护者已确认、无人认领、无 active PR”的干净新实现项；优先级收敛为：先推进自有 PR #7732，再回复直接 `@ranxi2001` 的 #7757，随后 review #7692 或 #7754，最后清理 #7697 已处理的 bot threads 并追真人 review。#7757 源码证据确认 `getAllocatableModelings()` 在饱和节点执行 `break` 会遗漏后续健康节点，但作者已认领，不重复实现。完整候选、排除理由和 #7757 英文草稿记录在 `internship-reports/day12-new-issue-pr-opportunities.md`；本轮未执行 upstream-facing action。
 - 2026-07-10：按用户要求重构 `internship-reports/day11-ci-flake-statistics.md`，把“一页结论 / 最新关注 / 高置信 Flake / 持续关注台账”放在正文前半部，将统计口径、rerun/trigger 样本、PR #7732 文案与技术复查、待补日志、排除项和数据采集命令下沉到附录。最新 GitHub 快照显示 #7732 仍 open、无 human review，核心 lint/codegen/compile/unit/e2e v1.34-v1.36 通过；此前 cancelled 的 Chart/Operator workflows 已进入 attempt 2，当前各有一个 job pending，Tide 仍等待 `approved`/`lgtm`。TODO 已同步改为等待 rerun 收尾与 human review。
 - 2026-07-10：继续清理遗漏的 #7719 issue body 临时副本。第二次 FlinkDeployment timeout、#7697/#7728 空提交与 `files=0` 证据已在 Day 11 归档，Day 9 已补最终 issue 更新索引，因此删除独立临时 body 文件并继续使用 Day 9/Day 11 作为本地入口。
 - 2026-07-10：按用户要求整理 `internship-reports/` 下以 `pr` 开头的 8 个临时文件。#7697 最终 scope comment 合并回 Day 8；#7719/#7732 的设计、最终验证和代码复查合并回 Day 11，Day 9 删除过期 PR body 草稿并改为结果索引；#7728/dashboard/website 的最终 body、验证和 PR 状态统一保留在 Day 10，删除重复旧草稿；README/TODO/PROGRESS 均改为 Day 文档入口。整理后不再保留独立 `pr*` body/plan/review 文件。验证时本机没有 `ruby`，改用 Perl 完成 Markdown fence 检查；文件名扫描、删除文件引用扫描、本地 Markdown 链接检查和 `git diff --check` 均通过。
@@ -82,10 +90,11 @@
 
 ## Current Blockers
 
-- 尚未实际运行 `hack/local-up-karmada.sh`，因此本机 kind / Docker / kubeconfig / 多集群环境是否可用还没有验证。
+- #7697 的本地 clean head `4b6fa135f` 已完成实现、rebase、全量 CLI 测试、lint/docs/import verifier、review thread 审计、PR body/回复草稿和 lease-protected push dry-run；远端仍为 `93eaf7e`。连续三个目标循环没有收到正式 push 授权，upstream posting gate 禁止继续改变 GitHub 状态；用户回复“确认 push”后恢复。
+- 尚未实际运行完整 `hack/local-up-karmada.sh` 多集群路径；但 Docker、kind、隔离 kubeconfig、Karmada init/rotate 和双节点 host control plane 已通过 #7697 真实过期实验验证。
 - 尚未跑完整 `make test` 或 `make verify`。本次 PR 只跑了相关范围的 `go test`、`hack/verify-command-line-flags.sh`、Helm lint、脚本语法和 YAML 解析。
-- upstream PR #7666 的 GitHub Actions 仍需继续观察。
-- GitHub CLI 当前未登录，匿名 GitHub API broad search 已遇到 rate limit；后续继续做 issue/PR 批量检索时应配置 `GH_TOKEN` 或改用浏览器页面。
+- upstream PR #7732 已由 `@RainbowMango` `/lgtm`、`/approve` 并合并，不再是 blocker。PR #7697 本地最终 head 已验证，但远端 push 仍等待用户明确授权，Tide 仍等待后续 review/labels。
+- GitHub CLI 当前已通过 `GH_TOKEN` 登录 `ranxi2001`，repo/API 查询可用；token 缺少 `read:org`，但不影响本次公开仓库 issue/PR 扫描。
 - 当前 Windows 电脑上 draw.io 已安装但未加入 PATH：`drawio` / `draw.io` 命令不可用，系统级路径 `C:\Program Files\draw.io\draw.io.exe` 也不存在；实际可用路径是 `C:\Users\ranxi\AppData\Local\Programs\draw.io\draw.io.exe`，版本 `30.2.6`。这个路径只适用于当前 Windows 机器；macOS 或其他机器仍按 drawio-skill 的正常探测顺序处理。
 
 ## Ruled Out
@@ -95,9 +104,12 @@
 
 ## Next
 
+- #7732 已合并并归档；把 #7719 的 source-backed causal timeline 作为后续 flake review 模板，不再跟踪该 PR 的 checks/review。
+- #7757 已由 `@Priyanshu8023` 认领；复现/review 评论已发布并 `cc @RainbowMango`。下一步等待维护者确认语义和作者 PR，后续只协助 review，不重复实现。
+- #7692 无阻塞性 finding 的 comment review 已发布；等待作者或 test OWNERS 回复，不重复催促。之后可 review #7754，复用 Day 5 证据明确当前 Quantity 语义本来正确、改动价值是去掉不必要 float round trip。
 - 以“9 月前拿到 AgentCube Karmada 项目社区席位”为主目标管理后续工作：每周至少沉淀 1 个 upstream-visible 证据，包括 merged PR、reviewed PR、issue 验证、社区会议材料、maintainer feedback follow-up 或可复用测试/文档改进。
-- #7697 不再需要等待 CI；下一步是等待 maintainer review、`/lgtm` 和 `/approve`。如果 reviewer 追问运行态 reload 或重启边界，结合 Day 9 中 #7663 token refresh 深读和 Day 8 runtime validation 解释：#7697 更新 init-managed certificate data，组件加载新证书依赖重启或后续单独实现的 reload 机制。
-- estimator / FlinkDeployment / ResourceQuota e2e flake 已发布 upstream issue #7719，`kind/flake` label 已生效；修复 PR [#7732](https://github.com/karmada-io/karmada/pull/7732) 已创建，commit `1240559dd` 本地验证和 fork push CI 均通过。下一步观察 upstream PR CI 与 review；如失败先按 Day 11 flake 口径区分代码问题和 CI flake，不要把这个修复混入 #7697。
+- #7697 当前维护状态为 `BLOCKED_USER_APPROVAL`，仍持续跟踪直到 merge；唯一状态入口为 Day 13。本地 clean head `4b6fa135f` 已完成修复、rebase、线程预审、完整 CLI 测试和 10m leaf 真实过期恢复验证；lease-protected push 的 `--dry-run` 已确认会从远端 `93eaf7e` 更新到 `4b6fa135f`，但未写远端。用户回复“确认 push”后正式 push；PR body/comment、thread resolve 或 reviewer request 仍分别准备 exact text 后确认。
+- estimator / FlinkDeployment / ResourceQuota e2e flake 已闭环：issue #7719 closed，修复 PR [#7732](https://github.com/karmada-io/karmada/pull/7732) merged as `d0714678`。后续只复用 Day 11 RCA 方法，不再追加评论或改动。
 - CI flake 专项下一步：补最近两次 `CI Schedule Workflow` 和 `APIServer compatibility` artifacts，把 37 个 schedule e2e/setup 失败按具体 Ginkgo spec 或 setup 阶段聚类；Remedy 若再次复现，准备引用 #5323 的英文 issue/comment 草稿并先给用户确认。
 - #7693 后续 PR 前需要准备英文 PR body 和 reviewer 说明，明确第一版 scope：只轮转组件 leaf certificates，复用既有 CA，update-only 同步 init-managed Secrets，不轮转 root CA、不更新 caBundle、不自动重启、不改 Helm/operator/workload 模板。开 upstream PR 前必须让用户确认完整英文文本和目标。
 - #7690 / `feature/cert-manager-layout` 暂时作为背景和 Secret 映射参考，不作为当前第一优先级 PR。旧 branch 已通过 fork push CI，但不要直接从它开 upstream PR。
@@ -113,6 +125,7 @@
 
 ## Stop Conditions
 
+- #7697 持续维护任务只在 PR 已 merge、merge SHA/最终 CI/review 状态已归档、deferred follow-ups 已记录后才标记 `DONE`。如 PR 只是 closed 但未 merge，记录 maintainer 原因并标记 `BLOCKED` 或转入新 PR，不视为完成。
 - 同一个本地环境问题连续失败 3 次，例如 kind 集群创建、Docker 镜像拉取、证书生成或 kubeconfig 上下文混乱，就停止硬调，记录 BLOCKED 并换路径。
 - 如果某个 issue 已有人明确认领并正在修改同一问题，不开重复 PR，只做复现、测试、review 或文档补充。
 - 如果只能基于猜测发社区评论，先停止，补源码证据、官方文档引用或本地验证结果后再讨论。

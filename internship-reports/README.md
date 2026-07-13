@@ -22,7 +22,9 @@
 - [Day 8：PR #7697 后续说明图和 follow-up PR 拆分回复](day8-after-pr7697-follow-up-pr-split.md)
 - [Day 9：社区 issue / PR 扫描与 PR #7697 CI 等待](day9-community-issue-pr-ci-watch.md)
 - [Day 10：GitHub Actions Ubuntu runner 升级调研与候选 PR](day10-ci-ubuntu-runner-upgrade.md)
-- [Day 11：Karmada CI Flake 专项统计](day11-ci-flake-statistics.md)
+- [Day 11：Karmada CI Flake 专项统计](day11-ci-flake-statistics.md)（[#7719 Mermaid 源码](day11-flink-crd-flake-root-cause.mmd) / [SVG](day11-flink-crd-flake-root-cause.svg)）
+- [Day 12：新 Issue / PR 可介入机会扫描](day12-new-issue-pr-opportunities.md)
+- [Day 13：PR #7697 深度 Review 与持续合并维护](day13-pr7697-review-and-merge-maintenance.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

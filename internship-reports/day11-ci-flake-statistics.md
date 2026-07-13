@@ -2,13 +2,13 @@
 
 - 报告日期：`2026-07-09`
 - 统计窗口：`2026-06-26 00:00 UTC` 至 `2026-07-09`
-- 最新状态快照：`2026-07-10 17:08 CST`
+- 最新状态快照：`2026-07-13 15:25 CST`
 
 > 本报告把“当前该关注什么”放在前面。历史统计口径、PR 文案、详细样本和数据采集过程统一放在附录。
 
 ## 一页结论
 
-1. **当前第一优先级是 PR #7732。** #7719 已从 flake 证据推进到修复 PR；代码复查没有发现 correctness finding，核心 lint、unit、e2e v1.34-v1.36 均通过。当前等待 Chart/Operator workflow rerun 收尾和 human `lgtm`/approval。
+1. **#7719 / PR #7732 已闭环，但原 RCA 需要纠偏。** `@RainbowMango` 用失败 run 的组件日志和 scheduler 源码补齐了 `FitError -> Forget -> status-only update 不 requeue` 的完整因果链，随后 `/lgtm`、`/approve`；PR 已于 `2026-07-13T07:24:54Z` 合并为 `d0714678`。我们此前把 timing experiment 当成 root cause，且误称 scheduler 直接检查 member API，这不符合成熟项目的 flake 修复标准。
 2. **本窗口确认了 3 类高置信 flake。** 分别是 FlinkDeployment cleanup/APIEnablements 竞态、Remedy status cleanup 超时、aggregated API/etcd 短暂失稳。
 3. **失败数量不能直接当成 flake 数量。** 598 条 upstream run 中有 32 条 failed run，但其中还包含真实代码问题、lint、release、chart template 和 image scan；只有 4 个 upstream 样本达到本报告的高置信标准。
 4. **下一项最值得补证据的是 schedule workflow。** 已有 37 行 schedule/compatibility e2e 或 setup 非成功 job，但缺少 Ginkgo failure summary，尚不能按 spec 或根因归类。
@@ -16,7 +16,7 @@
 
 | 关注项 | 当前判断 | 下一动作 |
 | --- | --- | --- |
-| [`#7732`](https://github.com/karmada-io/karmada/pull/7732) | 修复方向成立，代码复查无 finding；等待 CI rerun 和 human review | 观察 pending checks、`lgtm`、approval，不因无关 CI interruption 改代码 |
+| [`#7732`](https://github.com/karmada-io/karmada/pull/7732) | 已 `/lgtm`、`/approve` 并合并；维护者 RCA 证明补丁切断了测试共享状态的因果边 | 归档 merge SHA 和 RCA；把源码级时序门槛复用于后续 flake |
 | Remedy / [`#5323`](https://github.com/karmada-io/karmada/issues/5323) | 历史 flake 疑似复现一次 | 保留 job 链接；第二次复现后再发社区更新 |
 | Schedule / compatibility | 数量多但根因未知 | 下载最近 artifacts，按 Ginkgo spec、setup 阶段和控制面故障聚类 |
 | Aggregated API / etcd transient | 高置信环境或控制面瞬时失稳 | 挂到 [`#6841`](https://github.com/karmada-io/karmada/issues/6841) 台账，不修改无关业务代码 |
@@ -29,18 +29,19 @@
 
 | 项目 | 状态 |
 | --- | --- |
-| PR | [`karmada-io/karmada#7732`](https://github.com/karmada-io/karmada/pull/7732)，open，非 draft |
+| PR | [`karmada-io/karmada#7732`](https://github.com/karmada-io/karmada/pull/7732)，merged |
 | Head | `1240559dd34cc0eedd0ec6cffe97b5c0076660dc` |
-| Merge state | GitHub 显示 mergeable；Tide 仍缺 `approved` / `lgtm` |
-| Human review | 暂无 human review；现有 review 来自 bot 和作者回复 |
-| 核心 CI | DCO、lint、codegen、compile、unit、e2e v1.34/v1.35/v1.36 已通过 |
-| 安装 workflows | 先前取消的 Chart v1.34、Operator v1.35 已触发 workflow rerun；`17:08 CST` 快照下各有一个 job pending |
+| Merge commit | `d0714678fe181e8dc7d7446555e14799333911db`，`2026-07-13T07:24:54Z` |
+| Human review | [`@RainbowMango` APPROVED](https://github.com/karmada-io/karmada/pull/7732#pullrequestreview-4682566443)：`/lgtm`、`/approve`，并引用维护者 RCA |
+| Labels | `approved`、`lgtm`、`kind/flake`、`size/S` |
+| Issue | [`#7719`](https://github.com/karmada-io/karmada/issues/7719) 已随 PR 合并关闭 |
 
 当前判断：
 
-- 不需要再修改 helper 来回应 Gemini 的 nil pointer 评论；该评论已通过 Gomega 控制流测试证明不成立。
-- pending checks 是对先前 cancelled workflows 的重新执行，当前没有指向 `test/e2e/` diff 的失败证据。
-- 最小行动是等待 rerun 结束和 human review。只有出现新的、与 diff 相关的失败时才重新进入代码分析。
+- 补丁方向成立，但我们原来的论证只到 timing/state window，属于 hypothesis，不足以称为 root cause。
+- `WaitCRDPresentOnClusters` 和 scheduler APIEnablement plugin 都读取 `Cluster.Status.APIEnablements`；它们都不直接检查 member API。原分析对此表述错误。
+- 维护者补出的关键环节是“为什么状态恢复后不自愈”：普通 `FitError` 被当成完成并 `Forget`，而 `APIEnablements` 恢复只是 status-only update，不触发 binding requeue。
+- 后续 flake 必须先完成 timestamp log + function/branch 的源码级时序，再讨论补丁；同 SHA rerun 转绿和本地 timing experiment 只能分别证明 nondeterminism 与 hypothesis。
 
 ### Remedy 再次出现
 
@@ -57,9 +58,8 @@
 
 ### 持续更新触发条件
 
-只在以下事件发生时更新报告正文：
+后续只在以下事件发生时更新报告正文：
 
-- #7732 checks、review、labels 或 state 发生变化。
 - Remedy spec 再次复现。
 - schedule/compatibility artifacts 已能归到具体 spec 或 setup 根因。
 - 新一周统计窗口完成，关键数字发生变化。
@@ -78,11 +78,12 @@
 关键证据：
 
 - scheduler 曾报告 `member1` missing `flink.apache.org/v1beta1/FlinkDeployment` API。
-- 本地 diagnostic 证明旧 cleanup 在 control plane CRD 消失后即可返回，此时 member CRD 和 `Cluster.Status.APIEnablements` 仍可能保留数秒。
+- 失败 job 显示下一用例的 `WaitCRDPresentOnClusters` 从 `07:29:51.516` 到下一步 `07:29:51.525` 仅约 9ms，但 member1 的新 CRD 到 `07:29:52.514` 才创建；该 wait 命中的是上一轮残留的 `APIEnabled`。
+- 维护者组件日志和源码追踪证明：status controller 随后采到 CRD 缺失，唯一一次 scheduling 因缺 API 返回 `FitError`，该 binding 被 `Forget`；状态恢复的 cluster status-only update 又不触发 requeue，最终卡满 420 秒。
 - #7697 没有修改 estimator/Flink 路径，同一代码通过空提交重触发后全绿。
 - #7728 只改 runner label，PR CI 全绿，合并后的独立 master push 再次命中同类 Flink timeout。
 
-结论：高置信 e2e timing flake。跟踪 issue 为 [`#7719`](https://github.com/karmada-io/karmada/issues/7719)，修复 PR 为 [`#7732`](https://github.com/karmada-io/karmada/pull/7732)。
+结论：高置信 e2e shared-state flake。完整 RCA 见 [`@RainbowMango` 的 issue comment](https://github.com/karmada-io/karmada/issues/7719#issuecomment-4955452375)；修复 PR [`#7732`](https://github.com/karmada-io/karmada/pull/7732) 已合并。
 
 ### 2. Remedy status cleanup 超时
 
@@ -117,8 +118,8 @@
 
 | 编号 | 状态 | 本报告中的作用 | 下一检查点 |
 | --- | --- | --- | --- |
-| [`#7732`](https://github.com/karmada-io/karmada/pull/7732) | open, `kind/flake` | 当前首要修复 PR | checks 完成、human `lgtm`/approval、merge state |
-| [`#7719`](https://github.com/karmada-io/karmada/issues/7719) | open, `kind/flake` | Flink cleanup/APIEnablements 根因与证据入口 | 随 #7732 合并状态更新 |
+| [`#7732`](https://github.com/karmada-io/karmada/pull/7732) | merged, `kind/flake`, `lgtm`, `approved` | Flink cleanup/APIEnablements 修复 | 已归档 merge SHA 与维护者 RCA |
+| [`#7719`](https://github.com/karmada-io/karmada/issues/7719) | closed, `kind/flake` | Flink cleanup/APIEnablements RCA 与证据入口 | 作为后续 flake 源码时序分析范例 |
 | [`#5323`](https://github.com/karmada-io/karmada/issues/5323) | closed | Remedy 同名历史 flake | 第二次新复现后决定 reopen/new issue |
 | [`#6841`](https://github.com/karmada-io/karmada/issues/6841) | open, `kind/flake` | e2e 间歇失败 umbrella | schedule/control-plane 新样本归档 |
 | [`#7388`](https://github.com/karmada-io/karmada/issues/7388) | open, `kind/flake` | v1.35 环境/兼容性历史参照 | 仅在失败持续集中于 v1.35 时关联 |
@@ -197,13 +198,99 @@ control plane CRD disappeared
   -> next test performs a fresh propagation/readiness wait
 ```
 
+### 维护者 RCA 与原分析纠偏
+
+先明确结论：PR 的测试隔离修复是 causal fix，但我们此前给出的理由没有达到 causal RCA。我们证明了旧 cleanup 会提前返回和状态存在时间窗，却没有追到 consumer 的错误分类、queue terminal path 以及 recovery event 为什么不能自愈；还把 scheduler 的观察对象说错了。最终批准依赖的是维护者补出的 [`#7719 root cause analysis`](https://github.com/karmada-io/karmada/issues/7719#issuecomment-4955452375)，不是“重跑绿了”或我们的 timing 推测。
+
+#### Observed facts
+
+| 时间 | Actor / event | 可直接得出的事实 | 证据 |
+| --- | --- | --- | --- |
+| `07:29:39.686` | previous e2e 删除 control-plane CRD | 旧 cleanup 只等待 control-plane `NotFound` | [failed job](https://github.com/karmada-io/karmada/actions/runs/28499042349/job/84472927003) Ginkgo step |
+| `07:29:41.371` | objectwatcher 删除 member1 CRD | member-side 删除晚于 source cleanup | controller-manager component log |
+| `07:29:45.622` | next e2e 创建 source CRD | 下一用例已开始复用同名 CRD | failed job Ginkgo step |
+| `07:29:51.505` | next e2e 创建 CPP | 新一轮 propagation 已发起 | failed job Ginkgo step |
+| `07:29:51.516-51.525` | presence wait 返回并进入下一步 | 约 9ms 返回；不可能观察到 `52.514` 才创建的新 member CRD | failed job Ginkgo/log timestamps |
+| `07:29:52.150` | status controller 采集 member1 API | 采集发生在 member CRD 缺失窗口 | controller-manager component log |
+| `07:29:52.514` | objectwatcher 重建 member1 CRD | 比 status collection 晚约 `0.364s` | controller-manager component log |
+| `07:29:56.552-56.560` | next e2e 创建 FlinkDeployments 和 policy | workload scheduling 输入在 non-enabled status 写入后出现 | failed job Ginkgo steps |
+| `07:29:56.592-56.593` | scheduler 唯一一次调度 | APIEnablement filter 报 missing API，结果为 clusters `[]` | scheduler component log |
+| `07:30:02.212` | scheduler 收到 member1 Cluster update | `APIEnablements` 已恢复，但日志中没有 affected binding enqueue 或第二次 scheduling | scheduler component log |
+| `07:36:56.570` | test timeout | binding 一直冻结在 `NoClusterFit` 直到 420 秒超时 | failed job and scheduler log |
+
+#### Code-proven causal chain
+
+| 链路 | 源码证明 |
+| --- | --- |
+| presence helper 观察什么 | [`WaitCRDPresentOnClusters`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/test/e2e/framework/customresourcedefine.go#L66-L78) 读取 `Cluster.Status.APIEnablements`，不访问 member CRD |
+| 状态如何产生 | [`setCurrentClusterStatus`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/pkg/controllers/status/cluster_status_controller.go#L247-L261) 通过 member discovery 收集 API 并写入 Cluster status |
+| scheduler 观察什么 | [`APIEnablement.Filter`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/pkg/scheduler/framework/plugins/apienablement/api_enablement.go#L50-L77) 同样只读 `Cluster.Status.APIEnablements` |
+| 一次失败为什么成为 terminal | [`getConditionByError`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/pkg/scheduler/helper.go#L112-L129) 对普通 `FitError` 返回 `ignoreErr=true`；[`scheduleResourceBinding`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/pkg/scheduler/scheduler.go#L571-L582) 把 `err` 置为 `nil`；[`handleErr`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/pkg/scheduler/scheduler.go#L933-L945) 随后执行 `Forget` |
+| 状态恢复为什么不自愈 | [`updateCluster`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/pkg/scheduler/event_handler.go#L326-L353) 只在 deletion timestamp、labels 或 generation 变化时进入 affected-binding requeue；status-only update 不改变 generation |
+
+因此旧时序是：
+
+`旧 status=APIEnabled -> 下一用例 presence wait 假阳性 -> status controller 采到短暂缺失并写 non-enabled -> 唯一一次调度 FitError -> binding Forget -> status 恢复但不 requeue -> 420s timeout`
+
+此前“scheduler checks the actual member cluster API”的说法是错误的。scheduler 与 presence helper 读的是同一份反映状态；真正的问题不是两者分别读取了不同数据源，而是下一用例先命中旧 `APIEnabled`，随后 status 在唯一一次 scheduling 前翻转为 non-enabled，并且恢复事件不会重新排队。
+
+#### Source-backed sequence
+
+![#7719 Flink CRD flake root-cause sequence](day11-flink-crd-flake-root-cause.svg)
+
+```mermaid
+%%{init: {"theme":"base","themeCSS":"svg { background-color: #ffffff; }","themeVariables":{"background":"#ffffff","primaryColor":"#f4f7fb","primaryTextColor":"#111827","primaryBorderColor":"#64748b","lineColor":"#475569","signalColor":"#334155","signalTextColor":"#111827","actorBkg":"#f4f7fb","actorBorder":"#64748b","actorTextColor":"#111827","noteBkgColor":"#fff7d6","noteBorderColor":"#d8a305","noteTextColor":"#111827"}}}%%
+sequenceDiagram
+    autonumber
+    participant Prev as Previous Flink e2e
+    participant CP as Karmada control plane
+    participant M1 as member1 API
+    participant SC as Status controller
+    participant CS as Cluster.Status.APIEnablements
+    participant Next as Next estimator e2e
+    participant Sch as Scheduler
+
+    rect rgb(255, 255, 255)
+    Prev->>CP: Delete source CRD (07:29:39.686, job log)
+    CP-->>Prev: WaitCRDDisappeared returns (job log/framework helper)
+    CP->>M1: Propagated delete (07:29:41.371, objectwatcher)
+    Note over CS: Previous collection still says APIEnabled
+    Next->>CP: Create source CRD (07:29:45.622, job log)
+    Next->>CP: Create CPP (07:29:51.505, job log)
+    Next->>CS: WaitCRDPresentOnClusters (07:29:51.516)
+    CS-->>Next: Stale APIEnabled, returns by 07:29:51.525
+    SC->>M1: Discovery collection (07:29:52.150)
+    M1-->>SC: Flink API absent (ServerGroupsAndResources, 07:29:52.150)
+    SC->>CS: setCurrentClusterStatus, update observed 07:29:52.191
+    CP->>M1: Re-create CRD (07:29:52.514, objectwatcher)
+    Next->>CP: Create FlinkDeployments and policy (07:29:56.552-56.560, job log)
+    CP->>Sch: ResourceBinding enters active queue (07:29:56.592, scheduler log)
+    Sch->>CS: APIEnablement.Filter (07:29:56.592)
+    CS-->>Sch: Not APIEnabled (scheduler log 07:29:56.592)
+    Sch->>Sch: FitError -> ignoreErr -> Forget (helper.go/scheduler.go)
+    SC->>CS: Sync 07:30:02.187, APIEnabled update observed 07:30:02.212
+    CS-->>Sch: Cluster status-only update (updateCluster)
+    Sch->>Sch: generation/labels unchanged, no binding requeue (event_handler.go)
+    Next-->>Next: Timeout after 420s (07:36:56.570, job log)
+    end
+```
+
+#### 为什么 #7732 切中了因果边
+
+- `WaitCRDDisappearedOnClusters` 先证明 member CRD 实体已经删除。
+- `WaitCRDDisappearedFromClusterStatus` 再证明上一轮 `APIEnabled` 已被 status controller 清除。
+- 下一轮 `WaitCRDPresentOnClusters` 因而必须观察一次新的 `non-enabled -> APIEnabled` 转换，不能再把上一轮残留状态当成新传播完成。
+- 修复只建立 e2e 跨用例边界 invariant，不改变 scheduler 的 `FitError`、queue 或 production controller 行为，范围与已证明的根因一致。
+
+这两个 cleanup wait 互补：仅等 member `NotFound` 可能仍留下 stale `APIEnabled`；仅等 status `!= APIEnabled` 又不能单独证明 member 实体确已删除。补丁切断的是“旧 status 让下一轮 readiness wait 假阳性”这条因果边，而不是用更长 timeout 掩盖问题。
+
 ### 代码复查结论
 
 - 4 个 FlinkDeployment CRD 创建路径均已覆盖。
 - Ginkgo `DeferCleanup` LIFO 顺序正确：先清 workload/policy，再删 ClusterPropagationPolicy，最后删除源 CRD并等待 member 状态。
 - helper 接受 `APIUnknown` 是合理的：member CRD 已直接确认为 NotFound，下一轮 setup 仍必须等到 `APIEnabled`。
 - Gemini 的 nil pointer finding 不成立：注入的 `gomega.Gomega` 断言失败会中止当前 poll 并让 `Eventually` 重试。
-- 没有发现需要修改的 correctness finding。
+- 没有发现补丁本身需要修改的 correctness finding；但此前 review 缺少 scheduler terminal path 和 recovery-event 分析，不能把“补丁看起来合理”写成“root cause 已证明”。
 
 ### 验证
 
@@ -212,8 +299,9 @@ control plane CRD disappeared
 - Topic worktree 干净，commit 包含 `Signed-off-by`，base 是 PR head 的祖先。
 - Fork push CI 的 CI Workflow、Chart、CLI、Operator 最终通过。
 - Upstream 核心 lint、codegen、compile、unit、e2e v1.34-v1.35-v1.36 通过。
+- `@RainbowMango` 基于上述 RCA 提交 `/lgtm`、`/approve`，PR 最终合并为 `d0714678fe181e8dc7d7446555e14799333911db`。
 
-剩余风险：原竞态依赖多个异步控制器和 discovery/status 时序，没有稳定触发原 timeout 的自动化回归测试；本地 diagnostic 已直接证明旧 cleanup 会提前返回。
+剩余风险：仓库仍没有一个可确定性重放完整 420 秒失败链的自动化回归测试。当前证据达到 E3：原始组件日志和源码分支贯通了 producer、reflected status、consumer、queue 与 recovery event。E4 尚未通过受控复现或回归测试达成；修复后矩阵通过只能说明没有观察到回归，不能单独证明 causal validation。维护者是在完整 E3 RCA、补丁范围与 counterfactual 一致的基础上批准合并。
 
 ## 附录 D：待补日志样本
 

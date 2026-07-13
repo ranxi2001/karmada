@@ -19,6 +19,7 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
 - Chinese analysis belongs in `internship-reports/`.
 - Search for related issues/PRs before proposing a new direction.
 - Distinguish explicit maintainer comments from engineering inference.
+- For flake issues, also use `code-review-growth` and apply its Flake Root-Cause Gate. Label statements as symptom, hypothesis, or root cause; do not use root cause before `E3` evidence.
 - Distinguish human maintainers/reviewers from automation bots, CI, merge gates, and AI reviewer output.
 - Do not post comments, `/assign`, reviewer requests, or maintainer mentions without explicit user approval of the exact text and target.
 
@@ -39,11 +40,12 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
    - open questions
    - blocked, duplicate, or conflicting work
    - related issue/PR graph
-5. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
-6. Produce Chinese internal summary first when planning or learning.
-7. Produce English upstream comment only when asked to draft or post.
-8. Include GitHub cross-links with short relevance notes.
-9. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+5. For a flake, build a timestamp/code evidence table and Mermaid sequence diagram that traces producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and why the system does not self-heal.
+6. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
+7. Produce Chinese internal summary first when planning or learning.
+8. Produce English upstream comment only when asked to draft or post.
+9. Include GitHub cross-links with short relevance notes.
+10. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
 
 ## Fetching Thread Context
 
@@ -171,6 +173,39 @@ For local deployment, e2e, compatibility, or performance comments:
 - ...
 ```
 
+For a flake root-cause comment, use this structure only after reaching `E3` in `code-review-growth`:
+
+````md
+## First failure and timeline
+
+| Time | Actor and code path | State transition | Evidence |
+| --- | --- | --- | --- |
+| ... | `file:function/branch` | ... | log/artifact link |
+
+```mermaid
+sequenceDiagram
+    participant Producer
+    participant State
+    participant Consumer
+    participant Queue
+    Producer->>State: proven transition
+    State->>Consumer: proven observation
+    Consumer->>Queue: proven error/queue branch
+```
+
+## Why recovery does not self-heal
+
+- Recovery event:
+- Event filter / retry branch:
+- Terminal stuck state:
+
+## Fix invariant and counterfactual
+
+- Exact causal edge cut by the patch:
+- Expected sequence with the invariant:
+- Controlled validation or stated E4 limitation:
+````
+
 ## Cross-Linking Rules
 
 - Use `#123` for same-repo references.
@@ -186,6 +221,7 @@ For local deployment, e2e, compatibility, or performance comments:
 - Never claim we will implement something unless the user asks to commit to it.
 - Do not post comments without explicit user instruction.
 - Do not treat automation bot or AI reviewer comments as maintainer consensus.
+- Do not turn a rerun, timing correlation, or local state-window experiment into a root-cause claim or fix recommendation. At `E2`, publish only a labeled hypothesis or diagnostics plan.
 - Always report assignee state as `PR 认领 @` in planning tables or summaries.
 - If someone is assigned or an active PR exists, recommend review/test feedback instead of duplicate implementation.
 - Keep Chinese analysis local unless the project explicitly asks for it.

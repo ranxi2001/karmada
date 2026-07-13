@@ -974,3 +974,87 @@ Chart:       28762870940
 CLI:         28762870936
 Operator:    28762870928
 ```
+
+## 2026-07-13 深度 Review 快照：社区会议前的合并阻塞项
+
+> 持续跟踪入口已迁移到 [Day 13：PR #7697 深度 Review 与持续合并维护](day13-pr7697-review-and-merge-maintenance.md)。本节只保留 2026-07-13 首次深度 review 快照；后续 head、review、CI、修复和 merge 状态只更新 Day 13，避免两份记录漂移。
+
+本次基于 PR #7697 当前 head `93eaf7e57515c959fe30fa2aba387ce10029046d` 重新读取 issue #7693、PR body、10 个变更文件、相关调用方、全部 issue/review/line comments 和 CI。结论是：基本分支拆分和大部分防御性逻辑合理，但当前实现仍有个建议在请求 `lgtm` 前解决的证书生命周期问题。
+
+### Findings
+
+#### P1 / Blocking：更换 `karmada.key` 会破坏现有 ServiceAccount Token
+
+- `pkg/karmadactl/cmdinit/kubernetes/cert_rotation.go:82` 通过 `signLeafCert()` 重签 `karmada.crt`。
+- `pkg/karmadactl/cmdinit/cert/cert.go:224-239` 的 `NewCertAndKey()` 每次都调用 `NewPrivateKey()`，所以 `karmada.key` 也会被换掉。
+- 同一个 key 在 `pkg/karmadactl/cmdinit/kubernetes/command.go:82-83` 被 kube-apiserver 用作 `service-account-key-file` 和 `service-account-signing-key-file`，在 `command.go:138` 被 kube-controller-manager 用作 `service-account-private-key-file`。
+
+这不只是 TLS leaf key 轮换，也是 ServiceAccount JWT 签名 key 轮换。CA 保持不变无法让旧 JWT 继续通过新 key 验签。HA 滚动重启时，新旧 apiserver 副本还会分别信任不同 key，已有 token 和 rollout 期间新签 token 可能出现间歇或持久 `401`。
+
+最小修复建议：第一版只续签 `karmada.crt`，复用现有 `karmada.key`；如果真要轮换 SA key，需要 old/new verification overlap 和单独过渡设计。回归测试应断言 rotate 前后 `karmada.key` 或公钥不变。
+
+#### P1 / Blocking：默认 admin kubeconfig 仍嵌入旧证书
+
+- install 在 `pkg/karmadactl/cmdinit/kubernetes/deploy.go:838-842` 调用 `createKarmadaConfig()`，把 admin kubeconfig 写到默认 `/etc/karmada/karmada-apiserver.config`。
+- rotate 在 `deploy.go:799-803` 直接进入 `runCertRotate()`，该路径只更新集群内 Secrets，没有更新这个本地文件。
+- Day 8 的运行验证已直接证明这个缺口：旧 kubeconfig 因 client cert 过期访问失败，恢复验证必须从更新后的 Secret 手工导出 `rotated-karmada.config`。
+
+这意味着控制面 Pod 恢复了，用户继续使用 Karmada 默认 kubeconfig 仍会失败。也不能简单复用现有 `createKarmadaConfig()`，因为 `pkg/karmadactl/cmdinit/utils/format.go:110-115` 在目标文件已存在时直接返回。
+
+最小修复建议：rotate 时解析现有 kubeconfig，保留 server/context，以原子写入方式替换 CA/client cert/key；或至少显式生成新文件并输出路径。
+
+#### P1 / Blocking：原安装参数稍有遗漏就会静默改变 SAN 和组件 kubeconfig
+
+issue #7693 明确把“`other flags consistent with the original installation`”作为操作契约。但 PR 的 CLI 示例和生成文档只展示：
+
+```bash
+karmadactl init --cert-mode=rotate
+```
+
+实现会按本次参数和当前节点状态全量重建身份：
+
+- `deploy.go:515-524`：根据当前 `EtcdReplicas` 和 `HostClusterDomain` 生成 etcd server SAN。
+- `deploy.go:542-550`：根据当前 external DNS/IP、node IP 和 InternetIP 生成 apiserver SAN。
+- `deploy.go:614-625`：根据当前 domain 全量重建 8 个组件 kubeconfig。
+
+如果原安装是 3 副本 etcd、自定义 cluster domain、external DNS/IP，用户按当前示例执行后再重启，可能丢失 etcd-1/etcd-2 peer SAN、外部 API 地址或组件 server URL。
+
+最小合并要求是恢复 issue 中的完整示例，在 help/release note 中明确必须重放原安装参数，并补 3 副本 etcd、custom domain 和 external SAN 测试。更可靠的方案是从旧证书保留/合并 SAN，从现有 kubeconfig 保留 server/context，而不是要求用户准确重现历史环境。
+
+#### P1 / Blocking：过期或即将过期的 CA 仍可得到“轮换成功”
+
+- `cert_rotation.go:166-184` 只加载 CA cert/key，不检查 CA 当前有效期。
+- `deploy.go:508` 直接把 leaf `NotAfter` 设为 `now + CertValidity`。
+- `cert.go:175-195` 签发时没有保证 leaf 有效期被 CA 有效期包含。
+
+因此 CA 已过期或只剩 30 天时，命令仍可能写入一张显示为“365 天”的 leaf 并打印成功，但整条 TLS 链现在已无效或 30 天后就会无效。由于当前 PR 明确不支持 CA rotation，安全行为应是在任何 Secret update 前检查 root/front-proxy/internal-etcd CA 的 CA 属性、当前有效性和 `requested NotAfter <= CA.NotAfter`，不满足时明确报告需要 CA rotation。
+
+### P2 剩余风险
+
+- external-etcd CA/client cert/key 文件只读取 bytes，没有解析 CA PEM 或校验 client cert/key 匹配；误传文件可在命令成功后导致重启时 etcd 认证失败。
+- `updateCertsSecrets()` 对约 11 个 Secret 顺序 `Update`，第 N 个失败时前 N-1 个已经更新，没有 rollback。固定 CA 且保留 SA key 后通常可重跑收敛，但应加 conflict retry、可操作错误信息和“第 N 个失败后重跑”测试。
+
+### 已确认正常的部分
+
+- `install` 仍是默认 mode，原安装路径保持。
+- rotate 正确跳过 NodePort 检查、节点打标和 data directory 清空。
+- 所有目标 Secret 都会在首次 update 前完成存在性检查，不会在 rotate 中意外创建缺失 Secret。
+- existing root CA 和 Secret metadata 会保留；internal/external etcd mode 误切换已有防护。
+- Bot 原来提出的 etcd mode、metadata 和 error wrapping 意见已在代码和测试中处理。
+
+### 验证和 GitHub 状态
+
+- `go test ./pkg/karmadactl/cmdinit/... -count=1` 通过，其中 `cmdinit/kubernetes` 耗时 `77.452s`。
+- `git diff --check upstream/master...HEAD` 通过。
+- 当前 head 的 17 个 GitHub check-runs 全部 success；Tide 只缺 `lgtm/approve`。
+- PR 比当前 `upstream/master` 落后 15 个提交，但这些提交没有修改本 PR 的 10 个文件，当前没有冲突标记。
+- 尚无真人代码 review；16 个 bot review threads 都仍是 unresolved，虽然现有代码已处理它们。
+- Codecov 显示 patch coverage 约 `62.32%`，104 行变更未覆盖；当前没有 rotate 专项 e2e 或可重放的 CI artifact。
+
+### 社区会议必须确认的问题
+
+1. 第一版是否明确保留 `karmada.key`，把 ServiceAccount signing-key rotation 拆到单独设计。
+2. 本地 `/etc/karmada/karmada-apiserver.config` 是否属于“init-managed”并必须同步更新。
+3. 第一版是继续要求用户完整重放原安装 flags，还是从现有 cert/kubeconfig 保留 SAN 和 server。
+4. 不支持 CA rotation 时，CA 剩余有效期不足应报错、截断 leaf 有效期，还是只警告。
+5. 顺序更新多个 Secret 的部分失败语义是否可接受，合并前是否要求 rotate 专项 e2e。
