@@ -1,0 +1,68 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff"},"flowchart":{"curve":"basis","htmlLabels":true}}}%%
+flowchart TB
+    DNOTE["Decision plane: required by #7621,<br/>out of scope for #7662"]
+    METRICS["Pool telemetry<br/>watermarks, CPU/memory ratio"]
+    POLICY["Select workload, from/to<br/>cooldown, hysteresis, migration budget"]
+    DNOTE ~~~ METRICS --> POLICY
+
+    subgraph RUNTIME["Execution paths"]
+        direction LR
+        subgraph CURRENT["Current master d0714678f"]
+            direction TB
+            WR0["WorkloadRebalancer<br/>workloads + TTL"]
+            CTRL0["WR controller<br/>write rescheduleTriggeredAt<br/>mark Successful immediately"]
+            SCHED0["Scheduler Fresh mode<br/>recompute Binding clusters"]
+            BIND0["Binding controller<br/>remove orphan Works<br/>then ensure target Works"]
+            TARGET0["Target member workload<br/>starts asynchronously"]
+            STATUS0["AggregatedStatus<br/>single Health per cluster"]
+            GE["Failover-only GracefulEvictionTask<br/>temporarily retain source Work"]
+            GEC["Wait new targets Healthy<br/>or purge after timeout"]
+            WR0 --> CTRL0 --> SCHED0 --> BIND0 --> TARGET0 --> STATUS0
+            SCHED0 -. "separate failover path" .-> GE --> GEC
+        end
+
+        subgraph PROPOSED["PR #7662 proposal: execution layer"]
+            direction TB
+            WR1["WorkloadRebalancer<br/>strategy + cancel + progress"]
+            CTRL1["Generic lifecycle controller<br/>status, retry, timeout, cancel"]
+            EXEC{"Strategy executor"}
+            FULL["Reschedule / Full<br/>wait scheduler completion"]
+            READY["Reschedule / PreserveReady<br/>keep ready count, place delta"]
+            SAFE["SafeMigration<br/>from/to + maxInFlightUnits"]
+            UNIT["Workload-specific units<br/>replica batch, shard, partition"]
+            STABLE["Open target<br/>fresh readiness + stableWindow"]
+            COMMIT["Commit source<br/>only after target is stable"]
+            REL["Relationship to existing<br/>GracefulEviction is undefined"]
+            WR1 --> CTRL1 --> EXEC
+            EXEC --> FULL
+            EXEC --> READY
+            EXEC --> SAFE --> UNIT --> STABLE --> COMMIT
+            SAFE -.-> REL
+        end
+    end
+
+    POLICY -. "current task" .-> WR0
+    POLICY -. "future consumer" .-> WR1
+
+    GAPTITLE["Safety contract still unresolved"]
+    GAP1["Durable operation ID, unit state,<br/>ReadySince and crash recovery"]
+    GAP2["Single writer, concurrent WR/failover,<br/>spec mutation and stale status"]
+    GAP3["Traffic switch, data warm-up,<br/>serving readiness and rollback"]
+    GAP4["Automatic waterline decision,<br/>ratio objective and anti-oscillation"]
+    GAPTITLE ~~~ GAP1 ~~~ GAP2 ~~~ GAP3 ~~~ GAP4
+    CTRL1 -.-> GAP1
+    REL -.-> GAP2
+    STABLE -.-> GAP3
+
+    classDef decision fill:#f5f5f5,stroke:#666666,color:#222222,stroke-dasharray:5 5;
+    classDef current fill:#dae8fc,stroke:#6c8ebf,color:#1f2937;
+    classDef existing fill:#fff2cc,stroke:#d6b656,color:#3f3f2f;
+    classDef proposed fill:#d5e8d4,stroke:#82b366,color:#1f3a24;
+    classDef gap fill:#f8cecc,stroke:#b85450,color:#5b1f1f;
+
+    class DNOTE,METRICS,POLICY decision;
+    class WR0,CTRL0,SCHED0,BIND0,TARGET0,STATUS0 current;
+    class GE,GEC existing;
+    class WR1,CTRL1,EXEC,FULL,READY,SAFE,UNIT,STABLE,COMMIT proposed;
+    class REL gap;
+    class GAPTITLE,GAP1,GAP2,GAP3,GAP4 gap;

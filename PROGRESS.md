@@ -6,10 +6,12 @@
 
 阶段目标：在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。
 
-当前主线：围绕 Karmada upstream 真实贡献建立稳定产出能力，不再停留在学习仓库搭建。重点是持续完成可 review、可合并、可复盘的社区工作：高质量 issue/PR triage、设计提案、函数级验证、测试补强、PR review 响应和社区会议表达。短期以 `karmadactl init` 证书轮换 PR 为主线，沉淀一套可复用的 Karmada 贡献流程，形成 mentor 可检查的社区影响力证据。
+当前主线：围绕 Karmada upstream 真实贡献建立稳定产出能力，不再停留在学习仓库搭建。战略主线切到 #7621 / proposal PR #7662 的复杂工作负载安全重调度，先用源码、会议和状态机证据做高质量 proposal review，再在作者/maintainer 确认后认领独立 test/design slice；#7697 证书轮换继续作为交付维护线直到 merge，不扩大 scope。
 
 ## Last Run
 
+- 2026-07-13：按用户要求建立 Day 15 高价值特性主线，完整尽调 upstream #7621 和直接 proposal PR #7662。确认 #7621 当前是无 assignee 的 `kind/question`，维护者明确“只讨论、暂不开发”；#7662 head `586f6fc35` 由 `@zhy76` 提交，`@RainbowMango` assign review，尚无人类技术 review/LGTM/approve。官方会议证据显示 2026-06-16 纪要原文为 `Openkruze-like workloads.`，2026-06-30 将 story 2 定位为 offline pending replica、story 3 定位为 online graceful migration，但没有记录设计批准。按 `upstream/master@d0714678f` 追踪 WR trigger、scheduler Fresh、Binding/Work、GracefulEviction、Descheduler、ResourceInterpreter 和多组件路径，结论是当前只有 failover-only 的部分 make-before-break，WR/Descheduler 都不保证 safe migration；#7662 仍缺 durable operation state、single-writer/concurrency、GracefulEviction 单一状态源、PreserveReady scheduling-mode 证据、AggregatedStatus freshness 和 API compatibility，且自动水位/比例/防振荡明确为 non-goal。新增 Day 15 报告以及 `.drawio`/Mermaid/PNG/SVG current-vs-proposed 图；draw.io/Graphviz 不可用，draw.io XML validator 为 `0 error / 0 warning`，Mermaid fallback 已视觉检查。未修改 Go 代码、未评论、未认领、未改变 upstream 状态。
+- 2026-07-13：按用户“只增强有价值段落，不更新代码分支”的要求完成 repo-local skill 最小增强。`code-review-growth` 新增 claim-specific evidence labels（OBS/CODE/DOC/MAINTAINER/INFERENCE）、组件边界取证、terminal symptom 反向追因、read freshness 与 lifecycle freshness 区分，以及去锚定 independent falsification；pattern library 用 #7719/#7732 新增“fresh read 仍可能是 previous lifecycle state”。`karmada-pr-management` 仅新增高风险 differential review：base/head history、effect ledger/graph、revert-sensitive tests、coverage disclosure 和 finding labels，未修改 branch/push workflow。两个 skill 均通过 `quick_validate.py`，`git diff --check` 通过；三个 fresh-context forward tests 均命中预期且没有引入无关 branch 操作。Day 14 已记录吸收/拒绝项和 pinned source；没有安装或运行第三方 skill/script，没有修改 Karmada 源码或 upstream 状态。
 - 2026-07-13：按用户要求检索知名开源维护者公开 Agent Skills，并使用 `skill-installer` 只读列出官方 curated catalog。通过 GitHub API 核验 Jesse Vincent `obra/superpowers@d884ae04`、Addy Osmani `agent-skills@98967c45`、Anthony Fu `skills@a74f281a`、Simon Willison `skills@a6579982`、Trail of Bits `skills@cfe5d7b1` 及知名组织仓库；逐项读取目标 `SKILL.md`、license、manifest、hooks 和 executable tree。当前 Karmada junior 首选是 `systematic-debugging`、`verification-before-completion`、`source-driven-development`，高风险 PR 再借鉴 `differential-review`；不整包安装，不因 star/作者身份跳过供应链审计。完整 shortlist、冲突点、固定 SHA、审计清单和未执行安装命令见 Day 14。本轮未安装或运行第三方 skill/script。
 - 2026-07-13：复核 `@RainbowMango` 在 issue #7719 的 root cause analysis 及 PR #7732 最终状态。原始 job/component logs 证明：下一用例 `WaitCRDPresentOnClusters` 在 `07:29:51.516-51.525` 约 9ms 内命中上一轮 stale `APIEnabled`，而新 member CRD 到 `07:29:52.514` 才创建；status controller 在中间窗口采到 API 缺失，scheduler 唯一一次 scheduling 返回普通 `FitError`，随后 `ignoreErr=true -> err=nil -> Forget`；`07:30:02.212` 的 APIEnablements status-only 恢复不改变 generation，`updateCluster` 不 requeue binding，因此冻结到 420s timeout。纠正旧分析错误：presence helper 和 scheduler plugin 都读 `Cluster.Status.APIEnablements`，scheduler 不直接检查 member API。维护者据此 `/lgtm`、`/approve`，PR 于 `2026-07-13T07:24:54Z` 合并为 `d0714678`，issue 同步关闭。Day 11 已加入 observed facts、code-proven chain、Mermaid 和 causal edge；`code-review-growth`、`karmada-issue-discussion`、`karmada-pr-management` 已加入 E0-E4 flake RCA gate，禁止从 rerun/timing correlation 直接提出补丁。三个 skill 均通过 `quick_validate.py`；fresh-agent forward test 将 rerun + timing window + green CI 正确判为 E2，并拒绝 fix/endorse。本轮未执行 upstream-facing action。
 - 2026-07-13：按用户要求对 PR #7697 final local head `4b6fa135f` 补做真实证书过期恢复测试。使用隔离 kind `v0.32.0` / Kubernetes `v1.36.1` 双节点 host cluster，以 `10m` leaf 安装并等待真实 `NotAfter`；过期后默认 kubeconfig `/readyz`、curl TLS、controller-manager/kube-controller-manager/scheduler 日志均复现 x509 expired。`100000h` CA 边界负例在任何写入前失败，Secret resourceVersion 和本地 kubeconfig hash 不变。随后用匹配原安装的 SAN/domain/etcd flags rotate 到 `8760h`，7 个 workload rollout 成功；最终 `/readyz=ok`、APIService `Available=True`、全部 workload desired/updated/ready `1/1/1`。机器断言证明三个 CA 和 `karmada.key` 不变，leaf 已更新，本地 kubeconfig 保留 `127.0.0.1:33443`/context/`0640` 且 client cert 与新 Secret 一致，过期前创建的 SA token 在恢复后仍 HTTP 200。完整时间线、失败命令和辅助脚本竞态见 Day 13；证据日志暂存 `/tmp/pr7697-expiry-final/logs/`。未 push、未评论、未改变 PR 状态。
@@ -91,6 +93,7 @@
 
 ## Current Blockers
 
+- #7662 尚无真人技术 review，proposal 未确定 GracefulEviction relationship、迁移事务持久化、并发 ownership 和旧 API default/TTL 合同；在这些边界确认前，不进入 SafeMigration Go 实现。
 - #7697 的本地 clean head `4b6fa135f` 已完成实现、rebase、全量 CLI 测试、lint/docs/import verifier、review thread 审计、PR body/回复草稿和 lease-protected push dry-run；远端仍为 `93eaf7e`。连续三个目标循环没有收到正式 push 授权，upstream posting gate 禁止继续改变 GitHub 状态；用户回复“确认 push”后恢复。
 - 尚未实际运行完整 `hack/local-up-karmada.sh` 多集群路径；但 Docker、kind、隔离 kubeconfig、Karmada init/rotate 和双节点 host control plane 已通过 #7697 真实过期实验验证。
 - 尚未跑完整 `make test` 或 `make verify`。本次 PR 只跑了相关范围的 `go test`、`hack/verify-command-line-flags.sh`、Helm lint、脚本语法和 YAML 解析。
@@ -105,6 +108,7 @@
 
 ## Next
 
+- #7621 / #7662：先用现有 scheduler core 做 PreserveReady 的 Duplicated/Static Weighted/Aggregated/Dynamic behavior matrix，并整理 SafeMigration crash-point/state ledger；随后准备一条不重复 bot 的英文 proposal review，完整文本和目标经用户确认后再发布，请作者与 `@RainbowMango` 决定可认领的独立 test/design slice。
 - #7732 已合并并归档；把 #7719 的 source-backed causal timeline 作为后续 flake review 模板，不再跟踪该 PR 的 checks/review。
 - #7757 已由 `@Priyanshu8023` 认领；复现/review 评论已发布并 `cc @RainbowMango`。下一步等待维护者确认语义和作者 PR，后续只协助 review，不重复实现。
 - #7692 无阻塞性 finding 的 comment review 已发布；等待作者或 test OWNERS 回复，不重复催促。之后可 review #7754，复用 Day 5 证据明确当前 Quantity 语义本来正确、改动价值是去掉不必要 float round trip。
@@ -126,6 +130,7 @@
 
 ## Stop Conditions
 
+- #7662 未形成 maintainer design direction，或作者正在修改同一 API/controller 时，不开重复实现 PR；只有 bot 建议和 green docs CI 不能授权实现。
 - #7697 持续维护任务只在 PR 已 merge、merge SHA/最终 CI/review 状态已归档、deferred follow-ups 已记录后才标记 `DONE`。如 PR 只是 closed 但未 merge，记录 maintainer 原因并标记 `BLOCKED` 或转入新 PR，不视为完成。
 - 同一个本地环境问题连续失败 3 次，例如 kind 集群创建、Docker 镜像拉取、证书生成或 kubeconfig 上下文混乱，就停止硬调，记录 BLOCKED 并换路径。
 - 如果某个 issue 已有人明确认领并正在修改同一问题，不开重复 PR，只做复现、测试、review 或文档补充。
