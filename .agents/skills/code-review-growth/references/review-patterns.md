@@ -92,6 +92,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Controller and test timestamps around source deletion, derived object creation, Work deletion, and the first successful absence poll.
 - Test or fix cue: Add a bounded presence barrier before cleanup, then retain the disappearance barrier; use failure artifacts to confirm the ordering rather than relying only on a green rerun.
 
+## A Fresh Read Can Still Return State From The Previous Lifecycle
+
+- Pattern: Polling the API again proves read freshness, not semantic freshness; reflected status can still describe a previous object lifecycle when names are reused.
+- Seen in: `karmada-io/karmada#7719` and PR `#7732`, where the next FlinkDeployment case briefly accepted the prior CRD's `APIEnabled` status before the new member CRD existed.
+- Miss symptom: A wait returns true immediately, a later controller refresh changes the same status, and the consumer makes a one-shot decision from the stale value that is never retried.
+- Review check: Identify the state layer being read and prove that the value is correlated to the current UID, generation, resource version, or an observed old-state-disappeared then new-state-present transition.
+- Evidence to gather: Object identities and lifecycle timestamps, authoritative/member state, reflected status updates, consumer decision input, and requeue/event-filter behavior.
+- Test or fix cue: Test both the target alone and `predecessor -> target`; use a lifecycle-aware barrier rather than only polling a boolean condition or increasing its timeout.
+
 ## Certificate Private Keys May Have Non-TLS Consumers
 
 - Pattern: A file named after a TLS certificate may also be reused as a JWT, ServiceAccount, or application signing key, so rotating the leaf key can invalidate credentials outside the X.509 trust chain.

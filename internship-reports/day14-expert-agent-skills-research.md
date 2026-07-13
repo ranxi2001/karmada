@@ -6,7 +6,7 @@
 
 寻找由知名开源个人或成熟开源组织公开维护的 Agent Skills，判断哪些内容能帮助 Karmada junior 学习工程判断、源码分析、调试和 review，而不是只收集 GitHub star 或未经验证的 prompt。
 
-本轮只读仓库、作者资料、`SKILL.md`、manifest、hooks 和 executable tree；没有安装第三方 skill，也没有运行第三方脚本。
+本轮只读第三方仓库、作者资料、`SKILL.md`、manifest、hooks 和 executable tree；没有安装第三方 skill，也没有运行第三方脚本。审计后只把通过历史案例 forward test 的最小规则改写进 repo-local skills。
 
 ## 一页结论
 
@@ -18,6 +18,8 @@
 4. `receiving-code-review`、`planning-and-task-breakdown`、`audit-context-building` 适合借鉴局部规则，不建议原样全局启用。
 
 不建议整包安装。名人作者、官方 marketplace 和高 star 都不能替代逐文件审计；skills 可以携带 scripts、hooks、network command 和写操作。当前更稳妥的策略是固定 commit SHA，先读单个 skill，再用历史案例做 forward test，最后把通过的原则合并到 repo-local skills。
+
+本轮已按该策略增强 `code-review-growth` 和 `karmada-pr-management`，没有修改 Karmada Go 源码、topic branch workflow 或 upstream 状态。
 
 ## 个人维护者来源
 
@@ -136,17 +138,38 @@ Agent Skills 不只是 Markdown。根据 [Agent Skills specification](https://ag
 9. 不自动更新；升级时 diff 旧 SHA 与新 SHA。
 10. 与 `AGENTS.md`、repo-local skills 和社区 posting gate 冲突时，以本项目规则为准。
 
-## 建议的 Controlled Trial
+## 已吸收的最小增强
 
-暂不安装，先做三个只读测试：
+`code-review-growth`：
 
-| Skill | 历史输入 | 合格标准 |
+- 用 `OBS`、`CODE`、`DOC`、`MAINTAINER`、`INFERENCE` 标记证据类型，按 claim 选择证据，不建立固定权威排名。
+- 从 terminal symptom 反向追到阻止恢复的最后决策、决策输入、状态 producer 和 authoritative transition。
+- 在组件边界记录 input/output/state source/timestamp/object identity/freshness marker。
+- 明确“fresh GET”只证明读取动作新鲜，不证明返回状态属于当前 lifecycle；复用名称时要关联 UID/generation/resourceVersion 或旧状态消失后的新 transition。
+- 高风险结论使用去锚定的 independent falsification：fresh reviewer 只拿 raw artifact + contract，不先看旧 RCA 和偏好补丁；反馈再分类为 contract misread、actionable、tradeoff 或 noise。
+
+`karmada-pr-management`：
+
+- 只对证书/认证、scheduler queue、controller cleanup、API compatibility 等高风险变更加 differential review。
+- 删除或弱化旧 guard 时查 base/head、`git log -S` 和 base `git blame`，理解旧约束为什么存在。
+- 用 effect ledger / effect graph 追 reads、writes、shared state、watch、queue、consumer、recovery 和 rollout，不用文件数、行数或 caller 数作风险阈值。
+- review 结尾披露 deep/surface/skipped coverage、evidence confidence 和 residual unknown，并把输出标成 blocking、non-blocking、question 或 evidence gap。
+
+明确没有吸收：固定三轮 reviewer、固定 Five Whys 次数、文件/调用者数量阈值、所有 bug 必须稳定复现、所有改动强制 TDD、固定报告章节、强制感谢或不感谢的社区话术，以及第三方 branch/push 工作流。
+
+这些规则分别改写自 `obra/superpowers@d884ae04`、`addyosmani/agent-skills@98967c45` 和 `trailofbits/skills@cfe5d7b1` 的上述段落；本地措辞与 Karmada 的 E0-E4、源码证据和 upstream posting gate 对齐，不复制整套 skill。
+
+## Fresh-context Forward Test
+
+三个无旧对话上下文、只读、不接触 GitHub 权限的测试均通过：
+
+| 场景 | 预期行为 | 实际结果 |
 | --- | --- | --- |
-| `systematic-debugging` | #7719 在维护者 RCA 之前的 E1/E2 证据 | 必须拒绝直接加 wait，要求 producer/status/consumer/queue/recovery 链 |
-| `verification-before-completion` | #7697 “unit tests 通过，是否可称证书轮换完成” | 必须要求真实过期、恢复、key/CA invariant 和 PR head 绑定证据 |
-| `source-driven-development` | `WaitCRDPresentOnClusters` 名称与实现不一致 | 必须读取 helper/plugin 源码并纠正“scheduler 直接查 member API”的错误 |
+| 同 SHA 失败后 rerun 通过，helper fresh GET 到复用 GVK 的 `APIEnabled=true` | 停在 `E1`，区分 read freshness 与 lifecycle freshness | 正确拒绝 boolean wait 和 root-cause claim，要求 UID/generation/resourceVersion、old -> new transition、queue/recovery 证据 |
+| XXL PR 删除 private-key validation 并把 scheduler retry 改成 `Forget` | 查历史、建 effect ledger/graph、质疑 green test | 正确要求 base/head + history、证书和 scheduler 两条 effect graph、revert-sensitive tests 与 coverage disclosure；没有引入 branch/push 流程 |
+| controller/scheduler flake 已有一套偏好 wait fix | reviewer 输入去锚定，先独立重建因果链 | 正确隐藏旧 RCA/patch/maintainer opinion，要求 alternative timeline、hidden coupling、self-heal 和 falsifying evidence，再逐项 reconcile |
 
-只有 forward test 明显补强现有能力、且不制造冲突，才考虑将单个 skill 固定 SHA 安装到隔离位置，或把最小规则合并到现有 repo-local skill。安装和任何第三方脚本执行都需要用户再次确认。
+结论：最小规则对真实 Karmada review 有增益，整包安装仍无必要。安装和任何第三方脚本执行仍需用户再次确认。
 
 ## 未执行的安装命令
 

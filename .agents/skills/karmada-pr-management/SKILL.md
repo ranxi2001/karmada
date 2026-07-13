@@ -255,6 +255,17 @@ python3 .agents/skills/karmada-pr-management/scripts/pr_status.py <pr-number>
 python3 .agents/skills/karmada-issue-discussion/scripts/thread_brief.py <pr-number>
 ```
 
+### High-Risk Differential Review
+
+Use this focused pass when a PR removes or weakens behavior around certificates/private keys, authentication/validation, scheduler retry/queue/`Forget`/event predicates, controller cleanup/finalizers/idempotence, or API defaults/compatibility. Do not apply it to ordinary mechanical changes.
+
+1. Read both base and head implementations. When an old guard or branch disappears, use `git log -S'<symbol-or-condition>' -- <path>` and `git blame <base> -- <path>` to learn why it existed.
+2. Build a lightweight effect ledger: inputs and trust source; API/cache/status/Secret/file reads; object/status/queue/file/certificate writes; direct callers and asynchronous consumers; preserved invariants; unresolved uncertainty.
+3. Map semantic blast radius as an effect graph: changed function -> callers -> shared state/cache -> watches or predicates -> queue/retry -> affected resources/components -> recovery and rollout path. Do not use caller, file, or line counts as risk thresholds.
+4. Review tests as behavioral claims. Ask whether each regression would fail with the patch reverted and whether recovery, mixed-version, negative, and boundary paths are covered.
+5. Disclose coverage: areas deep-reviewed, surface-scanned, generated or low-risk areas skipped, evidence confidence, and residual unknowns.
+6. Label output as `blocking`, `non-blocking`, `question`, or `evidence gap`. For non-obvious conclusions, use the independent falsification pass from `code-review-growth` before posting.
+
 ## OWNERS Mapping
 
 Use `OWNERS` by changed path:

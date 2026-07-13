@@ -55,6 +55,28 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
    - Keep each pattern short: symptom, review check, evidence to gather, and test/fix cue.
    - Do not edit upstream-facing topic branches only to store learning notes; update local learning branches or internship records.
 
+## Evidence Model
+
+Label every material claim by what actually supports it. Pick evidence for the claim being made; there is no universal source ranking.
+
+- `OBS`: timestamped logs, a failing test, a controlled reproduction, or another direct observation of what happened.
+- `CODE`: exact-SHA source and branch behavior, proving what the implementation can or will do for stated inputs.
+- `DOC`: the version-matched public contract or documented semantics.
+- `MAINTAINER`: project direction, acceptance criteria, or a review decision; this does not replace technical proof.
+- `INFERENCE`: an unproven connection between facts. Keep it visibly labeled until supported.
+
+Match the claim to sufficient evidence:
+
+| Claim | Minimum evidence |
+| --- | --- |
+| An exact commit passed a check | Exact-SHA CI result or complete local command result |
+| A failure is nondeterministic | Same-SHA rerun or repeated independent observations (`E1`) |
+| This is the root cause | `OBS` + `CODE` completing the causal chain (`E3`) |
+| This patch removes the cause | Controlled baseline-versus-patch evidence or a regression counterfactual (`E4`) |
+| This direction is acceptable upstream | Explicit `MAINTAINER` evidence |
+
+A test passing proves only its assertions on that run. Check whether the test would fail with the patch reverted or the disputed edge restored. Agent, reviewer, and maintainer conclusions remain claims until their supporting evidence is inspected; role changes coordination priority, not technical truth.
+
 ## Flake Root-Cause Gate
 
 Treat flake classification and patch authorization as separate decisions. Use these evidence levels:
@@ -77,6 +99,20 @@ For every flake, trace this sequence before proposing a fix:
 
 Build a timestamp/code evidence table and a Mermaid `sequenceDiagram`. Every causal arrow must cite a timestamped log or a `file:function/branch`; helper names and comments are not proof of what they observe. Mark unsupported arrows as hypotheses and continue investigating.
 
+When an arrow lacks evidence, instrument or inspect each component boundary. Record the actor/function, input, output or decision, state source (authoritative API, member object, cache, or reflected status), timestamp, correlated object identity, and a freshness marker such as UID, generation, resource version, or lifecycle transition.
+
+Also trace backward from the terminal symptom instead of only narrating forward:
+
+```text
+terminal symptom
+<- last decision that prevented recovery
+<- input used by that decision
+<- producer of the reflected or cached state
+<- authoritative state transition
+```
+
+For waits and eventually-consistent checks, define both the condition and why the observation belongs to the current lifecycle. A fresh API GET can still return stale reflected status. When names are reused, require old-state disappearance followed by the new transition, or correlate by UID/generation/resource version; a bare boolean such as `APIEnabled=true` is insufficient. If test pollution is plausible, compare the target alone with `predecessor -> target`, then narrow the predecessor set instead of only rerunning the target.
+
 Stop under these conditions:
 
 - At `E0` or `E1`, do not change product or test synchronization logic.
@@ -84,6 +120,12 @@ Stop under these conditions:
 - Require `E3` before implementing a flake fix. Also seek `E4`; when controlled validation is objectively impractical, record why, the residual risk, and obtain maintainer direction before upstream posting.
 - Do not use a longer timeout, `sleep`, retry, or generic wait as a substitute for RCA. Add a bounded wait only when source evidence proves the next consumer requires that exact missing invariant.
 - Do not recommend `/lgtm` or `/approve` from green CI alone; verify that the patch closes the proven causal chain.
+
+## Independent Falsification Pass
+
+Use a fresh-context review for non-obvious, high-risk claims involving shared state, controllers, scheduler queues, certificates, authentication, cleanup, or flake RCA. Give the reviewer the raw artifact and the contract, but omit the prior conclusion, intended fix, and investigation narrative so they are not anchored.
+
+Ask the reviewer to identify unsupported evidence edges, an alternative event order, hidden state coupling, recovery paths that may or may not self-heal, and whether the proposed regression would fail without the patch. Treat the response as data, not a verdict. Reconcile each point as one of: contract misread, valid and actionable, valid tradeoff, or noise. Record unresolved evidence gaps explicitly. Skip this pass for mechanical or low-risk edits.
 
 ## Focused Subroutines
 
