@@ -25,6 +25,7 @@
 - [Day 11：Karmada CI Flake 专项统计](day11-ci-flake-statistics.md)（[#7719 Mermaid 源码](day11-flink-crd-flake-root-cause.mmd) / [SVG](day11-flink-crd-flake-root-cause.svg)）
 - [Day 12：新 Issue / PR 可介入机会扫描](day12-new-issue-pr-opportunities.md)
 - [Day 13：PR #7697 深度 Review 与持续合并维护](day13-pr7697-review-and-merge-maintenance.md)
+- [Day 14：知名开源维护者 Agent Skills 调研](day14-expert-agent-skills-research.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
