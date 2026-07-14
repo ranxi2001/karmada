@@ -14,16 +14,16 @@
 | --- | --- |
 | Upstream PR | [#7697 `feat: support rotating init-managed certificates`](https://github.com/karmada-io/karmada/pull/7697) |
 | 关联 issue | [#7693](https://github.com/karmada-io/karmada/issues/7693) |
-| Head | `93eaf7e57515c959fe30fa2aba387ce10029046d` |
-| 变更规模 | 10 files，`+1154/-18`，标签 `size/XXL` |
+| Head | `4b6fa135fe870a7fa97fcc00399092bac7e6eb92` |
+| 变更规模 | 10 files，`+1696/-22`，标签 `size/XXL` |
 | 当前 assignee | `@zhzhuang-zju` |
 | Requested reviewers | `@prodanlabs`、`@Tingtal` |
 | Human review | 尚无实质性代码 review，尚无 `lgtm/approve` |
-| CI | 当前 head 17 个 check-runs 全部 success；Tide 等待 `lgtm/approve` |
-| 分支同步 | 远端 PR head 比 `upstream/master@3d4d14d74` 落后 15 个提交；本地已无冲突 rebase 到该 master |
-| 本地候选 | clean head `4b6fa135f`，4 个 signed-off commits，完整 PR 为 10 files `+1696/-22`；本次 hardening commit 为 `+547/-9` |
+| CI | exact head 的 17 个 check-runs 全部 success；Tide 等待 `lgtm/approve` |
+| 分支同步 | clean head `4b6fa135f` 已推送到 `ranxi2001:feature/cert-mode-rotate`，4 个 commits 均有 sign-off |
+| 本地候选 | 已成为远端 PR head；本次 hardening commit 为 `+547/-9` |
 | 真实过期验证 | final head 已在隔离双节点 kind v1.36.1 环境完成 10 分钟 leaf 真实过期、rotate、rollout restart 和恢复验证；全部最终断言通过 |
-| 维护状态 | `BLOCKED_USER_APPROVAL`：本地候选、验证、PR body/thread 草稿和 push dry-run 均已完成；连续三个维护循环未收到正式 push 授权，不能改变 fork/PR head |
+| 维护状态 | `WAITING_HUMAN_REVIEW`：实现、CI 和精简 body 均已完成；当前 body 为 30 行、241 词，等待 human `lgtm/approve` |
 
 ## 变更模型
 
@@ -293,8 +293,11 @@ all_final_assertions_passed=true
 | 2026-07-13 | local `4b6fa135f` | 审计 16 个 review threads，并按既有 bot 规范补齐 3 个新 helper doc comments 后 amend | 13 个文档类 + 3 个行为类 bot threads 均已由代码覆盖；无真人 review；lint/test/docs 复验通过 | 先 push 跑新 head CI；再按 exact draft 更新 body、回复/resolve threads |
 | 2026-07-13 | local `4b6fa135f`, remote `93eaf7e` | 第三个连续目标循环仍未收到 upstream-facing push 的明确授权；重新核对 local/remote/master/PR 均无漂移 | 安全的本地与只读准备已穷尽，posting gate 不允许把自动 continuation 视为确认 | 状态标记 `BLOCKED_USER_APPROVAL`；用户回复“确认 push”后恢复并立即执行 lease-protected push |
 | 2026-07-13 | local `4b6fa135f`, runtime kind v1.36.1 | 完成 10m leaf 真实过期、CA 超长有效期负例、rotate、7 workload rollout 和恢复验证 | 过期故障已复现；CA/`karmada.key` 保持，本地 kubeconfig 自动刷新，旧 SA token 仍有效；最终断言全通过 | 保留本地证据；远端仍需用户明确批准 push 后才能进入新 head CI |
+| 2026-07-14 | remote `4b6fa135f` | 用户确认后仅通过 REST API 将 PR body 从约 1015 词收缩为 241 词 | 回读与本地候选逐字一致，SHA-256 `9740e0ca...35af`；title/branch/commits/threads/reviewer 未变 | 等待 human review，不扩大 scope |
 
-## 待用户确认的外部动作
+## 历史 Push 准备（已完成）
+
+> 2026-07-14 更新：下述 push 已完成，PR head 当前为 `4b6fa135f`。保留本节只用于记录当时的 lease 保护和审批边界。
 
 目标：将个人 fork 的 `feature/cert-mode-rotate` 从已确认旧 head `93eaf7e57515c959fe30fa2aba387ce10029046d` 更新为本地 `4b6fa135fe870a7fa97fcc00399092bac7e6eb92`，从而更新 open PR #7697 并触发 fork push / upstream PR CI。
 
@@ -309,7 +312,9 @@ git push --force-with-lease=refs/heads/feature/cert-mode-rotate:93eaf7e57515c959
 
 同一命令加 `--dry-run` 已成功验证权限、refspec 和 lease，输出确认预期变更为 `93eaf7e57...4b6fa135f` forced update；dry-run 没有写远端、没有改变 PR，也没有触发 CI。
 
-## Push 后 PR body 更新草稿
+## 历史 PR body 草稿（已废弃）
+
+> 该版本发布后达到 120 行、约 1015 词，文件表、完整测试矩阵、动态 CI 状态和已知限制占用了 reviewer 的首屏。不要再次发布此版本；详细证据保留在本报告，GitHub body 使用后文精简候选。
 
 以下正文使用官方模板；只有 `<...>` 三处 CI placeholder 需要在新 head checks 结束后替换。发布前仍需用户再次确认完整正文。
 
@@ -427,6 +432,44 @@ Codex was used to help inspect certificate consumers, draft portions of the impl
 `karmadactl init`: Added `--cert-mode=rotate` to renew init-managed leaf certificates and update certificate/config Secrets. Use flags consistent with the original installation and restart the related components after rotation.
 ```
 ````
+
+## 2026-07-14 已发布的精简 PR body
+
+目标：严格保留官方模板，只写 reviewer 做首次判断所需的信息。详细文件 rationale、完整边界测试和实验日志继续留在本报告，不放入 PR body。
+
+````markdown
+**What type of PR is this?**
+
+/kind feature
+
+**What this PR does / why we need it**:
+
+This PR adds certificate rotation to `karmadactl init` through `--cert-mode=rotate` and `spec.certMode: rotate`.
+
+Rotation reuses existing CA material to renew init-managed leaf certificates, refreshes a matching local admin kubeconfig, and updates existing certificate/config Secrets. The default `install` path is unchanged. Root CAs, Secret metadata, and `karmada.key` (the ServiceAccount signing key) are preserved.
+
+Users must pass options consistent with the original installation and restart the affected components after rotation.
+
+**Which issue(s) this PR fixes**:
+
+Fixes #7693
+
+**Special notes for your reviewer**:
+
+- Safety: validates CA/key usage and lifetime, preflights all target Secrets, and rejects missing Secrets, CA mismatches, and internal/external etcd mode changes.
+- Scope: does not rotate CAs, update `caBundle` fields, or restart workloads automatically. Secret updates are sequential rather than transactional.
+- Tests: `go test ./pkg/karmadactl/... ./cmd/karmadactl/... ./cmd/kubectl-karmada/... -count=1`; cmdinit lint, command-line flag/import verifiers, and all 17 checks on `4b6fa135f` passed.
+- Live test: allowed 10-minute leaf certificates to expire on kind, rotated them to one year, restarted all seven managed workloads, and verified `/readyz`, APIService availability, and a pre-rotation ServiceAccount token.
+- AI assistance: Codex helped inspect the code and draft tests/text; I reviewed the changes and validated the results above.
+
+**Does this PR introduce a user-facing change?**:
+
+```release-note
+`karmadactl init`: Added `--cert-mode=rotate` to renew init-managed leaf certificates. Use options consistent with the original installation and restart affected components after rotation.
+```
+````
+
+发布结果：用户确认上述完整英文文本后，仅覆盖了 [karmada-io/karmada#7697](https://github.com/karmada-io/karmada/pull/7697) 的 body。REST 回读为 1821 bytes、30 行，内容与本地候选逐字一致，SHA-256 为 `9740e0ca8750fe9f70fb04bc0ecea69d8d03ba55be055f1ce0d8da891cf535af`；title、branch、commits、review threads 和 reviewer requests 均未修改。
 
 ## Push 后 Review thread 处理草稿
 

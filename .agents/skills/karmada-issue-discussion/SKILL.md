@@ -3,9 +3,9 @@ name: karmada-issue-discussion
 description: >-
   Use when working with Karmada GitHub issues, discussions, proposals, or issue
   comments: fetch full issue/PR conversation context, summarize community
-  discussion in Chinese for internship notes, draft English replies, cross-link
-  related issues/PRs, classify assignees and maintainer guidance, and prepare
-  benchmark/proposal comments for karmada-io/karmada.
+  discussion in Chinese for internship notes, draft concise English issues and
+  replies, cross-link related issues/PRs, classify assignees and maintainer
+  guidance, and prepare benchmark/proposal comments for karmada-io/karmada.
 ---
 
 # Karmada Issue Discussion Skill
@@ -22,6 +22,7 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
 - For flake issues, also use `code-review-growth` and apply its Flake Root-Cause Gate. Label statements as symptom, hypothesis, or root cause; do not use root cause before `E3` evidence.
 - Distinguish human maintainers/reviewers from automation bots, CI, merge gates, and AI reviewer output.
 - Do not post comments, `/assign`, reviewer requests, or maintainer mentions without explicit user approval of the exact text and target.
+- Treat reviewer-facing text as an index to evidence, not a copy of the local investigation report. Read `references/concise-issue-writing.md` before drafting a new issue or a non-trivial upstream comment.
 
 ## Workflow
 
@@ -40,12 +41,35 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
    - open questions
    - blocked, duplicate, or conflicting work
    - related issue/PR graph
-5. For a flake, build a timestamp/code evidence table and Mermaid sequence diagram that traces producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and why the system does not self-heal.
+5. For a flake investigation, trace producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and self-healing behavior. At `E0-E2`, record missing causal edges instead of presenting a complete RCA diagram; at `E3`, build the timestamp/code table and Mermaid sequence diagram.
 6. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
 7. Produce Chinese internal summary first when planning or learning.
 8. Produce English upstream comment only when asked to draft or post.
-9. Include GitHub cross-links with short relevance notes.
-10. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+9. Run the concise-first publishing gate below before presenting exact text for approval.
+10. Include GitHub cross-links with short relevance notes.
+11. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+
+## Concise-First Publishing Gate
+
+Before presenting an issue or comment for approval:
+
+1. Select the repository template and artifact type first: enhancement, bug, flake, proposal/umbrella, ordinary comment, or review finding.
+2. Lead with the outcome, bounded impact, or exact decision needed. Do not recap the full thread.
+3. Keep one decisive evidence item per material claim and explain why each cross-link matters.
+4. Keep chronology, failed commands, complete logs, and broad source-reading notes in `internship-reports/` unless they change an upstream decision.
+5. Measure reviewer-visible text, excluding hidden HTML template comments:
+
+```bash
+python3 .agents/skills/karmada-issue-discussion/scripts/draft_metrics.py <draft.md> --limit 250
+```
+
+Use soft review triggers, not hard correctness limits:
+
+- Enhancement/question: 80-250 visible words.
+- Reproducible bug or focused flake: usually 120-400 visible words before irreducible logs/manifests.
+- Ordinary comment/review: 40-180 visible words; review again above 250.
+
+Long form is justified only for source-backed RCA, necessary reproduction material, proposal/API contracts, or an umbrella tracker. Put the conclusion and requested action first, then link or collapse supporting detail. When asking for posting approval, include the visible word count and name the long-form reason if the draft exceeds the relevant trigger.
 
 ## Fetching Thread Context
 
@@ -126,27 +150,19 @@ https://api.github.com/repos/karmada-io/karmada/pulls/<number>/commits
 
 ## English Comment Draft Format
 
-Use this when drafting upstream comments:
+Use this compact default for upstream comments:
 
 ```md
-Thanks for the discussion here. My understanding is:
+I verified <scenario> at `<sha>`.
 
-- ...
+- Observation: <result>
+- Evidence: <test, log, or code path>
+- Impact: <bounded behavior>
 
-Based on #<related>, this seems related to ...
-
-Proposed next step:
-
-1. ...
-2. ...
-3. ...
-
-I can help with:
-
-- ...
+Suggested next step: <one action or question>.
 ```
 
-For local deployment, e2e, compatibility, or performance comments:
+For local deployment, e2e, compatibility, or performance evidence, use the longer structure below only when the fields materially affect the upstream decision. Otherwise keep the full table in the local report and publish a compact result plus link.
 
 ```md
 ## Scope
@@ -225,3 +241,5 @@ sequenceDiagram
 - Always report assignee state as `PR 认领 @` in planning tables or summaries.
 - If someone is assigned or an active PR exists, recommend review/test feedback instead of duplicate implementation.
 - Keep Chinese analysis local unless the project explicitly asks for it.
+- Do not paste file inventories, complete test matrices, chronological work logs, bot summaries, or dynamic CI status into an ordinary issue/comment.
+- Do not imitate empty fields or weak evidence found in historical examples; preserve their brevity while satisfying the current repository template and evidence requirements.

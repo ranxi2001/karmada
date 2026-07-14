@@ -37,6 +37,8 @@ When writing learning reports, include process blockers and debugging evidence, 
 
 When preparing long reusable text such as upstream issue comments, PR descriptions, review comments, mentor summaries, or Mermaid explanations, write it into the appropriate report or draft file instead of only returning it in terminal/chat output. The terminal is inconvenient for copying and should not be the only handoff surface for content the user is expected to reuse.
 
+Treat upstream reviewer-facing text as an index, not as the full internship report. For ordinary PR bodies and comments, keep the problem, behavior, material risk, validation, and requested action within one screen when practical; leave file tables, complete test matrices, chronological debugging logs, dynamic CI status, and full RCA/proposal evidence in a stable linked issue, proposal, or local report. Apply the concise-first gates in `karmada-pr-management` and `karmada-issue-discussion`, and explicitly justify long-form exceptions.
+
 When creating diagrams or other visual artifacts for reports, do not wait for the user to ask for a preview. Deliver a directly viewable PNG or SVG alongside the editable source (`.drawio`, Mermaid, etc.) by default. If the preferred export tool is unavailable, proactively use a reasonable fallback such as Mermaid rendering or a local script-generated PNG, and record the tool limitation in the report or `PROGRESS.md`.
 
 Name report images and exported visual assets in `internship-reports/` with a `dayN-` prefix matching the report that uses them, and update both local Markdown links and raw GitHub image URLs when renaming.

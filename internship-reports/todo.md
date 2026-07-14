@@ -31,10 +31,11 @@
 | P1 | 分析 Karmada 社区 issue / PR 动态 | REVIEW | 中 | 低 | 0.5-1 天 | [Day 12 新 Issue / PR 机会扫描](day12-new-issue-pr-opportunities.md)；[#7757 复现/review 评论](https://github.com/karmada-io/karmada/issues/7757#issuecomment-4953788174)；[#7692 flake comment review](https://github.com/karmada-io/karmada/pull/7692#pullrequestreview-4681354181)；失败产物时序、代码 review 和 compile/CI 验证已归档 | #7692 等作者或 test OWNERS 回复，不重复催促；#7757 等维护者确认与作者 PR |
 | P1 | 调研证书管理相关 issue / PR 并拆任务 | DONE | 中 | 低 | 0.5 天 | [Day 3 证书管理任务整理](day3-certificate-management-task-triage.md) | 优先跟进 #6051 Helm 证书命名规范；先做差距表，不直接改代码 |
 | P1 | 准备证书 layout upstream 提案 | DONE | 中 | 低 | 0.5 天 | [Upstream issue #7690](https://github.com/karmada-io/karmada/issues/7690)；[Day 3 发布记录](day3-certificate-management-task-triage.md#upstream-issue-发布记录) | 等 maintainer review；回复前不急着开 PR |
-| P1 | 持续维护 `karmadactl init` 证书轮换 PR #7697 直到 merge | BLOCKED | 高 | 中 | 持续至 merge | [Upstream issue #7693](https://github.com/karmada-io/karmada/issues/7693)；[Upstream PR #7697](https://github.com/karmada-io/karmada/pull/7697)；[Day 13 持续合并维护](day13-pr7697-review-and-merge-maintenance.md)；本地 clean head `4b6fa135f` 已 rebase 到 `upstream/master@3d4d14d74`，4 个 P1 已修复，聚焦/cmdinit/完整 karmadactl CLI tests、lint、docs/import-alias/diff check 全部通过；隔离 kind v1.36.1 环境的 10m leaf 真实过期、CA 边界负例、rotate、7 workload rollout、旧 SA token 和最终恢复断言均通过；远端仍为 `93eaf7e` | 阻塞于 upstream-facing push 的明确用户授权；回复“确认 push”后执行 Day 13 的 lease-protected 命令并恢复 fork/upstream CI 跟踪；PR 未 merge 前不标记 `DONE` |
+| P1 | 持续维护 `karmadactl init` 证书轮换 PR #7697 直到 merge | REVIEW | 高 | 中 | 持续至 merge | [Upstream issue #7693](https://github.com/karmada-io/karmada/issues/7693)；[Upstream PR #7697](https://github.com/karmada-io/karmada/pull/7697)；[Day 13 持续合并维护](day13-pr7697-review-and-merge-maintenance.md)；远端 head `4b6fa135f`，4 个 P1 已修复，聚焦/cmdinit/完整 karmadactl CLI tests、lint、docs/import-alias/diff check 和 exact-SHA 17/17 checks 全部通过；隔离 kind v1.36.1 的 10m leaf 真实过期、rotate、7 workload rollout、旧 SA token 和最终恢复断言均通过；241 词精简 body 已发布并逐字回读 | 等待 human review；评论、thread resolve 或 reviewer request 分别取得 exact text 授权后再执行，PR 未 merge 前不标记 `DONE` |
 | P1 | 跟进 estimator / FlinkDeployment / ResourceQuota e2e flake | DONE | 中 | 低 | 0.5-1 天 | [Upstream issue #7719](https://github.com/karmada-io/karmada/issues/7719) 已关闭；[Upstream PR #7732](https://github.com/karmada-io/karmada/pull/7732) 已 `/lgtm`、`/approve` 并合并为 `d0714678`；[Day 11 维护者 RCA、纠偏与 Mermaid](day11-ci-flake-statistics.md#维护者-rca-与原分析纠偏) | 归档完成；后续 flake 强制使用 E0-E4 证据等级、源码时序和 no-self-heal 分析，不再从 rerun/timing 推测直接提出补丁 |
 | P1 | 建立 Karmada CI flake 专项台账 | REVIEW | 中 | 低 | 0.5-1 天 | [Day 11 CI flake 专项统计](day11-ci-flake-statistics.md)；GitHub Actions 2026-06-26 至 2026-07-09 run/job 统计；#6841/#7388/#7719/#7691/#7692/#5323/#3667 等关联台账 | 补最近 schedule workflow artifacts，把 37 个 schedule e2e/setup 失败按具体 Ginkgo spec 或 setup 阶段归类；如每周复用则沉淀脚本 |
 | P1 | 调研知名开源维护者公开 Agent Skills | DONE | 中 | 低 | 0.5 天 | [Day 14 Expert Skills 调研](day14-expert-agent-skills-research.md)；已核验作者、固定 SHA、license、hooks 和 executable tree；最小规则已合并进 repo-local `code-review-growth` / `karmada-pr-management` 并通过 forward tests | 不整包安装；以后只在出现新真实 review lesson 时增量更新本地 skill |
+| P1 | 建立 Karmada issue / PR 简洁起草规范 | DONE | 中 | 低 | 0.5 天 | [Day 16 写作风格审计](day16-karmada-upstream-writing-style.md)；抽样 `RainbowMango`、`zhzhuang-zju`、`FAUST-BENCHOU`、`hzxuzhonghu`；两个 skill 新增 concise-first gate/reference，`draft_metrics.py` 和两次 fresh-context tests 通过 | 后续每次 upstream exact text 审批都报告 visible words；只有 RCA/proposal/API/security 等明确原因才保留长文 |
 | P1 | 升级 GitHub Actions Ubuntu runner | DONE | 低 | 低 | 0.5 天 | [Upstream PR #7728](https://github.com/karmada-io/karmada/pull/7728) 已 merged；[Day 10 调研记录](day10-ci-ubuntu-runner-upgrade.md)；分支 `chore/update-github-runner-ubuntu-24`；commit `0f62fd62b`；fork push CI 和 upstream PR CI 已全绿 | merge 后 master push CI 命中 Remedy + Flink 两个 e2e flake，已记录到 Day 10 / Day 11；不视为 runner 升级确定性失败 |
 | P1 | 准备 `karmadactl init` split Secret layout PR | BLOCKED | 中 | 中 | 0.5-1 天 | [Day 3 PR 审阅准备](day3-certificate-management-task-triage.md#pr-审阅准备)；[Day 4 gap 分析](day4-certificate-layout-issue-follow-up.md)；fork push CI 已通过 | 根据 #7693 维护者方向，旧 split layout prototype 暂时不作为第一优先级 PR；后续只作为证书 Secret 映射参考 |
 | P1 | 验证 #7643 FlinkDeployment memory issue 是否真实存在 | DONE | 中 | 低 | 0.5 天 | [Day 5 验证报告](day5-issue-7643-flink-memory-verification.md)；临时函数级和默认 Flink interpreter 测试日志 | 若要回复 upstream issue，先让用户确认英文评论；当前结论是不建议开重复 PR |
@@ -86,8 +87,8 @@
 
 交付维护线是 `karmadactl init` 证书轮换 PR #7697：
 
-- 本地最终 head 已完成实现和真实过期恢复验证。
-- 当前只等待明确 push 授权与后续 upstream review，PR merge 前持续维护但不再扩大 scope。
+- 最终 head `4b6fa135f` 已推送，真实过期恢复验证和 17/17 checks 已完成。
+- 精简 PR body 已发布并回读验证；当前等待 human review，PR merge 前持续维护但不再扩大 scope。
 
 ## 卡点记录模板
 

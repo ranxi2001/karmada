@@ -5,10 +5,11 @@ description: >-
   upstream pull requests: enforce fork/upstream branch hygiene for
   karmada-io/karmada, run fork push CI before upstream PRs, inspect fork branch
   diffs as PR preflight, prepare file-level code-change explanations including
-  deleted or extracted code, fill the official PR template, map files to
-  OWNERS, choose make test/verify/update commands, disclose AI assistance,
-  track review state, read other contributors' PR code before commenting, and
-  keep internship notes separate from upstream PR branches.
+  deleted or extracted code, draft concise reviewer-facing PR bodies, fill the
+  official PR template, map files to OWNERS, choose make test/verify/update
+  commands, disclose AI assistance, track review state, read other
+  contributors' PR code before commenting, and keep internship notes separate
+  from upstream PR branches.
 ---
 
 # Karmada PR Management Skill
@@ -29,6 +30,7 @@ Use this skill for Karmada upstream PR work: branch prep, fork push CI, pre-PR d
 - For other contributors' PRs, do not draft comments or review suggestions until you have read the PR body, changed files, relevant docs/tests, and existing human review discussion.
 - For `/kind flake` work, also use `code-review-growth`; its Flake Root-Cause Gate is the canonical evidence and stop policy.
 - Prefer script-first PR analysis. If status checks, file summaries, review comment filtering, CI state, or branch hygiene checks are repeated across PRs, improve `.agents/skills/karmada-pr-management/scripts/` and update this skill.
+- Keep the detailed preflight explanation local. The upstream body is a concise index to the problem, behavior, risk, validation, and linked evidence. Read `references/concise-pr-writing.md` before drafting or materially expanding a PR body.
 
 ## Upstream Posting Gate
 
@@ -46,6 +48,7 @@ Approval request must include:
 - Title and full body/comment, using the official template when applicable.
 - Diff summary and tests run.
 - Why upstream attention is needed now.
+- Reviewer-visible word/nonblank-line count. If the body exceeds 400 words, include the exact long-form reason.
 
 If the goal is only to run CI, push the branch to the personal fork and inspect the push-triggered GitHub Actions checks. Do not open a self-fork PR.
 
@@ -144,7 +147,7 @@ git diff --name-status upstream/master...HEAD
 git diff upstream/master...HEAD -- <path>
 ```
 
-Prepare a local explanation in the internship report, PR draft, or review notes before upstream posting:
+Prepare a local explanation in the internship report or review notes before upstream posting:
 
 - Problem and issue link: what user-visible or maintainer-requested problem the branch addresses.
 - Scope and non-goals: what the branch intentionally does not solve.
@@ -155,7 +158,7 @@ Prepare a local explanation in the internship report, PR draft, or review notes 
 - Reviewer notes: risky areas, open questions, and the exact parts where maintainer feedback is needed.
 - Flake evidence when applicable: first hard failure, an `E3` timestamp/code timeline, Mermaid sequence diagram with evidence for every causal arrow, why recovery does not self-heal, the exact invariant introduced, and `E4` counterfactual validation or its explicit limitation.
 
-If this explanation exposes broad unrelated changes, split the branch or reduce scope before opening the PR. If fork CI fails, analyze the failure first and avoid opening a PR only to ask maintainers to debug basic validation.
+If this explanation exposes broad unrelated changes, split the branch or reduce scope before opening the PR. If fork CI fails, analyze the failure first and avoid opening a PR only to ask maintainers to debug basic validation. Do not copy this file-level matrix, complete test inventory, or investigation timeline into the PR body; compress it through the reviewer-attention gate below.
 
 ## PR Planning Checklist
 
@@ -289,6 +292,31 @@ Use `OWNERS` by changed path:
 
 Let the bot guide exact approval requirements; do not over-tag reviewers unless needed.
 
+## Reviewer-Attention Gate
+
+Before requesting approval for a PR body:
+
+1. Start from `.github/PULL_REQUEST_TEMPLATE.md` and keep every required field.
+2. State the problem and resulting behavior in one short paragraph.
+3. Add no more than three reviewer notes unless a material compatibility, safety, or residual-risk boundary requires another.
+4. Summarize validation in one line or compact bullet. Prefer the main command and exact-SHA result over a complete case list.
+5. Keep AI disclosure to one sentence and write a concrete release note or `NONE`.
+6. Measure reviewer-visible text:
+
+```bash
+python3 .agents/skills/karmada-issue-discussion/scripts/draft_metrics.py <draft.md> --limit 250
+```
+
+Use these soft targets:
+
+- Ordinary code, test, cleanup, or docs PR: 80-250 visible words and at most 30 nonblank lines.
+- API, compatibility, security, or multi-component PR: 150-400 visible words and at most 45 nonblank lines.
+- Above 400 words: perform another compression pass and record why the remaining detail must be in the body.
+
+Delete by default: file-by-file tables, complete test-case inventories, chronological debugging logs, dynamic CI status/links, repeated scope lists, bot summaries, and full proposal/RCA text. Link a stable issue, proposal, or local evidence record instead. Diff size and `size/XXL` labels do not justify a long body.
+
+Do not shorten away a proven flake causal edge, API upgrade contract, security boundary, or material residual risk. For those exceptions, lead with the decision-relevant summary and move the full evidence to a linked issue or proposal when possible.
+
 ## PR Template
 
 Always use `.github/PULL_REQUEST_TEMPLATE.md` exactly as the base for upstream PRs, including draft and WIP PRs.
@@ -308,10 +336,9 @@ Fixes #<issue>
 
 **Special notes for your reviewer**:
 
-- Scope:
-- Implementation notes:
-- Tests:
-- AI assistance: Used Codex to help inspect code, draft tests, and prepare this PR. I reviewed and validated the changes.
+- Scope/compatibility: <only when material>
+- Tests: `<most relevant command>` passed; <exact-SHA CI or focused evidence when useful>.
+- AI assistance: Codex helped inspect the change and draft tests/text; I reviewed the code and validation results.
 
 **Does this PR introduce a user-facing change?**:
 
@@ -380,3 +407,5 @@ python3 .agents/skills/karmada-issue-discussion/scripts/thread_brief.py <pr-numb
 - Do not mark an issue fixed unless the PR fully addresses it.
 - Do not duplicate work on an issue with an active assignee or open PR; record `PR 认领 @` and switch to review/test feedback unless maintainers ask for a separate PR.
 - Do not treat AI reviewer or automation bot comments as maintainer consensus.
+- Do not turn the local preflight record into the upstream PR body. Reviewer-facing text should fit one screen for ordinary changes and point to stable evidence for detail.
+- Do not imitate empty `What/why`, `Fixes #`, or release-note fields found in historical PRs; preserve maintainer-style brevity while completing the current template.
