@@ -6,7 +6,7 @@
 
 审计同时发现一个真实的上游分发缺陷：`SKILL.md` 顶层版本已经是 `1.34.0`，但 JSON metadata 仍是 `1.19.0`，而同步到 `Agents365-ai/365-skills` 的 workflow 正好读取旧字段。结果是 [`v1.34.0` 同步 run](https://github.com/Agents365-ai/drawio-skill/actions/runs/29328512589) 成功，但目标 marketplace 仍登记 `1.19.0`。
 
-已在独立临时 worktree 准备修复 commit `9b7105f`，并推送到 [`ranxi2001/drawio-skill:fix/skill-version-sync`](https://github.com/ranxi2001/drawio-skill/tree/fix/skill-version-sync)；尚未创建 upstream PR，发布前仍需确认本文末尾的准确目标和英文文案。
+已在独立临时 worktree 准备修复 commit `9b7105f`，推送到 [`ranxi2001/drawio-skill:fix/skill-version-sync`](https://github.com/ranxi2001/drawio-skill/tree/fix/skill-version-sync)，并按确认文案创建 upstream [PR #94](https://github.com/Agents365-ai/drawio-skill/pull/94)。
 
 ## 本地升级范围
 
@@ -101,7 +101,7 @@ metadata: {...,"version":"1.19.0"}
 
 修复分支验证：129 tests passed，7 skipped；两个 workflow YAML 解析成功；用当前 marketplace JSON 模拟时恰好替换一个 `drawio` entry 为 `1.34.0`；`git diff --check` 通过。
 
-## 待确认的 upstream PR 文案
+## 已发布的 upstream PR 文案
 
 目标：`Agents365-ai/drawio-skill:main`
 
@@ -140,4 +140,4 @@ I used Codex to inspect the release and sync history, prepare the patch, and run
 
 ## 发布边界
 
-当前 fork branch 已推送并回读为 commit `9b7105f`，但没有创建 issue/PR，也没有修改 `Agents365-ai/365-skills`。如果 `main` 在确认前再次发布新版本，需要先 rebase，并把两个 `1.34.0` 值更新到当时的最新版本后重新跑测试。
+PR #94 已回读为 open、非 draft、base `main@f8f4e89`、head `ranxi2001:fix/skill-version-sync@9b7105f`，4 个文件 `+43/-7`，`mergeable_state=clean`。远端正文与确认稿一致，唯一 check `unittest` 已 success；尚未修改 `Agents365-ai/365-skills`，需要等待 maintainer review/merge 和 merge 后 sync run。
