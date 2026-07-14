@@ -118,3 +118,21 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: For commands that read remote state and refresh local artifacts, list every independent selector (remote kubeconfig/context, namespace, data path, filename) and identify the stable cluster identity checked before mutation.
 - Evidence to gather: Selected remote CA or cluster ID, local artifact endpoint and embedded/referenced CA, path defaults, and the ordering of local/remote writes on mismatch.
 - Test or fix cue: Compare a stable identity such as parsed CA DER before rewriting, fail before any local or remote mutation on mismatch, and add a two-cluster regression test asserting both states remain unchanged.
+
+## Long-Running Operations Need A Deletion Path, Not Only A Cancel Field
+
+- Pattern: A controller that performs durable side effects over multiple reconciles must define direct deletion semantics; a `spec.cancel` state machine is bypassed when the operation object is deleted.
+- Seen in: `karmada-io/karmada#7662`, proposed `WorkloadRebalancer` SafeMigration lifecycle.
+- Miss symptom: Deleting the operation after target-open or partial source commit removes the only reconciliation intent while shared resources retain partial side effects.
+- Review check: Trace `deletionTimestamp`, finalizer installation/removal, watch predicates, NotFound handling, TTL cleanup, owner references, and the terminal path when rollback cannot converge.
+- Evidence to gather: First side effect, operation-object predicate/delete handling, ownership of mutated resources, durable operation identity, and whether another controller can complete or undo the work.
+- Test or fix cue: Add the finalizer before the first side effect, treat deletion as latched cancellation, stop new work, converge to a defined safe state, and test deletion before and after partial commit.
+
+## Target-First State Must Survive Other Desired-State Writers
+
+- Pattern: A make-before-break controller cannot claim source preservation merely by writing a temporary over-assigned desired state when a scheduler or another controller is also authorized to normalize that state.
+- Seen in: `karmada-io/karmada#7662`, where adding target replicas to `Binding.spec.clusters` requeues scheduling and can trigger scale-down before target readiness.
+- Miss symptom: `EnsureTarget` succeeds, but a concurrent scheduler recomputes the cluster assignment or a binding controller immediately reduces source replicas, breaking the target-ready barrier.
+- Review check: Build an effect graph for every writer of the shared spec, then test the intermediate state against Duplicated, static, dynamic, Fresh/Steady, eligibility changes, failover, and retry paths.
+- Evidence to gather: Update-event predicates, assignment branch for over/under-allocation, merge/update conflict semantics, existing eviction or suspension primitives, and exact before/after replica distributions.
+- Test or fix cue: Choose one authoritative migration state or an explicit scheduler exclusion, and assert that source desired/ready capacity cannot decrease from target-open through the stable window.

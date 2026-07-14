@@ -41,6 +41,8 @@ Treat upstream reviewer-facing text as an index, not as the full internship repo
 
 When creating diagrams or other visual artifacts for reports, do not wait for the user to ask for a preview. Deliver a directly viewable PNG or SVG alongside the editable source (`.drawio`, Mermaid, etc.) by default. If the preferred export tool is unavailable, proactively use a reasonable fallback such as Mermaid rendering or a local script-generated PNG, and record the tool limitation in the report or `PROGRESS.md`.
 
+Use English for every newly created diagram or visual artifact in this Karmada workspace, including images stored only in internship reports, because they may later be reused in upstream issues, PRs, reviews, or community meetings. Do not generate Chinese-labeled diagrams unless the user explicitly requests a local-only Chinese learning artifact. Any upstream- or community-facing image must be English-only.
+
 Name report images and exported visual assets in `internship-reports/` with a `dayN-` prefix matching the report that uses them, and update both local Markdown links and raw GitHub image URLs when renaming.
 
 On the current Windows workspace only, draw.io is installed per-user at `C:\Users\ranxi\AppData\Local\Programs\draw.io\draw.io.exe` and is not on PATH. For drawio-skill exports on this Windows machine, use this full path before declaring draw.io unavailable; `drawio`, `draw.io`, and `C:\Program Files\draw.io\draw.io.exe` may fail even when the app is installed. On macOS or other machines, follow the normal drawio-skill detection order instead of assuming this Windows path.

@@ -26,7 +26,7 @@
 - [Day 12：新 Issue / PR 可介入机会扫描](day12-new-issue-pr-opportunities.md)
 - [Day 13：PR #7697 深度 Review 与持续合并维护](day13-pr7697-review-and-merge-maintenance.md)
 - [Day 14：知名开源维护者 Agent Skills 调研](day14-expert-agent-skills-research.md)
-- [Day 15：#7621 复杂工作负载安全重调度特性尽调](day15-issue-7621-safe-rescheduling-feature.md)（[架构图 PNG](day15-issue-7621-current-proposed-flow.png) / [draw.io](day15-issue-7621-current-proposed-flow.drawio) / [Mermaid](day15-issue-7621-current-proposed-flow.mmd)）
+- [Day 15：#7621 复杂工作负载安全重调度特性尽调](day15-issue-7621-safe-rescheduling-feature.md)（[#7662 本地中文 review 图](day15-pr7662-review-infographic.png) / [架构图 PNG](day15-issue-7621-current-proposed-flow.png) / [draw.io](day15-issue-7621-current-proposed-flow.drawio) / [Mermaid](day15-issue-7621-current-proposed-flow.mmd)）
 - [Day 16：Karmada Upstream Issue / PR 简洁写作规范](day16-karmada-upstream-writing-style.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)

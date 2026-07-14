@@ -2,6 +2,8 @@
 
 日期：2026-07-13
 
+最近更新：2026-07-14
+
 ## 一页结论
 
 [#7621](https://github.com/karmada-io/karmada/issues/7621) 值得作为后续高价值主线，但当前正确动作是深度 review [proposal PR #7662](https://github.com/karmada-io/karmada/pull/7662)，不是认领 issue 或直接写 executor。
@@ -302,17 +304,90 @@ AggregatedStatus 是 member object -> Work status -> Binding status 的异步反
 
 状态标记为 `REVIEW`，不 `/assign` #7621，不从作者分支复制 controller，不先改 API。
 
-第一份可见证据建议是 `PreserveReady scheduler compatibility matrix`：
+### 2026-07-14：三个 blocking gap 信息图
 
-| Case | 要验证的合同 |
-| --- | --- |
-| Duplicated | 是否会在每个候选集群恢复完整副本，破坏 preserve-ready |
-| Static Weighted | 是否按权重重新分配而不保留 ready cluster count |
-| Aggregated | Steady/Fresh 分支是否保留旧集群并只补 delta |
-| Dynamic Weighted | estimator 结果和旧分配如何共同影响 delta |
-| No fitting target | source 是否仍保持；不能靠 timeout 假装成功 |
+![#7662 proposal review blocking gaps](day15-pr7662-review-infographic.png)
 
-第二份证据是 SafeMigration crash-point / state ledger，列出每一步的 durable fields、idempotency key、freshness marker 和 cancel compensation。
+这张图把当前 review 的三项 blocking gap 压缩成一页：`PreserveReady` 的支持边界、target-first 与 Binding 调度重算的冲突，以及 direct deletion 缺少 finalizer 合同。它是下面源码和实验分析的阅读索引，不替代证据本身。
+
+> 注意：这张中文图仅用于本地学习记录，不可用于 upstream issue、PR、review 或社区会议。后续新图默认全部使用英文。
+
+- [原生生成提示词](day15-pr7662-review-infographic-prompt.md)
+- [术语修正提示词](day15-pr7662-review-infographic-correction-prompt.md)
+
+### 2026-07-14：PreserveReady 行为矩阵
+
+使用 `upstream/master@d0714678f` 的真实 `core.AssignReplicas` 做 focused audit。输入统一为 Deployment desired `10`，准备保留的 ready 下界为 `member1=4/member2=4`，候选另含 `member3`。
+
+| Case | 实际输出 | 结论 |
+| --- | --- | --- |
+| Duplicated / Steady | `10/10/10`，sum `30` | 不兼容；每个候选得到完整副本数，proposal 的 total-delta 算法也不适用 |
+| Static Weighted `1:1:8` / Steady | `1/1/8` | 不兼容；按权重完整重算，ready `4/4` 不是下界 |
+| Aggregated / Steady | `6/4/0` | 条件兼容；仅在 ready clusters 仍是 candidates 且没有 Fresh trigger 时成立 |
+| Dynamic Weighted / Steady | `5/4/1` | 条件兼容；同样依赖 candidate 和 Steady 条件 |
+| Aggregated / Fresh | `10/0/0` | 不兼容；Fresh 丢弃旧分配 |
+| Dynamic Weighted / Fresh | `4/2/4` | 不兼容；`member2` 低于 ready 下界 |
+| Aggregated / Steady，过滤 `member2` | `10/0/0` | 不兼容；旧 ready cluster 不再 eligible 时被移除 |
+| Dynamic / Steady，过滤 `member2` | `6/0/4` | 不兼容；旧 ready cluster 不再 eligible 时被移除 |
+
+代码原因很明确：Duplicated 直接给每个 candidate 完整 `spec.replicas`；Static Weighted 不使用 Steady/Fresh 分支；只有 Aggregated/Dynamic 的 Steady scale-up 会把仍在 candidate 集合中的旧 `spec.clusters` 当作增量分配下界。因此 proposal 不能把 `PreserveReady` 描述成通用 `Reschedule` mode，至少要定义 supported placement matrix、禁止未完成的 Fresh trigger，并在 ready cluster 失去 eligibility 时 fail closed。
+
+验证命令：
+
+```text
+go test ./pkg/scheduler/core -run '^TestAuditPreserveReadyAcrossReplicaStrategies$' -count=1 -v
+go test ./pkg/scheduler/core -run 'TestAssignReplicas|Test_dynamicScale|Test_assignByStaticWeightStrategy' -count=1
+```
+
+两条命令均通过。第一条只存在于临时 detached worktree，用于审计，不进入 Karmada 代码或 upstream branch。
+
+### SafeMigration target-first 与 scheduler 冲突
+
+Proposal 的 `EnsureTarget -> stableWindow -> CommitSource` 无法只用 `Binding.spec.clusters` 表达：
+
+1. `EnsureTarget` 在不缩 source 的情况下加入 target，会让 `sum(spec.clusters) > spec.replicas`。
+2. spec 更新增加 Binding generation，scheduler update handler 会立即入队。
+3. Divided/Aggregated 或 Dynamic 的 Steady 路径看到 over-assignment 后进入 `dynamicScaleDown`；Duplicated/Static 则直接完整重算。
+4. 如果同一次 patch 先缩 source 再加 target，binding controller 会在 target ready 前就按新 `spec.clusters` 缩 source，同样违反 target-first。
+
+现有 `GracefulEvictionTasks` 能把整个 source cluster 移出 active schedule result，同时继续把 source Work 视为 existing；但它没有 target/unit identity、`stableWindow` 或 Deployment replica-batch 语义，默认还会在 Healthy 或 timeout 后删 task。Proposal 必须明确是扩展该 durable state、增加专用 migration field/CR，还是采用其他 scheduler exclusion；不能让 SafeMigration 和 scheduler 同时写 `spec.clusters` 却没有单一状态源。
+
+### 直接删除绕过 cancellation
+
+独立反证确认这是 blocking lifecycle gap，而不只是实现细节：
+
+- Proposal 只有 `spec.cancel -> Canceling -> Cancel()`，没有 finalizer、`deletionTimestamp` 或 direct-delete 合同。
+- 当前 WR controller 的 update predicate 只比较 spec，`DeleteFunc` 返回 false；对象 NotFound 时直接结束 reconcile。
+- ResourceBinding 的 owner 是 workload，不是 WR；删除 WR 不会触发垃圾回收来撤销 target-open 或 partial source commit。
+- 现有 GracefulEviction controller 只会继续已存在的 eviction task，不能替 SafeMigration 执行 rollback。
+
+最小安全合同应是：第一次 strategy side effect 前添加 finalizer；`deletionTimestamp` 视为不可撤销的 cancel，停止启动新 unit，先收敛到 proposal 定义的 safe state，再移除 finalizer。还必须定义恢复无法收敛时的行为，避免 finalizer 永久阻塞删除。
+
+对应 regression 至少覆盖：target 已打开但 source 未提交时 delete；部分 source 已提交时 delete；确认没有新 unit 启动、source 先保留/恢复，并且 WR 只在安全收敛后消失。
+
+### 候选 upstream review（尚未发布）
+
+候选 A，目标为 PR #7662 proposal line 569（选择 unit 并打开 target）：
+
+```text
+Could the proposal clarify how `EnsureTarget` preserves the source while the scheduler remains active?
+
+A `spec.clusters` update bumps the Binding generation and requeues scheduling. If target-first temporarily makes `sum(spec.clusters) > spec.replicas`, the current Divided Steady path enters `dynamicScaleDown`; Duplicated and Static Weighted recompute their assignments directly. In a focused `AssignReplicas` test, only Aggregated/Dynamic Steady preserved the ready lower bound, and only while every ready cluster remained eligible. Fresh mode and filtered ready clusters did not.
+
+Could the design choose one authoritative migration primitive (for example, extending `GracefulEvictionTasks` or a dedicated operation field) and add an invariant test that source desired replicas cannot decrease between `EnsureTarget` and the end of `stableWindow`?
+```
+
+候选 B，目标为 PR #7662 proposal line 328（controller ownership 包含 cancellation）：
+
+```text
+Could the lifecycle define direct deletion while `SafeMigration` is Running?
+
+The proposal reaches `Canceling` only through `spec.cancel`. Today the WR controller filters delete events and spec-unchanged updates, and a NotFound reconcile returns without cleanup. Because the Binding is owned by the workload rather than the WR, deleting the WR after `EnsureTarget` or a partial `CommitSource` would leave those side effects without an executor to converge or roll them back.
+
+Would the first side effect require a finalizer, with `deletionTimestamp` treated as latched cancellation: stop starting units, restore the defined safe state, then remove the finalizer? A regression should cover deletion after target-open and after partial source commit, including what happens if restoration cannot converge.
+```
+
+这两条不重复现有 9 条 bot threads，也不把 API compatibility、TTL、error aggregation 等已有 bot finding 再写一遍。发布前仍需用户确认 exact target 和全文。
 
 ### Maintainer 确认后
 
@@ -336,12 +411,13 @@ AggregatedStatus 是 member object -> Work status -> Binding status 的异步反
 | Bilibili API | 返回 `-799` | 使用官方 YouTube RSS、录像 URL 和 Google Meeting Notes |
 | 录像 transcript | 两场视频没有公开 caption track | 只引用会议纪要明确记录，不推断音频内容 |
 | draw.io / Graphviz | 当前 Linux 环境没有 CLI | 保留 `.drawio` 和 `.mmd` 源，使用 Mermaid remote renderer 生成 PNG/SVG，并记录限制 |
+| Karmada proposal reference 缺失 | `karmada-issue-discussion` 引用了不存在的 `references/proposal-review.md` | 只读参考 AgentCube 同源 checklist，并以 Karmada proposal、源码和历史 API 为最终证据；未照搬 AgentCube 项目结论 |
 
 ## 下一步
 
-1. 将 #7662 的四个核心问题收敛成一条简短英文 review 草稿：GracefulEviction 单一状态源、durable crash recovery、PreserveReady mode matrix、API compatibility。
-2. 在不改产品代码的临时测试中验证 `AssignReplicas` 四类策略，产出可复查结果；如果结论和源码分析不一致，先修正报告。
-3. 用户确认 exact text 后再发 PR review comment，请作者和 `@RainbowMango` 决定我们可认领的 test/design slice。
+1. 由用户确认候选 A、候选 B 是否分别作为 line comment 发布；不合并成冗长 omnibus review。
+2. 发布后等待作者或 `@RainbowMango` 回答 single source of truth、finalizer/deletion 和 supported placement 边界，不重复追问已有 bot threads。
+3. 设计边界明确后，请作者/maintainer 指定可独立认领的 state-machine、compatibility 或 scheduler contract test slice。
 4. 只有获得 maintainer/author 边界确认后，才从最新 `upstream/master` 建独立 topic branch；Day 15 报告和本地 evidence 不进入 upstream branch。
 
 ## Stop Conditions
