@@ -6,7 +6,7 @@
 
 审计同时发现一个真实的上游分发缺陷：`SKILL.md` 顶层版本已经是 `1.34.0`，但 JSON metadata 仍是 `1.19.0`，而同步到 `Agents365-ai/365-skills` 的 workflow 正好读取旧字段。结果是 [`v1.34.0` 同步 run](https://github.com/Agents365-ai/drawio-skill/actions/runs/29328512589) 成功，但目标 marketplace 仍登记 `1.19.0`。
 
-已在独立临时 worktree 准备修复 commit `9b7105f`，但尚未 push，也没有创建 upstream PR；发布前仍需确认本文末尾的准确目标和英文文案。
+已在独立临时 worktree 准备修复 commit `9b7105f`，并推送到 [`ranxi2001/drawio-skill:fix/skill-version-sync`](https://github.com/ranxi2001/drawio-skill/tree/fix/skill-version-sync)；尚未创建 upstream PR，发布前仍需确认本文末尾的准确目标和英文文案。
 
 ## 本地升级范围
 
@@ -140,4 +140,4 @@ I used Codex to inspect the release and sync history, prepare the patch, and run
 
 ## 发布边界
 
-当前没有 push 临时分支，没有创建 issue/PR，也没有修改 `Agents365-ai/365-skills`。如果 `main` 在确认前再次发布新版本，需要先 rebase，并把两个 `1.34.0` 值更新到当时的最新版本后重新跑测试。
+当前 fork branch 已推送并回读为 commit `9b7105f`，但没有创建 issue/PR，也没有修改 `Agents365-ai/365-skills`。如果 `main` 在确认前再次发布新版本，需要先 rebase，并把两个 `1.34.0` 值更新到当时的最新版本后重新跑测试。
