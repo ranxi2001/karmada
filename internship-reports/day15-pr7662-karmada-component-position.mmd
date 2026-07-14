@@ -1,0 +1,91 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","fontFamily":"Arial"},"flowchart":{"curve":"basis","htmlLabels":true,"nodeSpacing":34,"rankSpacing":48}}}%%
+flowchart TB
+    TITLE["Where PR #7662 Fits in Karmada<br/><small>An execution orchestrator between intent and the existing scheduling pipeline</small>"]
+
+    subgraph INTENT["1. DECISION & INTENT"]
+        direction LR
+        APP["Application Workload +<br/>PropagationPolicy"]
+        OPS["User / Higher-level<br/>Automation"]
+        DECIDE["Choose when, workload,<br/>from / to, frequency<br/><b>OUT OF SCOPE</b>"]
+        WR["WorkloadRebalancer CR<br/>selected workloads + strategy"]
+        OPS --> DECIDE -->|submit execution command| WR
+    end
+
+    subgraph ORCH["2. PR #7662 PROPOSED REBALANCING ORCHESTRATION"]
+        direction LR
+        WRC["Existing WorkloadRebalancer Controller<br/><small>expanded by #7662 in karmada-controller-manager</small>"]
+        LIFE["Common lifecycle<br/>dispatch | retry | cancel<br/>timeout | TTL | status"]
+        ROUTER{"Strategy"}
+        RES["Reschedule Executor<br/><b>Full | PreserveReady</b>"]
+        SAFE["SafeMigration Executor<br/><b>target-first | stableWindow</b>"]
+        UNIT["Workload-specific Unit Executor<br/>replica batch | shard | partition"]
+        WRC --> LIFE --> ROUTER
+        ROUTER --> RES
+        ROUTER --> SAFE --> UNIT
+    end
+
+    subgraph CONTROL["3. EXISTING KARMADA CONTROL PLANE"]
+        direction LR
+        API["Karmada API Server + etcd<br/><b>authoritative control-plane state</b>"]
+        DET["Resource Detector<br/>match workload + policy"]
+        SCHED["karmada-scheduler<br/><b>placement computation only</b>"]
+        RB["ResourceBinding / ClusterResourceBinding<br/><b>placement + replica assignment</b>"]
+        BC["Binding Controller<br/>materialize per-cluster desired state"]
+        WORK["Work<br/>per-cluster desired manifest"]
+        EXEC["Execution Controller (Push) / karmada-agent<br/>execution + status (Pull)"]
+        API -->|watch stored workload + policy| DET
+        DET -->|create binding| RB
+        SCHED <-->|compute / reconcile assignment| RB
+        RB --> BC -->|create / update| WORK --> EXEC
+    end
+
+    subgraph MEMBER["4. MEMBER CLUSTERS & ASYNC FEEDBACK"]
+        direction LR
+        SOURCE["Source member<br/>workload"]
+        TARGET["Target member<br/>workload"]
+        REFLECT["Work Status + RB/CRB Status Controllers<br/>member status -> Work.status -><br/><b>Binding.status.aggregatedStatus</b>"]
+        SOURCE -->|observe| REFLECT
+        TARGET -->|observe| REFLECT
+    end
+
+    APP -->|store| API
+    WR -->|store| API
+    API -->|watch WR| WRC
+    RES -->|trigger / patch binding| RB
+    UNIT -. "proposed target-open / source-commit" .-> RB
+    EXEC -->|apply| SOURCE
+    EXEC -->|apply| TARGET
+    REFLECT -. "readiness feedback" .-> RB
+    RB -. "reconcile progress" .-> WRC
+    WRC -->|write phase / result / progress| WR
+
+    RISK["UNRESOLVED CONTRACT<br/>WR executors and Scheduler may both write Binding.spec.clusters.<br/>The durable target-first encoding and single-writer rule are not defined."]
+    SAFE -.-> RISK
+    SCHED -.-> RISK
+    RISK -.-> RB
+
+    POSITION["COMPONENT POSITION<br/>#7662 does not replace the Scheduler, Binding Controller, Work, or execution path.<br/>It proposes a long-running orchestration layer that drives and observes them."]
+    POSITION ~~~ MEMBER
+
+    LEGEND["Legend: blue = current Karmada | green = proposed #7662 | blue/green = existing controller expanded | yellow = shared API state | gray = out of scope | red dashed = unresolved"]
+    LEGEND ~~~ TITLE
+
+    classDef title fill:#ffffff,stroke:#ffffff,color:#172554,fontSize:20px,fontWeight:bold;
+    classDef external fill:#f5f5f5,stroke:#666666,color:#262626,stroke-dasharray:5 5;
+    classDef current fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef proposed fill:#d5e8d4,stroke:#82b366,color:#14532d;
+    classDef bridge fill:#dae8fc,stroke:#82b366,color:#14532d,stroke-width:3px;
+    classDef shared fill:#fff2cc,stroke:#d6b656,color:#713f12;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-width:2px,stroke-dasharray:6 4;
+    classDef note fill:#ffffff,stroke:#2563eb,color:#172554,stroke-width:2px;
+    classDef legend fill:#ffffff,stroke:#9ca3af,color:#374151,fontSize:12px;
+
+    class TITLE title;
+    class OPS,DECIDE external;
+    class APP,API,DET,SCHED,BC,EXEC,SOURCE,TARGET,REFLECT current;
+    class LIFE,ROUTER,RES,SAFE,UNIT proposed;
+    class WRC bridge;
+    class WR,RB,WORK shared;
+    class RISK risk;
+    class POSITION note;
+    class LEGEND legend;

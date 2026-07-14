@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" version="26.0.0">
+  <diagram id="pr7662-component-position" name="PR 7662 Component Position">
+    <mxGraphModel dx="2260" dy="1320" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2280" pageHeight="1320" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="PR #7662: Proposed Rebalancing in the Karmada Control Loop" style="text;whiteSpace=wrap;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=24;fontStyle=1;fontColor=#172B4D;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="2180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="decision-layer" value="1. Decision &amp; Intent (out of scope for PR #7662)" style="swimlane;startSize=34;container=1;pointerEvents=0;rounded=0;whiteSpace=wrap;html=1;fillColor=#F3F4F6;swimlaneFillColor=#FFFFFF;strokeColor=#6B7280;dashed=1;dashPattern=6 4;fontFamily=Helvetica;fontSize=16;fontStyle=1;fontColor=#374151;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="2180" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="decision-actor" value="User / Higher-level Automation&#xa;Decides when, workload, from, and to" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;dashed=1;dashPattern=6 4;fontFamily=Helvetica;fontSize=14;fontColor=#374151;" vertex="1" parent="decision-layer">
+          <mxGeometry x="710" y="50" width="760" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="workload-policy" value="Workload + PropagationPolicy&#xa;Existing desired workload and placement constraints" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;dashed=1;dashPattern=6 4;fontFamily=Helvetica;fontSize=14;fontColor=#374151;" vertex="1" parent="decision-layer">
+          <mxGeometry x="170" y="145" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="wr-cr" value="WorkloadRebalancer CR&#xa;Selected workloads and strategy intent" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;dashed=1;dashPattern=6 4;fontFamily=Helvetica;fontSize=14;fontColor=#374151;" vertex="1" parent="decision-layer">
+          <mxGeometry x="1540" y="145" width="430" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="proposal-layer" value="2. PR #7662 Proposed Rebalancing Orchestration" style="swimlane;startSize=34;container=1;pointerEvents=0;rounded=0;whiteSpace=wrap;html=1;fillColor=#E7F4E8;swimlaneFillColor=#FFFFFF;strokeColor=#4C956C;fontFamily=Helvetica;fontSize=16;fontStyle=1;fontColor=#234E2E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="350" width="2180" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="write-contract" value="UNRESOLVED WRITE CONTRACT&#xa;WR executors and scheduler may both write Binding.spec.clusters during target-first.&#xa;The exact durable encoding and single-writer rule are undefined." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#C4473A;strokeWidth=2;dashed=1;dashPattern=8 5;fontFamily=Helvetica;fontSize=13;fontStyle=1;fontColor=#7F1D1D;" vertex="1" parent="proposal-layer">
+          <mxGeometry x="40" y="45" width="920" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="common-lifecycle" value="Proposed common lifecycle&#xa;Progress, retry, timeout, cancel, and TTL" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E7F4E8;strokeColor=#4C956C;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#234E2E;" vertex="1" parent="proposal-layer">
+          <mxGeometry x="1080" y="50" width="350" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wr-controller" value="WR Controller in karmada-controller-manager&#xa;Existing controller, expanded by #7662&#xa;Current success = trigger write" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E7F4E8;strokeColor=#4C956C;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontStyle=1;fontColor=#234E2E;" vertex="1" parent="proposal-layer">
+          <mxGeometry x="1540" y="50" width="430" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="safe-executor" value="SafeMigration executor&#xa;Target-first orchestration" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E7F4E8;strokeColor=#4C956C;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#234E2E;" vertex="1" parent="proposal-layer">
+          <mxGeometry x="300" y="190" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="unit-executor" value="Workload-specific unit executor&#xa;Replica batch / shard / partition" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E7F4E8;strokeColor=#4C956C;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#234E2E;" vertex="1" parent="proposal-layer">
+          <mxGeometry x="630" y="190" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reschedule-executor" value="Reschedule executor&#xa;Full: waits for scheduler status&#xa;PreserveReady: preserves ready replicas" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E7F4E8;strokeColor=#4C956C;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;" vertex="1" parent="proposal-layer">
+          <mxGeometry x="1010" y="190" width="410" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="control-plane-layer" value="3. Existing Karmada Control Plane" style="swimlane;startSize=34;container=1;pointerEvents=0;rounded=0;whiteSpace=wrap;html=1;fillColor=#E8F1FB;swimlaneFillColor=#FFFFFF;strokeColor=#4C78A8;fontFamily=Helvetica;fontSize=16;fontStyle=1;fontColor=#1E3A5F;" vertex="1" parent="1">
+          <mxGeometry x="40" y="700" width="2180" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="resource-detector" value="Resource Detector" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E8F1FB;strokeColor=#4C78A8;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#1E3A5F;" vertex="1" parent="control-plane-layer">
+          <mxGeometry x="40" y="60" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="binding-hub" value="ResourceBinding /&#xa;ClusterResourceBinding hub&#xa;Binding.spec.clusters" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFF4D6;strokeColor=#C99A2E;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontStyle=1;fontColor=#5B4713;" vertex="1" parent="control-plane-layer">
+          <mxGeometry x="300" y="60" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="scheduler" value="karmada-scheduler&#xa;Computes placement" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E8F1FB;strokeColor=#4C78A8;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontStyle=1;fontColor=#1E3A5F;" vertex="1" parent="control-plane-layer">
+          <mxGeometry x="1090" y="60" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="binding-controller" value="Binding Controller&#xa;Observes desired placement" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E8F1FB;strokeColor=#4C78A8;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#1E3A5F;" vertex="1" parent="control-plane-layer">
+          <mxGeometry x="1390" y="60" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="work" value="Work" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFF4D6;strokeColor=#C99A2E;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontStyle=1;fontColor=#5B4713;" vertex="1" parent="control-plane-layer">
+          <mxGeometry x="1670" y="60" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="execution" value="Execution Controller (Push) /&#xa;karmada-agent execution + status (Pull)" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E8F1FB;strokeColor=#4C78A8;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontColor=#1E3A5F;" vertex="1" parent="control-plane-layer">
+          <mxGeometry x="1840" y="55" width="280" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="api-storage" value="Karmada API Server + etcd&#xa;Authoritative storage: Workload / Policy, WorkloadRebalancer, RB / CRB, and Work" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#FFF4D6;strokeColor=#C99A2E;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontColor=#5B4713;" vertex="1" parent="control-plane-layer">
+          <mxGeometry x="650" y="170" width="700" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="feedback-layer" value="4. Member Clusters &amp; Feedback" style="swimlane;startSize=34;container=1;pointerEvents=0;rounded=0;whiteSpace=wrap;html=1;fillColor=#F8FAFC;swimlaneFillColor=#FFFFFF;strokeColor=#4C78A8;fontFamily=Helvetica;fontSize=16;fontStyle=1;fontColor=#1E3A5F;" vertex="1" parent="1">
+          <mxGeometry x="40" y="990" width="2180" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="source-workload" value="Source member workload" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E8F1FB;strokeColor=#4C78A8;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#1E3A5F;" vertex="1" parent="feedback-layer">
+          <mxGeometry x="760" y="50" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="target-workload" value="Target member workload" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E8F1FB;strokeColor=#4C78A8;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#1E3A5F;" vertex="1" parent="feedback-layer">
+          <mxGeometry x="760" y="150" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="binding-status" value="Work Status +&#xa;RB/CRB Status" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFF4D6;strokeColor=#C99A2E;strokeWidth=2;fontFamily=Helvetica;fontSize=14;fontColor=#5B4713;" vertex="1" parent="feedback-layer">
+          <mxGeometry x="1210" y="100" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="aggregated-status" value="Binding.status.aggregatedStatus" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFF4D6;strokeColor=#C99A2E;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontStyle=1;fontColor=#5B4713;" vertex="1" parent="feedback-layer">
+          <mxGeometry x="1740" y="100" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-current" value="Solid = current" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4C78A8;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1260" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-proposed" value="Green = proposed" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#E7F4E8;strokeColor=#4C956C;strokeWidth=2;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;" vertex="1" parent="1">
+          <mxGeometry x="500" y="1260" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-unresolved" value="Red dashed = unresolved" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#C4473A;strokeWidth=2;dashed=1;dashPattern=8 5;fontFamily=Helvetica;fontSize=13;fontColor=#7F1D1D;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1260" width="420" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-scope" value="Gray = out of scope" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;dashed=1;dashPattern=6 4;fontFamily=Helvetica;fontSize=13;fontColor=#374151;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="1260" width="420" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-actor-workload" value="defines / selects" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6B7280;strokeWidth=2;dashed=1;dashPattern=6 4;endArrow=open;endFill=0;fontFamily=Helvetica;fontSize=13;fontColor=#4B5563;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="decision-actor" target="workload-policy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-actor-wr" value="creates rebalancing intent" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6B7280;strokeWidth=2;dashed=1;dashPattern=6 4;endArrow=open;endFill=0;fontFamily=Helvetica;fontSize=13;fontColor=#4B5563;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="decision-actor" target="wr-cr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-wr-controller" value="reconcile" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="wr-cr" target="wr-controller">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-controller-lifecycle" value="orchestrates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="wr-controller" target="common-lifecycle">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-lifecycle-reschedule" value="strategy dispatch" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=0.65;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="common-lifecycle" target="reschedule-executor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-lifecycle-safe" value="strategy dispatch" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=0.2;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="common-lifecycle" target="safe-executor">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1190" y="520" />
+              <mxPoint x="480" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-safe-unit" value="executes units" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="safe-executor" target="unit-executor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-safe-binding" value="EnsureTarget / CommitSource" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="safe-executor" target="binding-hub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-reschedule-scheduler" value="trigger + mode" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="reschedule-executor" target="scheduler">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-safe-contract" value="writer?" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C4473A;strokeWidth=2;dashed=1;dashPattern=8 5;endArrow=open;endFill=0;fontFamily=Helvetica;fontSize=13;fontColor=#7F1D1D;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=0.45;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="safe-executor" target="write-contract">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-scheduler-contract" value="writer?" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C4473A;strokeWidth=2;dashed=1;dashPattern=8 5;endArrow=open;endFill=0;fontFamily=Helvetica;fontSize=13;fontColor=#7F1D1D;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="scheduler" target="write-contract">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="760" />
+              <mxPoint x="1020" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-workload-detector" value="detects selected resources" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="workload-policy" target="resource-detector">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="20" y="260" />
+              <mxPoint x="20" y="800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-detector-binding" value="creates / updates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="resource-detector" target="binding-hub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-binding-scheduler" value="schedule request / placement result" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;startArrow=block;startFill=1;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="binding-hub" target="scheduler">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-scheduler-controller" value="Binding update observed" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="scheduler" target="binding-controller">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-controller-work" value="materializes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="binding-controller" target="work">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-work-execution" value="dispatches" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="work" target="execution">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-execution-source" value="Push / pull delivery" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="execution" target="source-workload">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1950" y="970" />
+              <mxPoint x="950" y="970" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-execution-target" value="Push / pull delivery" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="execution" target="target-workload">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2090" y="980" />
+              <mxPoint x="1120" y="980" />
+              <mxPoint x="1120" y="1180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-source-status" value="reports" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="source-workload" target="binding-status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-target-status" value="reports" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="target-workload" target="binding-status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-status-aggregate" value="aggregates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C78A8;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#334155;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="binding-status" target="aggregated-status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-aggregate-controller" value="readiness / progress feedback" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4C956C;strokeWidth=2;endArrow=block;endFill=1;fontFamily=Helvetica;fontSize=13;fontColor=#234E2E;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="aggregated-status" target="wr-controller">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2240" y="1130" />
+              <mxPoint x="2240" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

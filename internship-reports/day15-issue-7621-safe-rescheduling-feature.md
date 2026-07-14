@@ -92,6 +92,16 @@
 
 图中灰色 decision plane 是 #7621 需要、但 #7662 明确不负责的部分；蓝色是当前 master；绿色是 proposal；红色是尚未闭合的安全合同。
 
+### PR #7662 在 Karmada 组件链路中的位置
+
+![PR #7662 component position in Karmada](day15-pr7662-karmada-component-position.png)
+
+- [可编辑 draw.io 源](day15-pr7662-karmada-component-position.drawio)
+- [Mermaid fallback 源](day15-pr7662-karmada-component-position.mmd)
+- [SVG](day15-pr7662-karmada-component-position.svg)
+
+这张图进一步展开 proposal 与现有 Karmada 组件的边界：#7662 扩展现有 WorkloadRebalancer controller，作为 intent 和既有 scheduler / Binding / Work / execution pipeline 之间的长事务编排层，不替代这些组件。红色虚线保留当前最重要的未决合同：WR executor 与 scheduler 可能同时写 `Binding.spec.clusters`，proposal 尚未定义 durable target-first encoding 和 single-writer rule。
+
 ## 当前源码链路
 
 ### 1. WorkloadRebalancer 只是 trigger
@@ -365,19 +375,19 @@ Proposal 的 `EnsureTarget -> stableWindow -> CommitSource` 无法只用 `Bindin
 
 对应 regression 至少覆盖：target 已打开但 source 未提交时 delete；部分 source 已提交时 delete；确认没有新 unit 启动、source 先保留/恢复，并且 WR 只在安全收敛后消失。
 
-### 候选 upstream review（尚未发布）
+### Upstream review 状态
 
-候选 A，目标为 PR #7662 proposal line 569（选择 unit 并打开 target）：
+评论 A 已于 2026-07-14 发布到 PR #7662 proposal line 569（选择 unit 并打开 target）：[#discussion_r3576720182](https://github.com/karmada-io/karmada/pull/7662#discussion_r3576720182)。远端回读确认作者为 `@ranxi2001`、commit 为 `586f6fc3508e`、正文 80 个英文词：
 
 ```text
-Could the proposal clarify how `EnsureTarget` preserves the source while the scheduler remains active?
+Could the proposal clarify how `EnsureTarget` keeps source replicas unchanged while the scheduler remains active?
 
-A `spec.clusters` update bumps the Binding generation and requeues scheduling. If target-first temporarily makes `sum(spec.clusters) > spec.replicas`, the current Divided Steady path enters `dynamicScaleDown`; Duplicated and Static Weighted recompute their assignments directly. In a focused `AssignReplicas` test, only Aggregated/Dynamic Steady preserved the ready lower bound, and only while every ready cluster remained eligible. Fresh mode and filtered ready clusters did not.
+Updating `Binding.spec.clusters` increments the Binding generation and requeues scheduling. A temporary target-first over-assignment can therefore enter `dynamicScaleDown`; Duplicated and Static Weighted also recompute the assignment directly. This means the source may shrink before the target passes `stableWindow`.
 
-Could the design choose one authoritative migration primitive (for example, extending `GracefulEvictionTasks` or a dedicated operation field) and add an invariant test that source desired replicas cannot decrease between `EnsureTarget` and the end of `stableWindow`?
+Could the design define one authoritative migration state, or an explicit scheduler exclusion, and require that source desired replicas cannot decrease between `EnsureTarget` and the end of `stableWindow`?
 ```
 
-候选 B，目标为 PR #7662 proposal line 328（controller ownership 包含 cancellation）：
+候选 B 尚未发布，目标为 PR #7662 proposal line 328（controller ownership 包含 cancellation）：
 
 ```text
 Could the lifecycle define direct deletion while `SafeMigration` is Running?
@@ -387,7 +397,7 @@ The proposal reaches `Canceling` only through `spec.cancel`. Today the WR contro
 Would the first side effect require a finalizer, with `deletionTimestamp` treated as latched cancellation: stop starting units, restore the defined safe state, then remove the finalizer? A regression should cover deletion after target-open and after partial source commit, including what happens if restoration cannot converge.
 ```
 
-这两条不重复现有 9 条 bot threads，也不把 API compatibility、TTL、error aggregation 等已有 bot finding 再写一遍。发布前仍需用户确认 exact target 和全文。
+评论 A 不重复现有 9 条 bot threads，也没有把行为矩阵和完整取证过程复制到 upstream。下一步先等待作者或 `@RainbowMango` 回答 authoritative migration state / scheduler exclusion；评论 B 仍需用户确认 exact target 和全文，不能自动发布。
 
 ### Maintainer 确认后
 
@@ -415,8 +425,8 @@ Would the first side effect require a finalizer, with `deletionTimestamp` treate
 
 ## 下一步
 
-1. 由用户确认候选 A、候选 B 是否分别作为 line comment 发布；不合并成冗长 omnibus review。
-2. 发布后等待作者或 `@RainbowMango` 回答 single source of truth、finalizer/deletion 和 supported placement 边界，不重复追问已有 bot threads。
+1. 评论 A 已发布；候选 B direct-deletion/finalizer 仍需用户确认 exact target/text，不合并成冗长 omnibus review。
+2. 等待作者或 `@RainbowMango` 回答 authoritative migration state / scheduler exclusion、finalizer/deletion 和 supported placement 边界，不重复追问已有 bot threads。
 3. 设计边界明确后，请作者/maintainer 指定可独立认领的 state-machine、compatibility 或 scheduler contract test slice。
 4. 只有获得 maintainer/author 边界确认后，才从最新 `upstream/master` 建独立 topic branch；Day 15 报告和本地 evidence 不进入 upstream branch。
 
