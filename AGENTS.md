@@ -47,6 +47,8 @@ Name report images and exported visual assets in `internship-reports/` with a `d
 
 On the current Windows workspace only, draw.io is installed per-user at `C:\Users\ranxi\AppData\Local\Programs\draw.io\draw.io.exe` and is not on PATH. For drawio-skill exports on this Windows machine, use this full path before declaring draw.io unavailable; `drawio`, `draw.io`, and `C:\Program Files\draw.io\draw.io.exe` may fail even when the app is installed. On macOS or other machines, follow the normal drawio-skill detection order instead of assuming this Windows path.
 
+The repo-local `.agents/skills/drawio-skill/` is a Codex-adapted runtime vendor of `Agents365-ai/drawio-skill`. Upgrade it only from a verified stable release tag, record the tag and commit in `PROGRESS.md` or an internship report, preserve its MIT license and local `agents/openai.yaml`, and do not copy or enable upstream GitHub Actions as part of a runtime-only upgrade.
+
 ## Knowledge Capture Rules
 
 At the end of each task, classify useful outcomes before stopping:

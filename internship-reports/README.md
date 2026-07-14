@@ -29,6 +29,7 @@
 - [Day 15：#7621 复杂工作负载安全重调度特性尽调](day15-issue-7621-safe-rescheduling-feature.md)（[#7662 本地中文 review 图](day15-pr7662-review-infographic.png) / [架构图 PNG](day15-issue-7621-current-proposed-flow.png) / [组件定位图 PNG](day15-pr7662-karmada-component-position.png) / [draw.io](day15-pr7662-karmada-component-position.drawio) / [Mermaid](day15-pr7662-karmada-component-position.mmd)）
 - [Day 16：Karmada Upstream Issue / PR 简洁写作规范](day16-karmada-upstream-writing-style.md)
 - [Day 17：PR #7764 E2E Root Cause Analysis Skill Review](day17-pr7764-e2e-root-cause-skill-review.md)
+- [Day 18：drawio-skill v1.34.0 升级与版本同步缺陷](day18-drawio-skill-v1.34-upgrade.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
