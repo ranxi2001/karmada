@@ -30,6 +30,8 @@
 - [Day 16：Karmada Upstream Issue / PR 简洁写作规范](day16-karmada-upstream-writing-style.md)
 - [Day 17：PR #7764 E2E Root Cause Analysis Skill Review](day17-pr7764-e2e-root-cause-skill-review.md)
 - [Day 18：drawio-skill v1.34.0 升级与版本同步缺陷](day18-drawio-skill-v1.34-upgrade.md)
+- [Day 19：Codex CLI 模型流中断等待问题](day19-codex-cli-stream-stall-issue.md)
+- [Day 20：PR #7623 Reconcile Cache 提交时机 Review](day20-pr7623-reconcile-cache-review.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

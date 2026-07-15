@@ -136,3 +136,21 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Build an effect graph for every writer of the shared spec, then test the intermediate state against Duplicated, static, dynamic, Fresh/Steady, eligibility changes, failover, and retry paths.
 - Evidence to gather: Update-event predicates, assignment branch for over/under-allocation, merge/update conflict semantics, existing eviction or suspension primitives, and exact before/after replica distributions.
 - Test or fix cue: Choose one authoritative migration state or an explicit scheduler exclusion, and assert that source desired/ready capacity cannot decrease from target-open through the stable window.
+
+## Derived Caches Must Commit After Reconcile Success
+
+- Pattern: A controller cache used to detect desired-state changes is a commit marker; advancing it before all dependent side effects succeed can turn an error retry into a false no-op.
+- Seen in: `karmada-io/karmada#7623`, where the CronFederatedHPA target cache advanced before executor rebuild and rule-history status update completed.
+- Miss symptom: The first reconcile mutates some in-memory state and then fails; the retry reports success because the cached desired state now looks unchanged, leaving status or other side effects incomplete.
+- Review check: For every in-memory fingerprint, last-seen value, or derived-state cache write, identify which operations it suppresses on the next reconcile and whether every earlier return after the write is safe.
+- Evidence to gather: Cache lock and lifecycle, mutation order, retry behavior, partial side effects before each error, early-return conditions, watch predicates, and whether a later event can repair the incomplete state.
+- Test or fix cue: Commit the cache only after the full reconcile transaction succeeds, or make every partial step independently retryable; inject a failure after the cache candidate is computed and assert the next reconcile retries all incomplete work.
+
+## Fault Injection Does Not Prove Production Reachability
+
+- Pattern: A fake client, mock, or manually constructed state proves what code does if a trigger occurs; it does not prove that a real producer can emit the trigger or that supported operations can reach the state.
+- Seen in: `karmada-io/karmada#7623` review, where an injected status-update error proved the retry defect but needed separate reachability classification.
+- Miss symptom: A review calls an arbitrary mocked error or impossible object state a production bug and asks for a fix without identifying how a real system reaches it.
+- Review check: Name the production producer, its interface contract, the reachable preconditions, and the recovery behavior before assigning bug severity or blocking a PR.
+- Evidence to gather: Real logs or reproduction when available; otherwise exact error contracts, validation and locking rules, concurrent writers, retry/resync/restart paths, and the persistence of user-visible impact.
+- Test or fix cue: Inject only errors or states the real boundary permits. Label code-proven but unobserved cases as reachable latent bugs; keep unproven cases as questions or evidence gaps.

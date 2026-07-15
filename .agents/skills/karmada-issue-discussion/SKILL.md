@@ -19,6 +19,7 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
 - Chinese analysis belongs in `internship-reports/`.
 - Search for related issues/PRs before proposing a new direction.
 - Distinguish explicit maintainer comments from engineering inference.
+- For bug claims based on fault injection, mocks, or constructed state, also use `code-review-growth` and apply its Production Reachability Gate before drafting or posting.
 - For flake issues, also use `code-review-growth` and apply its Flake Root-Cause Gate. Label statements as symptom, hypothesis, or root cause; do not use root cause before `E3` evidence.
 - Distinguish human maintainers/reviewers from automation bots, CI, merge gates, and AI reviewer output.
 - Do not post comments, `/assign`, reviewer requests, or maintainer mentions without explicit user approval of the exact text and target.
@@ -41,13 +42,30 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
    - open questions
    - blocked, duplicate, or conflicting work
    - related issue/PR graph
-5. For a flake investigation, trace producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and self-healing behavior. At `E0-E2`, record missing causal edges instead of presenting a complete RCA diagram; at `E3`, build the timestamp/code table and Mermaid sequence diagram.
-6. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
-7. Produce Chinese internal summary first when planning or learning.
-8. Produce English upstream comment only when asked to draft or post.
-9. Run the concise-first publishing gate below before presenting exact text for approval.
-10. Include GitHub cross-links with short relevance notes.
-11. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+5. For every bug claim, apply the Bug Reachability Gate below before choosing a bug title, label, or definitive wording.
+6. For a flake investigation, trace producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and self-healing behavior. At `E0-E2`, record missing causal edges instead of presenting a complete RCA diagram; at `E3`, build the timestamp/code table and Mermaid sequence diagram.
+7. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
+8. Produce Chinese internal summary first when planning or learning.
+9. Produce English upstream comment only when asked to draft or post.
+10. Run the concise-first publishing gate below before presenting exact text for approval.
+11. Include GitHub cross-links with short relevance notes.
+12. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+
+## Bug Reachability Gate
+
+Before opening a bug issue or describing a scenario as a confirmed bug:
+
+1. State the exact trigger and bad outcome separately.
+2. Identify the production producer of the trigger. Accept an observed log/reproduction, or source/contract evidence that a real component or API may return that error or state.
+3. Prove users or controllers can reach the required preconditions through supported operations; check validation, locks, ownership, ordering, and feature gates.
+4. Trace retries, resyncs, restarts, later events, and cleanup. A temporary internal inconsistency that self-heals within the documented contract may not justify a bug issue.
+5. Use fault injection only after steps 2-3, and inject a value the real boundary is allowed to produce.
+6. Classify the draft:
+   - **Observed bug**: report reproduction/log evidence and actual impact.
+   - **Reachable latent bug**: state that the path is source- or contract-proven but not observed in production; explain why the failure mode is realistic.
+   - **Hypothesis/question**: production reachability remains unproven; ask for confirmation or diagnostics instead of filing a definitive bug claim.
+
+A mock only proves conditional behavior. Do not use an arbitrary fake error, impossible object, or unsupported event order as the sole basis for a bug issue, root-cause claim, severity label, or requested fix.
 
 ## Concise-First Publishing Gate
 
@@ -238,6 +256,7 @@ sequenceDiagram
 - Do not post comments without explicit user instruction.
 - Do not treat automation bot or AI reviewer comments as maintainer consensus.
 - Do not turn a rerun, timing correlation, or local state-window experiment into a root-cause claim or fix recommendation. At `E2`, publish only a labeled hypothesis or diagnostics plan.
+- Do not turn fault injection or a constructed state into a production bug claim without a real producer, reachable preconditions, and recovery analysis.
 - Always report assignee state as `PR 认领 @` in planning tables or summaries.
 - If someone is assigned or an active PR exists, recommend review/test feedback instead of duplicate implementation.
 - Keep Chinese analysis local unless the project explicitly asks for it.

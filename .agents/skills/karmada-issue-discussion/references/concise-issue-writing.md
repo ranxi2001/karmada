@@ -41,7 +41,7 @@ These are review triggers. A source-backed RCA, proposal, or umbrella tracker ma
 
 ### Bug
 
-Use the repository bug template. Put the minimal failing scenario first, then expected behavior, reproduction, the smallest decisive log/source link, and environment fields that affect the result. Label an unproven cause as a hypothesis.
+Use the repository bug template. Put the minimal failing scenario first, then expected behavior, reproduction, the smallest decisive log/source link, and environment fields that affect the result. Label an unproven cause as a hypothesis. A fault-injected test is not production evidence by itself: name the real producer and reachable preconditions, or describe the report as a source-proven latent risk or question rather than an observed bug.
 
 ### Flake
 

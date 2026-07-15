@@ -71,11 +71,28 @@ Match the claim to sufficient evidence:
 | --- | --- |
 | An exact commit passed a check | Exact-SHA CI result or complete local command result |
 | A failure is nondeterministic | Same-SHA rerun or repeated independent observations (`E1`) |
+| A failure path is reachable in production | An observed occurrence, or `CODE`/`DOC` identifying a real producer or interface contract that can produce the trigger under reachable preconditions |
 | This is the root cause | `OBS` + `CODE` completing the causal chain (`E3`) |
 | This patch removes the cause | Controlled baseline-versus-patch evidence or a regression counterfactual (`E4`) |
 | This direction is acceptable upstream | Explicit `MAINTAINER` evidence |
 
 A test passing proves only its assertions on that run. Check whether the test would fail with the patch reverted or the disputed edge restored. Agent, reviewer, and maintainer conclusions remain claims until their supporting evidence is inspected; role changes coordination priority, not technical truth.
+
+## Production Reachability Gate
+
+Apply this gate before calling an unobserved scenario a bug or posting it as a blocking review finding:
+
+1. Define the exact trigger, including input, error, timing, concurrency, and prior state.
+2. Identify its real producer. Use either an observed occurrence or `CODE`/`DOC` proving that a production component or interface may produce it. An arbitrary mock return is not a producer.
+3. Prove the preconditions are reachable through supported operations. Do not rely on states forbidden by validation, locking, ownership, or controller ordering.
+4. Trace retry, resync, restart, later events, and cleanup to determine whether the system remains wrong or self-heals within its contract.
+5. Run a counterfactual test only after reachability is established, and inject an error or state that the real boundary is allowed to produce.
+6. Classify the result accurately:
+   - **Observed bug**: the trigger and impact occurred in logs, CI, or a realistic end-to-end reproduction.
+   - **Reachable latent bug**: source or contract evidence proves the trigger can occur, and a focused test proves the bad outcome, but no real occurrence has been observed.
+   - **Hypothetical scenario**: only a synthetic test or imagined ordering creates the trigger; production reachability is unproven.
+
+Fault injection proves conditional control flow, not production reachability. A reachable latent bug may still block when the trigger is a routine external failure mode and the impact violates a correctness or safety invariant. If reachability is unproven, write a question or evidence gap and request a realistic test; do not present it as a confirmed bug.
 
 ## Flake Root-Cause Gate
 
