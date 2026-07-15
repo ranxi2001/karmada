@@ -41,6 +41,10 @@ Treat upstream reviewer-facing text as an index, not as the full internship repo
 
 When creating diagrams or other visual artifacts for reports, do not wait for the user to ask for a preview. Deliver a directly viewable PNG or SVG alongside the editable source (`.drawio`, Mermaid, etc.) by default. If the preferred export tool is unavailable, proactively use a reasonable fallback such as Mermaid rendering or a local script-generated PNG, and record the tool limitation in the report or `PROGRESS.md`.
 
+When `.drawio` and `.mmd` coexist, record which source and renderer produced each PNG/SVG and designate the canonical source. Do not call independently authored files equivalent or synchronized. Curated parallel views are acceptable when separate layouts materially improve clarity, but audit their key components, relations, and invariants after changes; evaluate visual clarity separately from source-maintenance quality.
+
+Use `.agents/skills/project-mermaid/` for project data-flow, event-flow, lifecycle, and sequence diagrams whose canonical source should be `.mmd` with a generated PNG/SVG. Use `.agents/skills/drawio-skill/` for architecture, topology, vendor-icon, swimlane, and precise custom-layout diagrams. Choose by the question and required deliverable, not by which tool was used previously.
+
 Use English for every newly created diagram or visual artifact in this Karmada workspace, including images stored only in internship reports, because they may later be reused in upstream issues, PRs, reviews, or community meetings. Do not generate Chinese-labeled diagrams unless the user explicitly requests a local-only Chinese learning artifact. Any upstream- or community-facing image must be English-only.
 
 Name report images and exported visual assets in `internship-reports/` with a `dayN-` prefix matching the report that uses them, and update both local Markdown links and raw GitHub image URLs when renaming.

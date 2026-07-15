@@ -1,0 +1,37 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+---
+sequenceDiagram
+    autonumber
+    actor User
+    participant API
+    participant Queue
+    participant Worker
+    participant Store
+
+    User->>+API: Submit command
+    API->>Store: Persist desired state
+    Store-->>API: Saved
+    API-)Queue: Dispatch work item
+    API-->>-User: Accepted
+
+    Queue-)Worker: Deliver work item
+    Worker->>Store: Read desired state
+    Store-->>Worker: Current state
+
+    alt Apply succeeds
+        Worker->>Store: Write result
+        Store-->>Worker: Updated
+    else Transient conflict
+        loop Bounded retry
+            Worker->>Store: Re-read and retry update
+            Store-->>Worker: Current state or success
+        end
+    end
+
+    Note over API,Store: Replace this note with the real state owner and retry invariant.
+

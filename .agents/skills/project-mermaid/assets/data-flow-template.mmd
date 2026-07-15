@@ -1,0 +1,33 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+  flowchart:
+    curve: basis
+    htmlLabels: true
+---
+flowchart LR
+    subgraph ENTRY["Entry"]
+        USER["Caller"]:::source
+        API["API<br/>validate request"]:::process
+    end
+
+    subgraph PROCESSING["Processing"]
+        QUEUE["Work queue"]:::state
+        WORKER["Worker<br/>apply command"]:::process
+        STORE[("Authoritative state")]:::state
+    end
+
+    USER -->|request| API
+    API -->|accepted command| QUEUE
+    QUEUE -.->|async work item| WORKER
+    WORKER -->|write result| STORE
+    STORE -.->|status feedback| API
+
+    classDef source fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef process fill:#d5e8d4,stroke:#82b366,color:#14532d;
+    classDef state fill:#fff2cc,stroke:#d6b656,color:#713f12;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-dasharray:6 4;
+

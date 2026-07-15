@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Mermaid"
+  short_description: "Create clear project data-flow and sequence diagrams"
+  default_prompt: "Use $project-mermaid to create a canonical .mmd source and a clear PNG for the requested project data-flow or sequence diagram."
