@@ -1,0 +1,4 @@
+interface:
+  display_name: "YouTube Transcript Proofreader"
+  short_description: "Local Whisper transcription with agent proofreading"
+  default_prompt: "Use $youtube-transcript-proofread to transcribe this YouTube video locally and deliver a timestamped, agent-proofread transcript."

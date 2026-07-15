@@ -33,6 +33,8 @@
 - [Day 19：Codex CLI 模型流中断等待问题](day19-codex-cli-stream-stall-issue.md)
 - [Day 20：PR #7623 Reconcile Cache 提交时机 Review](day20-pr7623-reconcile-cache-review.md)
 - [Day 21：Day 15 绘图方式与清晰度分析](day21-drawio-authoring-and-clarity-analysis.md)
+- [Day 22：2026-06-16 Karmada 社区会议重调度讨论文字稿](day22-karmada-meeting-2026-06-16-rescheduling-transcript.md)（[信息图 PNG](day22-karmada-meeting-rescheduling-infographic.png)）
+- [Day 23：PR #7662 2026-06-30 社区会议全量转录与对齐](day23-pr7662-meeting-2026-06-30-transcript-and-alignment.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

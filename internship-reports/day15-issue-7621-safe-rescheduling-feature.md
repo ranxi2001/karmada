@@ -2,16 +2,17 @@
 
 日期：2026-07-13
 
-最近更新：2026-07-14
+最近更新：2026-07-15
 
 ## 一页结论
 
 [#7621](https://github.com/karmada-io/karmada/issues/7621) 值得作为后续高价值主线，但当前正确动作是深度 review [proposal PR #7662](https://github.com/karmada-io/karmada/pull/7662)，不是认领 issue 或直接写 executor。
 
 - `MAINTAINER`：`@zhzhuang-zju` 明确说 #7621 当时只用于讨论，不需要开发；议题随后进入 2026-06-16 和 2026-06-30 社区会议。
-- `OBS`：#7621 仍是 open `kind/question`、无 assignee；#7662 已由 `@zhy76` 提交，`@RainbowMango` assign 自己 review，但没有实质性真人技术 review、`/lgtm` 或 `/approve`。
+- `OBS`：#7621 仍是 open `kind/question`、无 assignee；#7662 已由 `@zhy76` 提交，`@RainbowMango` assign 自己 review；我们已发布 1 条 contributor line review，但仍没有 maintainer 技术结论、`/lgtm` 或 `/approve`。
 - `CODE`：当前 WorkloadRebalancer 只写 `binding.spec.rescheduleTriggeredAt`，写入成功就把任务标成 `Successful`，不等待 scheduler、Work 或 member workload ready。
 - `CODE`：现有 GracefulEviction 能在 failover 场景暂时保留源端 Work，但 WorkloadRebalancer 和 Descheduler 都没有使用它；它也没有明确目标、稳定窗口、流量切换或迁移单元。
+- `MEETING-ASR`：2026-06-30 全长讨论对 Story 2 只有“初步方向可行”的信号；Story 3 被明确指出存在 Policy/WR 双重真相、scheduler/controller 双写、rolling 所属层级和 cancel/rollback 未闭合。PR head 是会议前 commit，至今没有吸收这些反馈。
 - `SCOPE`：#7662 只设计“上层已经决定迁谁、从哪迁到哪之后，怎样执行”的 execution layer。#7621 提到的自动水位决策、CPU/内存比例优化、防振荡、业务流量切换和数据 warm-up 都仍是 non-goal。
 
 因此，这条主线含金量高，但“做好”不是在作者旁边再开一个重复 PR。最有效的切入点是先贡献独立、可验证的设计证据：`PreserveReady` 对不同副本调度策略是否成立、SafeMigration 与 GracefulEviction 如何共享唯一状态源、controller crash/cancel/spec mutation/stale status 下需要持久化什么。维护者确认边界后，再认领一个测试或兼容性实现切片。
@@ -25,7 +26,7 @@
 | Upstream master | `d0714678fe181e8dc7d7446555e14799333911db`，2026-07-13 通过 GitHub REST 与 `upstream/master` 交叉确认 |
 | #7621 | GitHub issue body、4 条评论、events/timeline、assignee/label 状态 |
 | #7662 | head `586f6fc3508eb0a504223898c0329a4bb8b4c57c`，完整 720 行 proposal、全部 issue/review/line comments、exact-head checks |
-| 社区会议 | 官方 Google Meeting Notes；2026-06-16、2026-06-30 官方 YouTube 录像入口 |
+| 社区会议 | 官方 Google Meeting Notes；2026-06-16 录像 `14:51-24:51` 清理稿；2026-06-30 全长 `57:08` 本地 Whisper 清理稿和 #7662 讨论边界 |
 | 当前实现 | WorkloadRebalancer API/controller、scheduler Fresh mode、binding controller、GracefulEviction、Descheduler、ResourceInterpreter 和多组件调度源码 |
 
 本轮没有运行或修改 Karmada Go 代码。所有源码判断都绑定到上述 exact SHA；proposal 判断绑定到 PR head，不把未合并文档当成 master 行为。
@@ -39,10 +40,10 @@
 | 作者 | `@zhy76`，Karmada `MEMBER` | `@zhy76` |
 | PR 认领 @ | 无 | assignee `@RainbowMango`；requested reviewers `@seanlaii`、`@Tingtal` |
 | 当前产出 | 生产需求与讨论入口 | 一份 +720/-0 proposal，未改 API/runtime |
-| 真人技术结论 | 无 | 无；`@RainbowMango` 只表示已放入 review queue |
+| Maintainer 技术结论 | 无 | 无；`@RainbowMango` 只表示已放入 review queue |
 | CI | 不适用 | 17 个 exact-head checks 成功；只证明文档 head 通过仓库检查 |
 
-九条 line comments 均来自 Gemini 或 Copilot。optional strategy、TTL 兼容性、controller 早退、运行中 spec mutation 和迁移中间态持久化等意见有技术价值，但仍须按源码独立验证，不能写成 maintainer consensus。
+PR 原有九条 line comments 均来自 Gemini 或 Copilot；2026-07-14 我们另发布 1 条 contributor target-first review。bot 对 optional strategy、TTL 兼容性、controller 早退、运行中 spec mutation 和迁移中间态持久化等意见有技术价值，但仍须按源码独立验证；我们的评论也不能写成 maintainer consensus。
 
 ## 社区讨论时间线
 
@@ -50,19 +51,21 @@
 | --- | --- | --- | --- |
 | 2026-06-12 | #7621 创建 | 需求来自真实复杂 workload 语义：shard、warm-up、readiness/heartbeat、资源池平衡 | 尚无设计方向 |
 | 2026-06-12 | `@zhzhuang-zju` 邀请作者参加会议，并明确“currently just for discussion, and no development work is required for now” | 社区希望先讨论，禁止把它当普通可认领 feature | 不是拒绝长期特性 |
-| 2026-06-16 | 中文社区会议讨论 #7621，纪要仅记 `Openkruze-like workloads.` | 议题确实进入会议 | 没有 API、owner 或 action item 共识 |
+| 2026-06-16 | 中文社区会议讨论 #7621，纪要仅记 `Openkruze-like workloads.`；录像 `14:51-24:51` 讨论 WR 策略入口、source/target 同步变更风险和 target-first | 问题、WR 承载方向、服务受损风险及“A 等 B OK 后再删”行为不变量进入真实讨论 | ASR 不是正式纪要；没有 API、owner、action item 或 proposal 批准共识 |
 | 2026-06-23 | #7662 proposal 创建 | 作者将问题拆成执行框架 | 不代表设计被接受 |
 | 2026-06-24 | `@RainbowMango` `/assign`，表示进入其 review queue | 有 maintainer review owner | 不是技术 review、LGTM 或 approve |
-| 2026-06-30 | 作者在中文会议介绍 #7662 | 社区把 story 2 归为 offline pending replica，story 3 归为 online graceful migration | 纪要没有记录方案批准或未决问题答案 |
+| 2026-06-30 | 中文会议用约 54 分钟介绍并讨论 #7662 | Story 2 映射 offline pending GPU 场景并获初步方向信号；Story 3 映射 online migration，并明确暴露 Policy/WR 双重真相、rolling 层级、unit、双写和 cancel 问题 | ASR 不是正式纪要；没有 proposal 批准或 API 共识，且 PR head 会后未更新 |
 | 2026-07-13 | 本轮复核 | PR 仍停在原始单 commit，无真人技术 review | 不能推断社区已放弃；只能说当前等待 review |
 
 会议资料：
 
 - [官方 Meeting Notes](https://docs.google.com/document/d/1y6YLVC-v7cmVAdbjedoyR5WL0-q45DBRXTvz5_I7bkA/edit)
-- [2026-06-16 官方录像](https://www.youtube.com/watch?v=i-YL8mHKWWg)
+- [2026-06-16 官方录像](https://www.youtube.com/watch?v=i-YL8mHKWWg&t=891s)
+- [2026-06-16 目标片段清理版文字稿](day22-karmada-meeting-2026-06-16-rescheduling-transcript.md)
 - [2026-06-30 官方录像](https://www.youtube.com/watch?v=y-r0o2kDRXs)
+- [2026-06-30 全量转录与三条 story 对齐](day23-pr7662-meeting-2026-06-30-transcript-and-alignment.md)
 
-两段录像没有公开 caption track，本轮没有把未转录音频内容当作证据。
+两段录像都没有公开 caption track。2026-07-15 已用本地 Whisper 转录 2026-06-16 的 `14:51-24:51` 和 2026-06-30 的完整 `57:08`；对明显同音词、尾部越界和专有词做了二次转录与 Agent 清理。两份内容都只作为 `ASR/官方录像证据`，没有说话人分离，不自动归因具体 maintainer，也不升级为正式会议共识。
 
 ## 通俗理解
 
@@ -419,7 +422,7 @@ Would the first side effect require a finalizer, with `deletionTimestamp` treate
 | `gh pr view` GraphQL | token 缺 `read:org`，读取 reviewer login 失败 | 改用公开 REST pulls/reviews/check-runs API |
 | controller 文件名假设错误 | 尝试读取不存在的 `workload_rebalancer_controller.go` | `rg --files` 找到实际 `workloadrebalancer_controller.go` |
 | Bilibili API | 返回 `-799` | 使用官方 YouTube RSS、录像 URL 和 Google Meeting Notes |
-| 录像 transcript | 两场视频没有公开 caption track | 只引用会议纪要明确记录，不推断音频内容 |
+| 录像 transcript | 两场视频没有公开 caption track；第一场片段和第二场第一轮粗稿都出现了 previous-context 尾部幻觉 | 使用本地 `large-v3-turbo` GPU；关闭 previous-text conditioning、加入 Karmada 术语提示重跑，并用已知视频时长 validator 拦截越界 cue；只交付清理稿和可审计 raw SRT |
 | draw.io / Graphviz | 当前 Linux 环境没有 CLI | 保留 `.drawio` 和 `.mmd` 源，使用 Mermaid remote renderer 生成 PNG/SVG，并记录限制 |
 | Karmada proposal reference 缺失 | `karmada-issue-discussion` 引用了不存在的 `references/proposal-review.md` | 只读参考 AgentCube 同源 checklist，并以 Karmada proposal、源码和历史 API 为最终证据；未照搬 AgentCube 项目结论 |
 

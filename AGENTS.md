@@ -45,6 +45,8 @@ When `.drawio` and `.mmd` coexist, record which source and renderer produced eac
 
 Use `.agents/skills/project-mermaid/` for project data-flow, event-flow, lifecycle, and sequence diagrams whose canonical source should be `.mmd` with a generated PNG/SVG. Use `.agents/skills/drawio-skill/` for architecture, topology, vendor-icon, swimlane, and precise custom-layout diagrams. Choose by the question and required deliverable, not by which tool was used previously.
 
+Use `.agents/skills/youtube-transcript-proofread/` for Karmada YouTube meeting evidence. Confirm each video's exact title and total duration before stating coverage; keep raw ASR, Agent-corrected transcript, and paraphrased meeting digest as separate artifacts; validate SRT timestamps against media duration; and do not infer named speakers or maintainer consensus without an official transcript or explicit meeting evidence.
+
 Use English for every newly created diagram or visual artifact in this Karmada workspace, including images stored only in internship reports, because they may later be reused in upstream issues, PRs, reviews, or community meetings. Do not generate Chinese-labeled diagrams unless the user explicitly requests a local-only Chinese learning artifact. Any upstream- or community-facing image must be English-only.
 
 Name report images and exported visual assets in `internship-reports/` with a `dayN-` prefix matching the report that uses them, and update both local Markdown links and raw GitHub image URLs when renaming.

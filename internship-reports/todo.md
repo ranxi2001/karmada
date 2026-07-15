@@ -1,6 +1,6 @@
 # 实习任务 TODO
 
-更新时间：2026-07-13
+更新时间：2026-07-15
 
 这个文档用于管理 Karmada 实习期间的后续任务。日报记录每天做了什么，TODO 记录现在还要做什么、优先级是什么、做到哪里、卡在哪里。
 
@@ -18,7 +18,7 @@
 | 优先级 | 任务 | 状态 | 难度 | 成本 | 预计时间 | 产出/证据 | 下一步 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | 9 月前拿到 AgentCube Karmada 项目社区席位 | DOING | 高 | 中 | 7-8 周 | upstream issue/PR/review/CI/会议材料证据链；每周 mentor 可检查总结 | 以 #7621/#7662 为战略 review/实现主线，以 #7697 为持续交付维护线；每周至少沉淀 1 个 upstream-visible 证据 |
-| P0 | 跟进 #7621 / proposal PR #7662 复杂工作负载安全重调度 | REVIEW | 高 | 高 | 本周主线，先拿到独立 review/test slice | [Day 15 尽调](day15-issue-7621-safe-rescheduling-feature.md)；[upstream issue #7621](https://github.com/karmada-io/karmada/issues/7621)；[proposal PR #7662](https://github.com/karmada-io/karmada/pull/7662)；PreserveReady 8-case matrix、SafeMigration scheduler collision、direct-delete/finalizer falsification；[target-first review](https://github.com/karmada-io/karmada/pull/7662#discussion_r3576720182) 已发布 | 先等待作者/maintainer 回答 authoritative migration state / scheduler exclusion；候选 B direct-deletion 评论仍需用户确认，随后再请求独立 state-machine/compatibility test slice |
+| P0 | 跟进 #7621 / proposal PR #7662 复杂工作负载安全重调度 | REVIEW | 高 | 高 | 本周主线，先拿到独立 review/test slice | [Day 15 尽调](day15-issue-7621-safe-rescheduling-feature.md)；[6 月 16 日文字稿](day22-karmada-meeting-2026-06-16-rescheduling-transcript.md)；[6 月 30 日全量转录与对齐](day23-pr7662-meeting-2026-06-30-transcript-and-alignment.md)；PreserveReady 8-case matrix、SafeMigration scheduler collision、direct-delete/finalizer falsification；[target-first review](https://github.com/karmada-io/karmada/pull/7662#discussion_r3576720182) 已发布 | 明天先确认 Story 2 supported modes/Descheduler 分工，以及 Story 3 的 target authority、rolling owner、durable state 和 cancel/delete 合同；候选 B 发布前仍需用户确认 exact target/text |
 | P0 | 建立 Karmada 实习基础仓库结构 | DONE | 低 | 低 | 0.5 天 | `AGENTS.md`、`PROGRESS.md`、`internship-reports/`、`.agents/skills/open-source-onboarding/`、[Day 1 日报](day1-karmada-7598-default-version-pr.md) | 后续按 dayN 文件继续记录 |
 | P0 | 迁移并 Karmada 化本地 skills | DONE | 中 | 低 | 0.5 天 | `.agents/skills/drawio-skill/`、`.agents/skills/karmada-pr-management/`、`.agents/skills/karmada-issue-discussion/`；4 个 skills 均通过 `quick_validate.py`，Karmada GitHub 脚本 smoke test 通过 | 后续画图、issue 分析、PR 准备分别使用这些 skills |
 | P0 | 配置 upstream 远程和分支卫生规则 | DONE | 低 | 低 | 0.5 天 | `upstream=https://github.com/karmada-io/karmada.git`；upstream PR 分支从 `upstream/master` 创建；`intern` 只放学习记录 | 后续 upstream 改动继续使用独立 topic branch |
@@ -35,6 +35,7 @@
 | P1 | 跟进 estimator / FlinkDeployment / ResourceQuota e2e flake | DONE | 中 | 低 | 0.5-1 天 | [Upstream issue #7719](https://github.com/karmada-io/karmada/issues/7719) 已关闭；[Upstream PR #7732](https://github.com/karmada-io/karmada/pull/7732) 已 `/lgtm`、`/approve` 并合并为 `d0714678`；[Day 11 维护者 RCA、纠偏与 Mermaid](day11-ci-flake-statistics.md#维护者-rca-与原分析纠偏) | 归档完成；后续 flake 强制使用 E0-E4 证据等级、源码时序和 no-self-heal 分析，不再从 rerun/timing 推测直接提出补丁 |
 | P1 | 建立 Karmada CI flake 专项台账 | REVIEW | 中 | 低 | 0.5-1 天 | [Day 11 CI flake 专项统计](day11-ci-flake-statistics.md)；GitHub Actions 2026-06-26 至 2026-07-09 run/job 统计；#6841/#7388/#7719/#7691/#7692/#5323/#3667 等关联台账 | 补最近 schedule workflow artifacts，把 37 个 schedule e2e/setup 失败按具体 Ginkgo spec 或 setup 阶段归类；如每周复用则沉淀脚本 |
 | P1 | 调研知名开源维护者公开 Agent Skills | DONE | 中 | 低 | 0.5 天 | [Day 14 Expert Skills 调研](day14-expert-agent-skills-research.md)；已核验作者、固定 SHA、license、hooks 和 executable tree；最小规则已合并进 repo-local `code-review-growth` / `karmada-pr-management` 并通过 forward tests | 不整包安装；以后只在出现新真实 review lesson 时增量更新本地 skill |
+| P1 | 建立 YouTube 本地开源转录 + Agent 校对 skill | DONE | 中 | 低 | 0.5 天 | 全局 `~/.codex/skills/youtube-transcript-proofread/` 与 repo-local `.agents/skills/youtube-transcript-proofread/`；本地 Whisper、duration validator、review chunk、校对规则；两份内容哈希一致；57:08 真实会议 forward test 通过 | 后续会议先确认 title/duration，再区分 raw ASR、corrected transcript 和 digest；受限视频不得自动导入浏览器 cookies |
 | P1 | 建立 Karmada issue / PR 简洁起草规范 | DONE | 中 | 低 | 0.5 天 | [Day 16 写作风格审计](day16-karmada-upstream-writing-style.md)；抽样 `RainbowMango`、`zhzhuang-zju`、`FAUST-BENCHOU`、`hzxuzhonghu`；两个 skill 新增 concise-first gate/reference，`draft_metrics.py` 和两次 fresh-context tests 通过 | 后续每次 upstream exact text 审批都报告 visible words；只有 RCA/proposal/API/security 等明确原因才保留长文 |
 | P1 | 升级 GitHub Actions Ubuntu runner | DONE | 低 | 低 | 0.5 天 | [Upstream PR #7728](https://github.com/karmada-io/karmada/pull/7728) 已 merged；[Day 10 调研记录](day10-ci-ubuntu-runner-upgrade.md)；分支 `chore/update-github-runner-ubuntu-24`；commit `0f62fd62b`；fork push CI 和 upstream PR CI 已全绿 | merge 后 master push CI 命中 Remedy + Flink 两个 e2e flake，已记录到 Day 10 / Day 11；不视为 runner 升级确定性失败 |
 | P1 | 准备 `karmadactl init` split Secret layout PR | BLOCKED | 中 | 中 | 0.5-1 天 | [Day 3 PR 审阅准备](day3-certificate-management-task-triage.md#pr-审阅准备)；[Day 4 gap 分析](day4-certificate-layout-issue-follow-up.md)；fork push CI 已通过 | 根据 #7693 维护者方向，旧 split layout prototype 暂时不作为第一优先级 PR；后续只作为证书 Secret 映射参考 |
