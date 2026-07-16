@@ -288,6 +288,66 @@ Review 时 PR head 为 `ef572a249`，mergeability 为 `MERGEABLE`。lint、codeg
 
 用户确认 exact text 后，已在 head `ef572a249` 提交一次 [`COMMENTED` review #4692557177](https://github.com/karmada-io/karmada/pull/7764#pullrequestreview-4692557177)，包含四条不重复现有 bot thread 的 line comments：artifact scope、stale-state hypothesis、retry inference、prose hard-wrap。没有提交总评、`lgtm/approve`、maintainer mention 或 reviewer request。
 
+## 2026-07-16 增量复核：首次刷新只有作者回复，没有新提交
+
+用户要求 review 新提交后，分别核对 PR REST head、upstream pull ref 和作者 fork branch：三者仍全部指向 `ef572a249c20ab0b014f752cd8a6d64b6964db29`。PR 仍只有 1 个 commit、1 个新增文件，`ef572a249..upstream/pr/7764` 没有 commit 或 file diff。因此本轮没有可执行的“新 commit diff review”；`updated_at=2026-07-16T03:39:49Z` 来自新的 review reply，不是 push。
+
+唯一的新活动是作者在 Gemini flat-glob thread 回复：[`No, we need to search logs from specific component.`](https://github.com/karmada-io/karmada/pull/7764#discussion_r3592474113)。该 thread 随后被标记为 `resolved=true`、`outdated=false`，但 line 97 仍是：
+
+```bash
+grep -h "<object-name>" karmada-<component>-*.log
+```
+
+作者要求保留 component scope 是正确的；Gemini 的 `grep -rn "<object-name>" .` 会搜索整个 artifact，噪音过大。但这没有解决原始问题：shell 的 flat glob 不会进入 `karmada-host/.../containers/` 或 `member3/.../containers/`。Day 17 已用 run `28499042349` 的真实 artifact 证明 flat glob 找到 0 个 scheduler logs，而递归 component search 找到 8 个。因此该核心命令正确性问题仍未修复，thread 的 resolved 状态不能替代代码修正。
+
+同时满足“递归”和“具体组件”的最小命令仍是：
+
+```bash
+grep -rFn --include='karmada-<component>-*.log' -- '<object-name>' .
+```
+
+其中 `--include` 保留组件边界，`-r` 穿透 kind log 子目录，`-F` 避免对象名被当作正则，`-n` 保留可引用的文件行号。若要回复作者，可使用以下英文候选；本轮未发布：
+
+```text
+Agreed that the search should remain component-scoped. The issue is only that
+the current flat glob does not traverse the downloaded artifact's nested
+directories; in the v1.34.0 artifact from run 28499042349 it found 0 scheduler
+logs, while a recursive component search found 8. Could this use
+`grep -rFn --include='karmada-<component>-*.log' -- '<object-name>' .` so it is
+both recursive and component-scoped?
+```
+
+其余 thread 没有新回复：4 条 `ranxi2001` review 均为 `resolved=false`、`outdated=false`；3 条 Copilot thread 也仍未 resolved，其中 single-job logs ZIP 结论仍是已实测的误报。
+
+当前旧 head 共有 17 个 check runs：16 success，只有 `e2e test (v1.34.0)` failure。首个硬失败是 `FederatedResourceQuota auto-provision testing` 在 join cluster 的 `BeforeEach` 中触发 1 小时 suite timeout；后续 control-plane `connection refused` 和 cleanup failure 是超时后的连带结果。PR diff 只新增 skill Markdown，v1.35/v1.36 e2e 同 SHA 均成功；这些证据只到 `E0`，不能声称 root cause、flake 或与 PR 代码有关，也不构成新的 skill diff finding。
+
+### 二次刷新：`44e708220` 是 patch-equivalent rebase
+
+首次刷新约两分钟后，作者 force-push 新 head `44e708220853b50ddc19c7a7afab52196f29351a`。直接执行 `git diff ef572a249..44e708220` 会显示 22 个文件 `+60/-32`，但这不是 PR skill 的增量：旧 commit parent 是 `d01d3a8fd3`，新 parent 是 `2f47894fa6`，中间包含 `#7728` runner 更新、`#7732` e2e cleanup 修复和 CodeQL dependency bump。
+
+按单 commit patch 比较后，结果是完全等价：
+
+```text
+git range-diff ef572a249^! 44e708220^!
+1: ef572a249 = 1: 44e708220 Add agent skill for diagnosing flaky E2E tests
+
+stable patch-id (old) = 967d65395a3e9851088ee15fecd3102b118c708c
+stable patch-id (new) = 967d65395a3e9851088ee15fecd3102b118c708c
+```
+
+`SKILL.md` 在两个 head 之间逐字相同；新 commit 相对自己的 parent 仍只新增该文件 150 行。因此这次 push 只是 rebase 到较新的 `master`，没有处理任何 review finding：
+
+- line 47 仍固定下载 `karmada_e2e_log_<k8s_version>`，scope mismatch 未修复；
+- line 56-57 仍声明 artifact 有 `member1/2/3`，collector mismatch 未修复；
+- line 78-80 仍把快速 wait 直接归因于 stale state，lifecycle evidence gate 未加入；
+- line 97 仍是 flat component glob，嵌套日志搜索失败未修复；
+- line 103-105 仍从单次命中推断 `did not retry`，queue/source evidence gate 未加入；
+- hard-wrap 统计仍是 64 行落在 65-90 字符，non-blocking prompt-quality question 未处理。
+
+作者同时回复并 resolve 了 Copilot 的 ZIP 误报，准确区分 job-level logs 为 text、run-level logs 为 ZIP。这与本报告实测一致，是有效的 thread 处理，但不属于 skill patch。
+
+对 exact SHA `44e708220` 重新运行 skill quick validation 和 `git diff --check 44e708220^..44e708220` 均通过。检查快照为 DCO/codegen success，其余 11 个已出现的 checks 仍在运行；green CI 不能替代上述命令和 RCA 语义 review。
+
 ## VS Code 无法切换到 `intern` 的原因
 
 `/home/karmada` 当前在 `feature/cert-mode-rotate`，而 `intern` 已被 linked worktree 占用：
@@ -317,7 +377,7 @@ code --reuse-window /tmp/karmada-intern-worktree
 
 ## 下一步
 
-1. 跟踪作者对四条人工 review 和现有 bot threads 的回复；作者 push 后按新 head 重跑命令/layout/source consistency 检查。
+1. 当前 head `44e708220` 只是 patch-equivalent rebase；等待作者真正修改 skill patch 后再做增量 review。比较 force-push 时使用 `range-diff`/patch-id，不再把 base advancement 当成 PR 变更。当前 resolved 的 Gemini thread 仍需确认 flat glob 是否改成 recursive + component-scoped search。
 2. 第 4 条临时目录安全边界暂不追加评论，避免一次 review 过载；只有作者更新后仍保留无 ownership cleanup 时再决定。
 3. 如作者扩展 skill 到 init/operator，再分别按其不同 artifact 名称和 host-only layout 验证。
 4. 等已有 `intern` worktree 修改被安全保存后，再决定是否将该 worktree 移出 `/tmp` 或释放 branch 占用。

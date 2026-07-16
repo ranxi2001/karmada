@@ -154,3 +154,12 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Name the production producer, its interface contract, the reachable preconditions, and the recovery behavior before assigning bug severity or blocking a PR.
 - Evidence to gather: Real logs or reproduction when available; otherwise exact error contracts, validation and locking rules, concurrent writers, retry/resync/restart paths, and the persistence of user-visible impact.
 - Test or fix cue: Inject only errors or states the real boundary permits. Label code-proven but unobserved cases as reachable latent bugs; keep unproven cases as questions or evidence gaps.
+
+## Force-Pushed Rebases Need Patch Comparison, Not Head Comparison
+
+- Pattern: Comparing `old-head..new-head` after a force-pushed rebase mixes base-branch advancement into the apparent PR delta even when the contributor patch is unchanged.
+- Seen in: `karmada-io/karmada#7764`, where a patch-equivalent single commit moved to a newer `master` parent and a direct head diff misleadingly showed 22 changed files.
+- Miss symptom: A reviewer attributes already-merged base commits to the author, reviews unrelated files, or assumes earlier findings were addressed because the head SHA changed.
+- Review check: Inspect both parent SHAs, compare each `parent..head` patch, then run `git range-diff old^! new^!` and stable `git patch-id` before reviewing the incremental change.
+- Evidence to gather: Old/new parent and head SHAs, range-diff result, patch IDs, PR REST changed-file list, and direct equality of the files under review.
+- Test or fix cue: Mark `=` plus identical patch IDs as a patch-equivalent rebase; carry prior findings forward unchanged and wait for a real patch delta.
