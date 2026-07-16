@@ -164,6 +164,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Old/new parent and head SHAs, range-diff result, patch IDs, PR REST changed-file list, and direct equality of the files under review.
 - Test or fix cue: Mark `=` plus identical patch IDs as a patch-equivalent rebase; carry prior findings forward unchanged and wait for a real patch delta.
 
+## Re-Audit Scope After The Base Branch Advances
+
+- Pattern: A change can be relevant when proposed and later become redundant because another PR lands the same behavior in the base branch; current redundancy is not evidence that the original contribution was unrelated.
+- Seen in: `karmada-io/karmada#7704`, where the original Node.js 20 cleanup legitimately included a FOSSA action upgrade, but Dependabot PR `#7713` merged that upgrade before human review. Rebasing then correctly removed `fossa.yml` and left only the `release.yml` tar replacement.
+- Miss symptom: A delayed review calls a now-redundant file “outside scope” without naming the base change that absorbed it, or the contributor carries duplicate edits and stale PR-body/test claims after rebasing.
+- Review check: Compare the PR's creation base, current base, and current head; search merged overlapping PRs by file, dependency, issue, and behavior; state whether the change was originally unrelated, independently duplicated, or made redundant by base advancement.
+- Evidence to gather: Original and current base SHAs, original/current changed-file lists, the overlapping merged PR or commit, file-level patches, and the PR body/test text that may now be stale.
+- Test or fix cue: Ask for a rebase, name the already-merged change, and state the expected residual diff. Afterward, verify the redundant patch disappeared, update the PR body and validation scope, preserve sign-off during history rewriting, and compare patch/tree identity across force-pushes.
+
 ## Prompt-Formatting Claims Need A Mechanism Chain
 
 - Pattern: A parser preserving whitespace proves representation, not by itself that formatting helps or harms model behavior; a prompt-quality review needs the semantic, transport, and model-sensitivity links.

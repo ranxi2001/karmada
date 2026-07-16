@@ -13,6 +13,7 @@ Use this skill to make code review repeatable and cumulative. It complements rep
 
 1. Gather the exact review surface.
    - Read the PR body, linked issue, changed files, relevant surrounding code, CI state, and prior discussion.
+   - After a delayed review, rebase, or base-branch advancement, compare every changed file against the current base and overlapping merged PRs. Distinguish a change that was unrelated when proposed from one that was originally relevant but is now redundant.
    - On GitHub PRs, read both conversation comments and line review comments. Issue comments alone miss review threads:
 
 ```bash

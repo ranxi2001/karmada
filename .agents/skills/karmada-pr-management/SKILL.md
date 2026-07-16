@@ -248,9 +248,11 @@ Use this workflow before analyzing, reviewing, replying to, or building on someo
 3. Read `Files changed`, not only the conversation. Inspect implementation, API/CRD changes, generated files, tests, charts, and docs touched by the PR.
 4. Read human review comments and author replies before bot comments.
 5. Check whether later commits already addressed an earlier review comment.
-6. Compare the proposed comment against the current PR text/code.
-7. For a flake PR, independently verify the code-backed causal timeline, retry/requeue path, recovery event, and patch counterfactual; green CI alone is not a correctness argument.
-8. Record evidence locally before posting: PR number, commit SHA, files/sections read, key observations, unresolved questions, and comment purpose.
+6. If review was delayed or the base advanced, check whether another merged PR already absorbed any changed file or behavior. Call it `redundant after <PR/commit>` rather than `unrelated` when it was relevant at creation; request a rebase and state the exact diff expected to remain.
+7. After that rebase, verify the redundant patch disappeared and the PR body, test report, and issue-closing claim match the residual diff. Preserve sign-off and use tree/range-diff/patch-id comparison when force-pushes rewrite commit identity.
+8. Compare the proposed comment against the current PR text/code.
+9. For a flake PR, independently verify the code-backed causal timeline, retry/requeue path, recovery event, and patch counterfactual; green CI alone is not a correctness argument.
+10. Record evidence locally before posting: PR number, commit SHA, files/sections read, key observations, unresolved questions, and comment purpose.
 
 Useful commands:
 

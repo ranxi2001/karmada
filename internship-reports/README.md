@@ -35,6 +35,7 @@
 - [Day 21：Day 15 绘图方式与清晰度分析](day21-drawio-authoring-and-clarity-analysis.md)
 - [Day 22：2026-06-16 Karmada 社区会议重调度讨论文字稿](day22-karmada-meeting-2026-06-16-rescheduling-transcript.md)（[信息图 PNG](day22-karmada-meeting-rescheduling-infographic.png)）
 - [Day 23：PR #7662 2026-06-30 社区会议全量转录与对齐](day23-pr7662-meeting-2026-06-30-transcript-and-alignment.md)
+- [Day 24：Karmada 资源传播、部署与调度组件详解](day24-karmada-resource-propagation-scheduling-components.md)（[PNG](day24-karmada-resource-propagation-scheduling-components.png) / [SVG](day24-karmada-resource-propagation-scheduling-components.svg) / [draw.io](day24-karmada-resource-propagation-scheduling-components.drawio) / [Mermaid](day24-karmada-resource-propagation-scheduling-components.mmd)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

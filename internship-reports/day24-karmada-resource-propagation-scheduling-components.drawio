@@ -1,0 +1,470 @@
+<mxfile host="Electron">
+  <diagram id="W5EFOITa2dNBqP8Mpr2G" name="pageWithNumber">
+    <mxGraphModel dx="-1014" dy="-818" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="1. 声明期望：用户告诉 Karmada 传播什么、传播到哪里" mermaidId="n:INTENT" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="1. 声明期望：用户告诉 Karmada 传播什么、传播到哪里" id="2">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="305" width="1705" x="268" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="kubectl / GitOps / CI&#xa;提交资源与策略" mermaidId="n:USER" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#172554;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="kubectl / GitOps / CI&#xa;提交资源与策略" id="3">
+          <mxCell parent="2" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#172554;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="220" x="765" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Resource Template&#xa;资源模板&#xa;原生 Kubernetes 对象，如 Deployment nginx" mermaidId="n:TEMPLATE" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d9eaf7;strokeColor=#3d85c6;fontColor=#12344d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Resource Template&#xa;资源模板&#xa;原生 Kubernetes 对象，如 Deployment nginx" id="4">
+          <mxCell parent="2" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d9eaf7;strokeColor=#3d85c6;fontColor=#12344d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="371" x="1299" y="187" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="PropagationPolicy (PP)&#xa;命名空间级传播策略&#xa;选择资源 + Placement 放置约束" mermaidId="n:PP" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#713f12;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="PropagationPolicy (PP)&#xa;命名空间级传播策略&#xa;选择资源 + Placement 放置约束" id="5">
+          <mxCell parent="2" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#713f12;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="250" x="999" y="187" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="ClusterPropagationPolicy (CPP)&#xa;集群级传播策略&#xa;可选跨命名空间或集群级资源" mermaidId="n:CPP" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#713f12;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="ClusterPropagationPolicy (CPP)&#xa;集群级传播策略&#xa;可选跨命名空间或集群级资源" id="6">
+          <mxCell parent="2" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#713f12;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="307" x="642" y="187" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="OverridePolicy / ClusterOverridePolicy&#xa;覆盖策略（可选）&#xa;按目标集群修改 image / replicas / StorageClass" mermaidId="n:OP" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#4c1d95;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="OverridePolicy / ClusterOverridePolicy&#xa;覆盖策略（可选）&#xa;按目标集群修改 image / replicas / StorageClass" id="7">
+          <mxCell parent="2" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#4c1d95;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="380" x="35" y="187" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:USER-&gt;TEMPLATE#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.67;entryX=0.5;entryY=0;" mermaidBaseValue="" id="45">
+          <mxCell edge="1" parent="2" source="3" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.67;entryX=0.5;entryY=0;" target="4">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1485" y="153" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:USER-&gt;PP#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.93;entryX=0.5;entryY=0;" mermaidBaseValue="" id="46">
+          <mxCell edge="1" parent="2" source="3" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.93;entryX=0.5;entryY=0;" target="5">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1124" y="153" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="另一种作用域" mermaidId="e:USER-&gt;CPP#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.31;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="另一种作用域" id="47">
+          <mxCell edge="1" parent="2" source="3" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.31;exitY=1;entryX=0.5;entryY=0;" target="6">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="796" y="153" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="需要集群差异时" mermaidId="e:USER-&gt;OP#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.67;entryX=0.5;entryY=0;" mermaidBaseValue="需要集群差异时" id="48">
+          <mxCell edge="1" parent="2" source="3" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.67;entryX=0.5;entryY=0;" target="7">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="225" y="153" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="2. Karmada 控制面：匹配资源，并做跨集群调度" mermaidId="n:CONTROL" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="2. Karmada 控制面：匹配资源，并做跨集群调度" id="8">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="811" width="1077" x="699" y="335" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="karmada-apiserver + etcd&#xa;控制面 API 与持久化&#xa;保存 Template / Policy / Binding / Work" mermaidId="n:API" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#7c2d12;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="karmada-apiserver + etcd&#xa;控制面 API 与持久化&#xa;保存 Template / Policy / Binding / Work" id="9">
+          <mxCell parent="8" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#7c2d12;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="351" x="691" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="ResourceDetector&#xa;资源探测器&#xa;匹配 Template 与 Policy，创建 Binding" mermaidId="n:DETECTOR" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="ResourceDetector&#xa;资源探测器&#xa;匹配 Template 与 Policy，创建 Binding" id="10">
+          <mxCell parent="8" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="317" x="526" y="207" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="ResourceBinding / ClusterResourceBinding&#xa;资源绑定（待调度）&#xa;一个 Binding 对应一个资源模板" mermaidId="n:RB0" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e8def8;strokeColor=#674ea7;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="ResourceBinding / ClusterResourceBinding&#xa;资源绑定（待调度）&#xa;一个 Binding 对应一个资源模板" id="11">
+          <mxCell parent="8" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e8def8;strokeColor=#674ea7;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="400" x="484" y="369" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Cluster objects&#xa;成员集群档案&#xa;labels / region / zone / Ready / capacity" mermaidId="n:CLUSTER" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d9eaf7;strokeColor=#3d85c6;fontColor=#12344d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Cluster objects&#xa;成员集群档案&#xa;labels / region / zone / Ready / capacity" id="12">
+          <mxCell parent="8" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d9eaf7;strokeColor=#3d85c6;fontColor=#12344d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="375" x="35" y="369" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="karmada-scheduler&#xa;多集群调度器&#xa;资源 -&gt; 成员集群，并分配跨集群副本" mermaidId="n:SCHED" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=3;fillColor=#cfe2f3;strokeColor=#0b5394;fontColor=#073763;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="karmada-scheduler&#xa;多集群调度器&#xa;资源 -&gt; 成员集群，并分配跨集群副本" id="13">
+          <mxCell parent="8" style="html=1;whiteSpace=wrap;strokeWidth=3;fillColor=#cfe2f3;strokeColor=#0b5394;fontColor=#073763;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="233" x="198" y="531" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Binding（已调度）&#xa;spec.clusters 记录目标集群&#xa;也记录每个集群的副本分配" mermaidId="n:RB1" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e8def8;strokeColor=#674ea7;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Binding（已调度）&#xa;spec.clusters 记录目标集群&#xa;也记录每个集群的副本分配" id="14">
+          <mxCell parent="8" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e8def8;strokeColor=#674ea7;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="228" x="201" y="693" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="ResourceInterpreter&#xa;资源解释器（扩展点）&#xa;让 Karmada 理解副本、依赖、健康与状态" mermaidId="n:INTERPRETER" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#262626;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=6 4;fixDash=1;" mermaidBaseValue="ResourceInterpreter&#xa;资源解释器（扩展点）&#xa;让 Karmada 理解副本、依赖、健康与状态" id="15">
+          <mxCell parent="8" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#262626;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=6 4;fixDash=1;" vertex="1">
+            <mxGeometry height="93" width="276" x="278" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="watch" mermaidId="e:API-&gt;DETECTOR#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.83;entryY=0;" mermaidBaseValue="watch" id="49">
+          <mxCell edge="1" parent="8" source="9" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.83;entryY=0;" target="10">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="866" y="173" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="创建" mermaidId="e:DETECTOR-&gt;RB0#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="创建" id="50">
+          <mxCell edge="1" parent="8" source="10" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="11">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="进入待调度队列" mermaidId="e:RB0-&gt;SCHED#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=1;entryY=0.23;" mermaidBaseValue="进入待调度队列" id="51">
+          <mxCell edge="1" parent="8" source="11" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=1;entryY=0.23;" target="13">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="684" y="497" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="提供候选集群事实" mermaidId="e:CLUSTER-&gt;SCHED#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.27;entryY=0;" mermaidBaseValue="提供候选集群事实" id="52">
+          <mxCell edge="1" parent="8" source="12" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.27;entryY=0;" target="13">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="222" y="497" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="写回选择结果" mermaidId="e:SCHED-&gt;RB1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="写回选择结果" id="53">
+          <mxCell edge="1" parent="8" source="13" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="14">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="辅助理解资源" mermaidId="e:INTERPRETER-&gt;DETECTOR#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.01;entryY=0;" mermaidBaseValue="辅助理解资源" id="54">
+          <mxCell edge="1" parent="8" source="15" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.01;entryY=0;" target="10">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="416" y="173" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="3. 生成下发包：把统一期望变成每个目标集群的最终清单" mermaidId="n:PACKAGE" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="3. 生成下发包：把统一期望变成每个目标集群的最终清单" id="16">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="448" width="414" x="647" y="1176" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Binding Controller&#xa;绑定控制器&#xa;读取 Binding，套用 Override，生成 Work" mermaidId="n:BINDING" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Binding Controller&#xa;绑定控制器&#xa;读取 Binding，套用 Override，生成 Work" id="17">
+          <mxCell parent="16" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="322" x="46" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Work x N&#xa;每个目标集群一个工作包&#xa;namespace: karmada-es-&amp;lt;cluster&amp;gt;" mermaidId="n:WORK" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d9d2e9;strokeColor=#8e7cc3;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Work x N&#xa;每个目标集群一个工作包&#xa;namespace: karmada-es-&amp;lt;cluster&amp;gt;" id="18">
+          <mxCell parent="16" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d9d2e9;strokeColor=#8e7cc3;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="344" x="35" y="207" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Work.spec.workload.manifests&#xa;目标集群最终收到的 manifests" mermaidId="n:MANIFEST" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d9d2e9;strokeColor=#8e7cc3;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Work.spec.workload.manifests&#xa;目标集群最终收到的 manifests" id="19">
+          <mxCell parent="16" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d9d2e9;strokeColor=#8e7cc3;fontColor=#351c75;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="304" x="55" y="350" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="每个目标集群创建一个" mermaidId="e:BINDING-&gt;WORK#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="每个目标集群创建一个" id="55">
+          <mxCell edge="1" parent="16" source="17" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="18">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:WORK-&gt;MANIFEST#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="56">
+          <mxCell edge="1" parent="16" source="18" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="19">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="4. 下发并在成员集群部署：Push / Pull 只改变谁负责同步" mermaidId="n:MEMBER" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="4. 下发并在成员集群部署：Push / Pull 只改变谁负责同步" id="20">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="939" width="847" x="513" y="1673" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Push 模式&#xa;Execution Controller 在 Karmada 控制面&#xa;主动访问成员集群" mermaidId="n:PUSH" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Push 模式&#xa;Execution Controller 在 Karmada 控制面&#xa;主动访问成员集群" id="21">
+          <mxCell parent="20" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="348" x="464" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Pull 模式&#xa;Execution Controller 在 karmada-agent 内&#xa;从成员集群侧拉取并 apply" mermaidId="n:PULL" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Pull 模式&#xa;Execution Controller 在 karmada-agent 内&#xa;从成员集群侧拉取并 apply" id="22">
+          <mxCell parent="20" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="379" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="member kube-apiserver&#xa;成员集群 API&#xa;创建 / 更新 / 删除真实资源" mermaidId="n:MAPI" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d0e0e3;strokeColor=#45818e;fontColor=#134f5c;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="member kube-apiserver&#xa;成员集群 API&#xa;创建 / 更新 / 删除真实资源" id="23">
+          <mxCell parent="20" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d0e0e3;strokeColor=#45818e;fontColor=#134f5c;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="252" x="215" y="207" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Deployment / Service 等&#xa;成员集群中的真实业务资源" mermaidId="n:DEPLOY" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#c9daf8;strokeColor=#3c78d8;fontColor=#1c4587;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Deployment / Service 等&#xa;成员集群中的真实业务资源" id="24">
+          <mxCell parent="20" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#c9daf8;strokeColor=#3c78d8;fontColor=#1c4587;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="247" x="217" y="350" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="member kube-controller-manager&#xa;Deployment Controller&#xa;Deployment -&gt; ReplicaSet -&gt; Pods" mermaidId="n:DEPLOYCTRL" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="member kube-controller-manager&#xa;Deployment Controller&#xa;Deployment -&gt; ReplicaSet -&gt; Pods" id="25">
+          <mxCell parent="20" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#14532d;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="338" x="474" y="517" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="member kube-scheduler&#xa;单集群调度器&#xa;待调度 Pod -&gt; Node" mermaidId="n:KUBESCHED" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#fce5cd;strokeColor=#e69138;fontColor=#783f04;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="member kube-scheduler&#xa;单集群调度器&#xa;待调度 Pod -&gt; Node" id="26">
+          <mxCell parent="20" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#fce5cd;strokeColor=#e69138;fontColor=#783f04;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="256" x="515" y="679" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Pods on Nodes&#xa;业务副本真正运行" mermaidId="n:PODS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#b6d7a8;strokeColor=#38761d;fontColor=#274e13;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Pods on Nodes&#xa;业务副本真正运行" id="27">
+          <mxCell parent="20" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#b6d7a8;strokeColor=#38761d;fontColor=#274e13;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="178" x="554" y="841" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="create / update / delete" mermaidId="e:PUSH-&gt;MAPI#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=1;entryY=0.13;" mermaidBaseValue="create / update / delete" id="57">
+          <mxCell edge="1" parent="20" source="21" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=1;entryY=0.13;" target="23">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="638" y="173" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="create / update / delete" mermaidId="e:PULL-&gt;MAPI#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.23;entryY=0;" mermaidBaseValue="create / update / delete" id="58">
+          <mxCell edge="1" parent="20" source="22" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.23;entryY=0;" target="23">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="225" y="173" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:MAPI-&gt;DEPLOY#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="59">
+          <mxCell edge="1" parent="20" source="23" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="24">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:DEPLOY-&gt;DEPLOYCTRL#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.89;entryX=0.5;entryY=0;" mermaidBaseValue="" id="60">
+          <mxCell edge="1" parent="20" source="24" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.89;entryX=0.5;entryY=0;" target="25">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="643" y="458" />
+                <mxPoint x="643" y="492" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="创建待调度 Pods" mermaidId="e:DEPLOYCTRL-&gt;KUBESCHED#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="创建待调度 Pods" id="61">
+          <mxCell edge="1" parent="20" source="25" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="26">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="选择节点并绑定" mermaidId="e:KUBESCHED-&gt;PODS#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="选择节点并绑定" id="62">
+          <mxCell edge="1" parent="20" source="26" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="27">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="5. 状态回传：实际状态沿 Work -&gt; Binding -&gt; 原始模板聚合" mermaidId="n:FEEDBACK" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="5. 状态回传：实际状态沿 Work -&gt; Binding -&gt; 原始模板聚合" id="28">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="851" width="485" x="8" y="2155" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="成员资源实际状态&#xa;availableReplicas / health / conditions" mermaidId="n:ACTUAL" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" mermaidBaseValue="成员资源实际状态&#xa;availableReplicas / health / conditions" id="29">
+          <mxCell parent="28" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" vertex="1">
+            <mxGeometry height="73" width="363" x="61" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Work Status Controller&#xa;Push: controller-manager&#xa;Pull: karmada-agent" mermaidId="n:WORKSTATUS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fce5cd;strokeColor=#e69138;fontColor=#783f04;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Work Status Controller&#xa;Push: controller-manager&#xa;Pull: karmada-agent" id="30">
+          <mxCell parent="28" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fce5cd;strokeColor=#e69138;fontColor=#783f04;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="261" x="112" y="197" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Work.status&#xa;单个成员集群的 applied / manifest status" mermaidId="n:WSTATUS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" mermaidBaseValue="Work.status&#xa;单个成员集群的 applied / manifest status" id="31">
+          <mxCell parent="28" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" vertex="1">
+            <mxGeometry height="73" width="331" x="77" y="359" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="ResourceBinding Status Controller&#xa;聚合多个 Work 的结果" mermaidId="n:RBSTATUSCTRL" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fce5cd;strokeColor=#e69138;fontColor=#783f04;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="ResourceBinding Status Controller&#xa;聚合多个 Work 的结果" id="32">
+          <mxCell parent="28" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fce5cd;strokeColor=#e69138;fontColor=#783f04;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="334" x="76" y="507" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Binding.status&#xa;Scheduled / FullyApplied / aggregatedStatus" mermaidId="n:RBSTATUS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" mermaidBaseValue="Binding.status&#xa;Scheduled / FullyApplied / aggregatedStatus" id="33">
+          <mxCell parent="28" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" vertex="1">
+            <mxGeometry height="73" width="415" x="35" y="630" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Resource Template.status&#xa;用户看到的多集群聚合状态" mermaidId="n:TSTATUS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" mermaidBaseValue="Resource Template.status&#xa;用户看到的多集群聚合状态" id="34">
+          <mxCell parent="28" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#fff2cc;strokeColor=#bf9000;fontColor=#7f6000;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;dashed=1;dashPattern=5 3;fixDash=1;" vertex="1">
+            <mxGeometry height="73" width="266" x="110" y="753" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="watch" mermaidId="e:ACTUAL-&gt;WORKSTATUS#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="watch" id="63">
+          <mxCell edge="1" parent="28" source="29" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="30">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:WORKSTATUS-&gt;WSTATUS#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="64">
+          <mxCell edge="1" parent="28" source="30" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="31">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:WSTATUS-&gt;RBSTATUSCTRL#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="65">
+          <mxCell edge="1" parent="28" source="31" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="32">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RBSTATUSCTRL-&gt;RBSTATUS#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="66">
+          <mxCell edge="1" parent="28" source="32" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="33">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RBSTATUS-&gt;TSTATUS#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="67">
+          <mxCell edge="1" parent="28" source="33" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="34">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="一眼记住&#xa;&lt;b&gt;Policy&lt;/b&gt; = 传播什么 + 约束什么&#xa;&lt;b&gt;Karmada scheduler&lt;/b&gt; = 资源 -&gt; 集群 / 分副本&#xa;&lt;b&gt;Binding&lt;/b&gt; = 单个模板的调度记录&#xa;&lt;b&gt;Work&lt;/b&gt; = 面向单个目标集群的下发包&#xa;&lt;b&gt;member kube-scheduler&lt;/b&gt; = Pod -&gt; Node" mermaidId="n:KEY" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=default;strokeColor=#333333;fontColor=#1f2937;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="一眼记住&#xa;&lt;b&gt;Policy&lt;/b&gt; = 传播什么 + 约束什么&#xa;&lt;b&gt;Karmada scheduler&lt;/b&gt; = 资源 -&gt; 集群 / 分副本&#xa;&lt;b&gt;Binding&lt;/b&gt; = 单个模板的调度记录&#xa;&lt;b&gt;Work&lt;/b&gt; = 面向单个目标集群的下发包&#xa;&lt;b&gt;member kube-scheduler&lt;/b&gt; = Pod -&gt; Node" id="35">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=default;strokeColor=#333333;fontColor=#1f2937;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="150" width="403" x="49" y="3075" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:TEMPLATE-&gt;API#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.85;entryY=0;" mermaidBaseValue="" id="36">
+          <mxCell edge="1" parent="1" source="4" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.85;entryY=0;" target="9">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1753" y="305" />
+                <mxPoint x="1753" y="330" />
+                <mxPoint x="1753" y="355" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:PP-&gt;API#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.18;entryY=0;" mermaidBaseValue="" id="37">
+          <mxCell edge="1" parent="1" source="5" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.18;entryY=0;" target="9">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1392" y="305" />
+                <mxPoint x="1392" y="330" />
+                <mxPoint x="1392" y="355" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:CPP-&gt;API#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0;entryY=0.23;" mermaidBaseValue="" id="38">
+          <mxCell edge="1" parent="1" source="6" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0;entryY=0.23;" target="9">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1064" y="305" />
+                <mxPoint x="1064" y="330" />
+                <mxPoint x="1064" y="355" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RB1-&gt;BINDING#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.82;entryY=0;" mermaidBaseValue="" id="39">
+          <mxCell edge="1" parent="1" source="14" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.82;entryY=0;" target="17">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1014" y="1146" />
+                <mxPoint x="1014" y="1171" />
+                <mxPoint x="1014" y="1196" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="按目标集群变换" mermaidId="e:OP-&gt;BINDING#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0;entryY=0.16;" mermaidBaseValue="按目标集群变换" id="40">
+          <mxCell edge="1" parent="1" source="7" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0;entryY=0.16;" target="17">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="493" y="305" />
+                <mxPoint x="493" y="330" />
+                <mxPoint x="493" y="355" />
+                <mxPoint x="493" y="427" />
+                <mxPoint x="493" y="508" />
+                <mxPoint x="493" y="589" />
+                <mxPoint x="493" y="670" />
+                <mxPoint x="493" y="751" />
+                <mxPoint x="493" y="832" />
+                <mxPoint x="493" y="913" />
+                <mxPoint x="493" y="994" />
+                <mxPoint x="493" y="1075" />
+                <mxPoint x="493" y="1146" />
+                <mxPoint x="493" y="1171" />
+                <mxPoint x="493" y="1196" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Cluster.spec.syncMode = Push" mermaidId="e:MANIFEST-&gt;PUSH#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.93;entryX=0.5;entryY=0;" mermaidBaseValue="Cluster.spec.syncMode = Push" id="41">
+          <mxCell edge="1" parent="1" source="19" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.93;entryX=0.5;entryY=0;" target="21">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1151" y="1624" />
+                <mxPoint x="1151" y="1659" />
+                <mxPoint x="1151" y="1693" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Cluster.spec.syncMode = Pull" mermaidId="e:MANIFEST-&gt;PULL#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.27;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="Cluster.spec.syncMode = Pull" id="42">
+          <mxCell edge="1" parent="1" source="19" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.27;exitY=1;entryX=0.5;entryY=0;" target="22">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="738" y="1624" />
+                <mxPoint x="738" y="1659" />
+                <mxPoint x="738" y="1693" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="反馈实际状态" mermaidId="e:DEPLOY-&gt;ACTUAL#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.25;exitY=1;entryX=1;entryY=0.14;" mermaidBaseValue="反馈实际状态" id="43">
+          <mxCell edge="1" parent="1" source="24" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.25;exitY=1;entryX=1;entryY=0.14;" target="29">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="732" y="2131" />
+                <mxPoint x="732" y="2165" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="持续协调下一次变更或故障" mermaidId="e:TSTATUS-&gt;KEY#0" mermaidBaseStyle="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="持续协调下一次变更或故障" id="44">
+          <mxCell edge="1" parent="1" source="34" style="curved=1;dashed=1;dashPattern=2 3;fixDash=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="35">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

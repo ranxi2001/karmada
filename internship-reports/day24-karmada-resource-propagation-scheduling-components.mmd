@@ -1,0 +1,102 @@
+flowchart TB
+    subgraph INTENT["1. 声明期望：用户告诉 Karmada 传播什么、传播到哪里"]
+        direction LR
+        USER["kubectl / GitOps / CI<br/>提交资源与策略"]:::client
+        TEMPLATE["Resource Template<br/>资源模板<br/>原生 Kubernetes 对象，如 Deployment nginx"]:::object
+        PP["PropagationPolicy (PP)<br/>命名空间级传播策略<br/>选择资源 + Placement 放置约束"]:::policy
+        CPP["ClusterPropagationPolicy (CPP)<br/>集群级传播策略<br/>可选跨命名空间或集群级资源"]:::policy
+        OP["OverridePolicy / ClusterOverridePolicy<br/>覆盖策略（可选）<br/>按目标集群修改 image / replicas / StorageClass"]:::override
+        USER --> TEMPLATE
+        USER --> PP
+        USER -. "另一种作用域" .-> CPP
+        USER -. "需要集群差异时" .-> OP
+    end
+
+    subgraph CONTROL["2. Karmada 控制面：匹配资源，并做跨集群调度"]
+        direction LR
+        API["karmada-apiserver + etcd<br/>控制面 API 与持久化<br/>保存 Template / Policy / Binding / Work"]:::api
+        DETECTOR["ResourceDetector<br/>资源探测器<br/>匹配 Template 与 Policy，创建 Binding"]:::controller
+        RB0["ResourceBinding / ClusterResourceBinding<br/>资源绑定（待调度）<br/>一个 Binding 对应一个资源模板"]:::state
+        CLUSTER["Cluster objects<br/>成员集群档案<br/>labels / region / zone / Ready / capacity"]:::object
+        SCHED["karmada-scheduler<br/>多集群调度器<br/>资源 -> 成员集群，并分配跨集群副本"]:::scheduler
+        RB1["Binding（已调度）<br/>spec.clusters 记录目标集群<br/>也记录每个集群的副本分配"]:::state
+        INTERPRETER["ResourceInterpreter<br/>资源解释器（扩展点）<br/>让 Karmada 理解副本、依赖、健康与状态"]:::helper
+        API -->|watch| DETECTOR
+        DETECTOR -->|创建| RB0
+        RB0 -->|进入待调度队列| SCHED
+        CLUSTER -->|提供候选集群事实| SCHED
+        SCHED -->|写回选择结果| RB1
+        INTERPRETER -. "辅助理解资源" .-> DETECTOR
+    end
+
+    subgraph PACKAGE["3. 生成下发包：把统一期望变成每个目标集群的最终清单"]
+        direction LR
+        BINDING["Binding Controller<br/>绑定控制器<br/>读取 Binding，套用 Override，生成 Work"]:::controller
+        WORK["Work x N<br/>每个目标集群一个工作包<br/>namespace: karmada-es-&lt;cluster&gt;"]:::work
+        MANIFEST["Work.spec.workload.manifests<br/>目标集群最终收到的 manifests"]:::work
+        BINDING -->|每个目标集群创建一个| WORK
+        WORK --> MANIFEST
+    end
+
+    subgraph MEMBER["4. 下发并在成员集群部署：Push / Pull 只改变谁负责同步"]
+        direction LR
+        PUSH["Push 模式<br/>Execution Controller 在 Karmada 控制面<br/>主动访问成员集群"]:::controller
+        PULL["Pull 模式<br/>Execution Controller 在 karmada-agent 内<br/>从成员集群侧拉取并 apply"]:::controller
+        MAPI["member kube-apiserver<br/>成员集群 API<br/>创建 / 更新 / 删除真实资源"]:::member
+        DEPLOY["Deployment / Service 等<br/>成员集群中的真实业务资源"]:::memberResource
+        DEPLOYCTRL["member kube-controller-manager<br/>Deployment Controller<br/>Deployment -> ReplicaSet -> Pods"]:::memberController
+        KUBESCHED["member kube-scheduler<br/>单集群调度器<br/>待调度 Pod -> Node"]:::memberScheduler
+        PODS["Pods on Nodes<br/>业务副本真正运行"]:::runtime
+        PUSH -->|create / update / delete| MAPI
+        PULL -->|create / update / delete| MAPI
+        MAPI --> DEPLOY
+        DEPLOY --> DEPLOYCTRL
+        DEPLOYCTRL -->|创建待调度 Pods| KUBESCHED
+        KUBESCHED -->|选择节点并绑定| PODS
+    end
+
+    subgraph FEEDBACK["5. 状态回传：实际状态沿 Work -> Binding -> 原始模板聚合"]
+        direction LR
+        ACTUAL["成员资源实际状态<br/>availableReplicas / health / conditions"]:::status
+        WORKSTATUS["Work Status Controller<br/>Push: controller-manager<br/>Pull: karmada-agent"]:::statusController
+        WSTATUS["Work.status<br/>单个成员集群的 applied / manifest status"]:::status
+        RBSTATUSCTRL["ResourceBinding Status Controller<br/>聚合多个 Work 的结果"]:::statusController
+        RBSTATUS["Binding.status<br/>Scheduled / FullyApplied / aggregatedStatus"]:::status
+        TSTATUS["Resource Template.status<br/>用户看到的多集群聚合状态"]:::status
+        ACTUAL -. "watch" .-> WORKSTATUS
+        WORKSTATUS -.-> WSTATUS
+        WSTATUS -.-> RBSTATUSCTRL
+        RBSTATUSCTRL -.-> RBSTATUS
+        RBSTATUS -.-> TSTATUS
+    end
+
+    TEMPLATE --> API
+    PP --> API
+    CPP --> API
+    RB1 --> BINDING
+    OP -. "按目标集群变换" .-> BINDING
+    MANIFEST -->|Cluster.spec.syncMode = Push| PUSH
+    MANIFEST -->|Cluster.spec.syncMode = Pull| PULL
+    DEPLOY -. "反馈实际状态" .-> ACTUAL
+
+    KEY["一眼记住<br/><b>Policy</b> = 传播什么 + 约束什么<br/><b>Karmada scheduler</b> = 资源 -> 集群 / 分副本<br/><b>Binding</b> = 单个模板的调度记录<br/><b>Work</b> = 面向单个目标集群的下发包<br/><b>member kube-scheduler</b> = Pod -> Node"]:::key
+    TSTATUS -. "持续协调下一次变更或故障" .-> KEY
+
+    classDef client fill:#dae8fc,stroke:#6c8ebf,color:#172554,stroke-width:2px;
+    classDef object fill:#d9eaf7,stroke:#3d85c6,color:#12344d;
+    classDef policy fill:#fff2cc,stroke:#d6b656,color:#713f12,stroke-width:2px;
+    classDef override fill:#e1d5e7,stroke:#9673a6,color:#4c1d95,stroke-width:2px;
+    classDef api fill:#ffe6cc,stroke:#d79b00,color:#7c2d12,stroke-width:2px;
+    classDef controller fill:#d5e8d4,stroke:#82b366,color:#14532d,stroke-width:2px;
+    classDef scheduler fill:#cfe2f3,stroke:#0b5394,color:#073763,stroke-width:3px;
+    classDef state fill:#e8def8,stroke:#674ea7,color:#351c75,stroke-width:2px;
+    classDef work fill:#d9d2e9,stroke:#8e7cc3,color:#351c75,stroke-width:2px;
+    classDef helper fill:#f5f5f5,stroke:#666666,color:#262626,stroke-dasharray:6 4;
+    classDef member fill:#d0e0e3,stroke:#45818e,color:#134f5c,stroke-width:2px;
+    classDef memberResource fill:#c9daf8,stroke:#3c78d8,color:#1c4587;
+    classDef memberController fill:#d5e8d4,stroke:#82b366,color:#14532d;
+    classDef memberScheduler fill:#fce5cd,stroke:#e69138,color:#783f04,stroke-width:2px;
+    classDef runtime fill:#b6d7a8,stroke:#38761d,color:#274e13,stroke-width:2px;
+    classDef statusController fill:#fce5cd,stroke:#e69138,color:#783f04;
+    classDef status fill:#fff2cc,stroke:#bf9000,color:#7f6000,stroke-dasharray:5 3;
+    classDef key fill:#ffffff,stroke:#333333,color:#1f2937,stroke-width:2px;

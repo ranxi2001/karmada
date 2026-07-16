@@ -54,8 +54,11 @@
 | Work | 发往某个 member cluster 的实际工作载体 | execution controller 根据 Work 在 member cluster 创建或更新真实资源 |
 | Cluster | Karmada 管理的成员集群对象 | 描述 member cluster 的 API endpoint、状态、资源和调度属性 |
 | ResourceInterpreter | 资源解释器 | 帮助 Karmada 理解自定义资源的副本数、依赖、状态和健康语义 |
+| ResourceDetector | 资源探测器 | 监听资源模板与传播策略，匹配成功后创建待调度的 ResourceBinding 或 ClusterResourceBinding；旧概览中相近职责可能称为 Policy Controller |
+| Binding Controller | 绑定控制器 | 读取已调度 Binding，应用 Override，并为每个目标集群生成 Work |
+| Execution Controller | 执行控制器 | 读取 Work，把其中 manifests 创建、更新或删除到成员集群；它不负责生成 Work |
 
-> 分析：Karmada 的关键链路可以先粗略理解为：用户提交资源模板和 policy，Karmada 生成 binding，scheduler 计算放置结果，execution controller 生成 Work 并下发到 member cluster。
+> 分析：Karmada 的关键链路可以先粗略理解为：用户提交资源模板和 policy，ResourceDetector 生成待调度 binding，karmada-scheduler 写入放置结果，Binding Controller 生成 Work，Execution Controller 再下发到 member cluster。
 
 ## L3：调度、传播与状态
 
@@ -65,6 +68,8 @@
 | cluster affinity | 集群亲和性 | 按 region、provider、label、字段等选择目标集群 |
 | spread constraint | 分散约束 | 控制副本或资源跨 region/zone/cluster 分布 |
 | replica scheduling | 副本调度 | 决定 Deployment 等多副本 workload 在不同集群的副本数 |
+| karmada-scheduler | 多集群调度器 | 把资源放到合适的成员集群，并可分配跨集群副本；决策层级是资源到集群 |
+| member kube-scheduler | 成员集群的 Kubernetes 调度器 | 把待调度 Pod 绑定到该成员集群的 Node；决策层级是 Pod 到 Node |
 | scheduler estimator | 调度估算器 | 帮助 scheduler 估算 member cluster 是否能承载资源 |
 | failover | 故障转移 | member cluster 异常时迁移或重建工作负载 |
 | graceful eviction | 优雅驱逐 | 在迁移或重平衡时尽量降低业务中断 |
@@ -98,6 +103,8 @@
 | ResourceBinding vs Work | binding 表示调度结果；Work 是下发到某个 member cluster 的资源载体 |
 | OverridePolicy vs PropagationPolicy | propagation 决定放到哪里；override 决定在某个集群里怎么改 |
 | controller vs scheduler | controller 负责状态推进和对象创建；scheduler 负责放置和副本分配决策 |
+| karmada-scheduler vs member kube-scheduler | 前者决定资源去哪些集群、各集群多少副本；后者决定一个 Pod 去该集群中的哪个 Node |
+| ResourceDetector vs Binding Controller vs Execution Controller | ResourceDetector 做资源与策略匹配并建 Binding；Binding Controller 把调度结果变成 Work；Execution Controller 把 Work 应用到成员集群 |
 | status aggregation vs propagation | propagation 是把期望下发出去；status aggregation 是把实际状态收回来 |
 | 组件身份证书 vs CA/root 证书 | 组件身份证书是被轮转的对象；CA/root 证书是签发者和信任根，第一版不轮转、不更新 caBundle |
 
