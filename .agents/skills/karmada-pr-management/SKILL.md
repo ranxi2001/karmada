@@ -28,6 +28,8 @@ Use this skill for Karmada upstream PR work: branch prep, fork push CI, pre-PR d
 - Treat fork branch push CI plus code-change explanation as PR preflight. After pushing a topic branch to `origin` and before opening an upstream PR, inspect the diff, tests, CI state, deleted/extracted code, scope, and reviewer-facing rationale locally.
 - Keep internship reports, raw benchmark results, and Chinese-only notes out of upstream PRs unless explicitly intended.
 - For other contributors' PRs, do not draft comments or review suggestions until you have read the PR body, changed files, relevant docs/tests, and existing human review discussion.
+- For every non-trivial upstream review comment, use `code-review-growth` and pass its Review Comment Comprehension Gate before asking for exact-text approval. The comment must be understandable from the diff and thread without the local internship report or chat.
+- Apply the `code-review-growth` Review Visualization Gate. For three or more actors/steps, competing causes, retries, lifecycle order, or proposal node changes within the same flow, default to a compact inline Mermaid diagram supported by a prose conclusion and action; use prose alone only when it is genuinely easier to scan. In current/proposed comparisons, keep unchanged/current nodes neutral and accent changed/new nodes without relying on color alone. If the diagram synthesizes meeting, log, experiment, or research evidence, include what the source supports, what it does not establish, and its provenance limits.
 - For `/kind flake` work, also use `code-review-growth`; its Flake Root-Cause Gate is the canonical evidence and stop policy.
 - Prefer script-first PR analysis. If status checks, file summaries, review comment filtering, CI state, or branch hygiene checks are repeated across PRs, improve `.agents/skills/karmada-pr-management/scripts/` and update this skill.
 - Keep the detailed preflight explanation local. The upstream body is a concise index to the problem, behavior, risk, validation, and linked evidence. Read `references/concise-pr-writing.md` before drafting or materially expanding a PR body.
@@ -49,6 +51,8 @@ Approval request must include:
 - Diff summary and tests run.
 - Why upstream attention is needed now.
 - Reviewer-visible word/nonblank-line count. If the body exceeds 400 words, include the exact long-form reason.
+- For a non-trivial review comment, confirmation that the exact text names the current claim, gives one concrete counterexample or failing scenario, explains the impact or evidence gap in plain language, and requests a specific change.
+- When the visualization gate triggers, the exact Mermaid source plus local render/syntax status; when prose is retained, the reason it is clearer than a diagram.
 
 If the goal is only to run CI, push the branch to the personal fork and inspect the push-triggered GitHub Actions checks. Do not open a self-fork PR.
 
@@ -364,6 +368,8 @@ When review comments arrive:
 7. Decide whether each fix belongs in the current PR, a temporary validation branch, or a separate PR from `upstream/master`.
 8. Apply fixes locally, validate, then update the PR with a clean history.
 9. Reply directly and specifically after user approval when the reply is upstream-facing.
+10. If an author says a comment is hard to understand, do not repeat the same abstraction with more jargon. Restate the exact current claim, one concrete counterexample, what the signal does and does not prove, and the smallest requested change.
+11. If the clarification describes branches, actors, or event order, use a compact Mermaid diagram instead of making the prose denser.
 
 Useful response format:
 

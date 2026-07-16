@@ -267,11 +267,11 @@ karmada.config
 
 ### 8. Hard-wrap 对 Agent Prompt 的证据边界
 
-PR 中普通 prose 几乎全部固定在约 80 列：150 行中有 64 行长度为 65-90 字符。官方 Claude Code 文档说明 skill 激活后，rendered `SKILL.md` content 会作为一条 message 进入 conversation；Agent Skills reference parser 的 `parse_frontmatter()` 返回保留内部 newline 的 raw Markdown body。Anthropic 官方 skills pinned at `9d2f1ae187` 则通常把一个 semantic paragraph 保持在一行，只对 headings、lists、code blocks 使用结构化换行。
+PR 中普通 prose 几乎全部固定在约 80 列：初次 review 的 150 行版本中有 64 行长度为 65-90 字符。官方 Claude Code 文档说明 skill 激活后，rendered `SKILL.md` content 会作为一条 message 进入 conversation；Agent Skills reference parser 的 `parse_frontmatter()` 返回保留内部 newline 的 raw Markdown body。
 
-这些证据支持“soft break 可能成为 prompt layout signal”，但没有证明它会造成可测的 instruction-following 下降。本机没有 Claude Code CLI 或 Anthropic credential，未完成 hard-wrap/unwrapped A/B；官方也建议用 fresh-session baseline/version comparison 评价 skill 效果。因此该意见明确定位为 non-blocking prompt-quality question，而不是 correctness claim。
+后续对 OpenAI 与 Anthropic 当前官方仓库做了固定 SHA、Markdown AST 级复核。OpenAI 已将旧 `openai/skills` 标记 deprecated，并明确重定向到 `openai/plugins`，所以主统计使用后者的 608 个现行 skill；Anthropic 使用 `anthropics/skills` 的 17 个 skill。官方仓库并非绝对禁止 hard wrap，但绝大多数 prompt paragraph 都保持为一个物理行，而本 PR 的多物理行段落比例为 60%。因此该意见的依据是 Markdown 语义、prompt transport、模型格式敏感性研究与官方工程惯例的组合，而不是本地 A/B。A/B 只在声称“可测性能下降”时才需要；当前意见仍是 non-blocking robustness convention，不是 correctness claim。
 
-已发布 review：[hard-wrap thread](https://github.com/karmada-io/karmada/pull/7764#discussion_r3577478914)。参考：[Claude Code skill lifecycle](https://code.claude.com/docs/en/skills)、[Agent Skills specification](https://agentskills.io/specification)、[Anthropic skills](https://github.com/anthropics/skills/tree/9d2f1ae187231d8199c64b5b762e1bdf2244733d/skills)。
+已发布 review：[hard-wrap thread](https://github.com/karmada-io/karmada/pull/7764#discussion_r3577478914)。完整参考与官方仓库统计见后文刷新记录。
 
 ## PR 与 Review 状态
 
@@ -348,6 +348,133 @@ stable patch-id (new) = 967d65395a3e9851088ee15fecd3102b118c708c
 
 对 exact SHA `44e708220` 重新运行 skill quick validation 和 `git diff --check 44e708220^..44e708220` 均通过。检查快照为 DCO/codegen success，其余 11 个已出现的 checks 仍在运行；green CI 不能替代上述命令和 RCA 语义 review。
 
+### 三次刷新：`1972f0b4e` 与作者完整回复
+
+作者再次 amend 为 head `1972f0b4e3d8908227eb861220d47dec59d6aef6`，并回复所有 4 条 `ranxi2001` review。`range-diff 44e708220^! 1972f0b4e^!` 证明本次 patch 只修改 artifact layout：删除错误的 `member1/`、`member2/`，保留 `member3/`；skill 从 150 行变为 149 行。该修正与 `hack/run-e2e.sh` collector 和真实 artifact 一致，应标记为已解决。
+
+对 exact SHA `1972f0b4e` 的 skill quick validation、`git diff --check` 均通过；65-90 字符 hard-wrap 仍为 64 行。当前 17 checks 为 15 success、2 failure：v1.34 首个硬失败是 namespace auto-provision cleanup 读取 Cluster 时收到 apiserver 503，v1.35 首个硬失败是 Deployment cleanup 遇到 `etcdserver: request timed out`，后续均出现 control-plane/cleanup 级联失败。PR 只改 1 行 Markdown，这些失败当前只到 `E0`，不能归因于 skill patch。
+
+#### 四条人工 review 的回复判定
+
+| Thread | 作者回复 | 证据判定 | 建议动作 |
+| --- | --- | --- | --- |
+| Artifact scope | skill 只用于 E2E，不用于 init/operator | 部分成立：init/operator 可以排除；但 compatibility workflow 的 job 就叫 `e2e test`、运行 `hack/run-e2e.sh`，artifact 名称仍是双版本 `karmada_e2e_log_<apiserver>_<karmada>` | 保持 open，用 compatibility 这一项澄清，不再争论 init/operator |
+| Fast wait -> stale | fast step 值得注意，当前文字看起来没问题 | “值得注意”成立，但 elapsed time 只证明 fast，不能区分当前 lifecycle 已满足条件与 previous-lifecycle stale state；`WaitCRDPresentOnClusters` 首次 poll 只读当前 `Cluster.Status.APIEnablements` | 保持 open，把争点简化为 `signal != diagnosis`，建议 `usually means -> can indicate` |
+| Single hit -> no retry | 没看出单次命中推断的问题 | 日志计数可作 lead，但不能证明 queue/controller control flow；scheduler 的真实 retry 由 `getConditionByError`、`handleErr`、`Forget`/backoff 决定，且 attempt 日志可能是未启用的 V(4) | 保持 open，用具体 source path 解释 `log evidence != retry evidence` |
+| Hard-wrap | 请求文档依据 | 请求合理；不应只说“parser 保留换行”就结束。现有规范、实现和论文可组成理论机制链，支持 robustness 建议，但不支持“每个 hard wrap 必然降低性能” | 保持 non-blocking，提供下面的理论参考与限定表述 |
+
+#### Review comment 可理解性复盘
+
+作者分别在 [fast-wait thread](https://github.com/karmada-io/karmada/pull/7764#discussion_r3593103404) 说 `I may not get what you mean`，在 [retry thread](https://github.com/karmada-io/karmada/pull/7764#discussion_r3593119673) 说 `I feel hard to understand what you mean`。这不能只归因于作者没有细读：两条 comment 技术方向正确，但把最关键的推理桥压缩在术语里，只有读过本地调查或聊天解释的人容易补全。
+
+共同问题不是使用 `Could`；`Could` 只负责礼貌。真正缺失的是 standalone causal context：
+
+| Thread | Comment 已提供 | 作者仍需自行补全的上下文 |
+| --- | --- | --- |
+| Fast wait | `hypothesis`、`current lifecycle`、UID/generation/resourceVersion | 同一个“毫秒级返回”在两种情况下都会出现：previous-lifecycle stale state，或当前对象条件本来已经满足；所以 elapsed time 不能区分二者 |
+| Retry | different message/verbosity/replica、`handleErr`/`Forget` | grep count 测量的是“这个搜索模式命中几次”，retry 是 runtime control-flow event；两者不是同一个量，单次命中不能直接推出没有 retry |
+
+如果一个 upstream comment 只有在聊天里再做一次通俗解释后才能理解，comment 本身就没有通过 review-quality gate。以后非平凡 comment 必须按 `observation -> concrete counterexample -> reasoning -> specific action` 组织，并做一次无本地报告/无聊天上下文的 teach-back 检查。
+
+更可理解的 fast-wait 草稿（未发布）：
+
+```text
+This sentence treats a very fast return as evidence that the helper read stale state from the previous test case. But the same helper also returns immediately when the condition is already true for the current object, so elapsed time alone cannot distinguish those two cases. Could `usually means` be changed to `can indicate`, and stale state only be concluded after the observed value is tied to the previous lifecycle, for example by UID/generation/resourceVersion or by seeing the old state disappear before the new transition?
+```
+
+更可理解的 retry 草稿（未发布）：
+
+```text
+This sentence equates one grep hit with the component not retrying. The count only proves that this search pattern found the object name once; a later retry may log a different message or verbosity, run in another replica, or appear in a rotated file. Could `did not retry` be changed to `may not have retried`, with a definite no-retry conclusion requiring queue or control-flow evidence such as `handleErr`/`Forget` or the returned `Result`/error?
+```
+
+这次 miss 已固化到 `code-review-growth` 的主 workflow 和 pattern library，并接入 `karmada-pr-management` upstream posting gate；它不是 #7764 专用措辞模板，而是所有复杂 review comment 的可理解性约束。
+
+`draft_metrics.py` 统计 fast-wait 重写稿为 `85/1`，retry 重写稿为 `72/1`。按新 gate 自检，两条都直接指出 current claim、给出同信号反例、解释 signal 与 diagnosis/control-flow claim 的差别，并把 `Could` 只留在最后的具体 action。本轮没有做 fresh-agent teach-back；发布前仍需用户检查 exact text。
+
+#### Review visualization gate 复盘
+
+可理解性不只取决于句子是否通俗。当 comment 要求作者在脑中跟踪多个原因、actor、state layer 或事件顺序时，继续压缩成大段 prose 会把图的认知成本转嫁给作者。我们此前把 Mermaid 当成 proposal/RCA 的重型产物，对 line comment 过于吝啬；这也是 review workflow 的缺陷。
+
+[GitHub 官方文档](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams) 明确说明 Mermaid 会在 pull requests、Issues 和 Discussions 中直接渲染。因此以后遇到以下关系，默认比较一个 4-10 节点的 inline Mermaid 与 prose：3 个以上 actor/state/step、retry 或时序、同一 signal 的多个原因、current-vs-proposed。单一局部事实仍用一两句文字；图前必须有一句结论，图后必须有具体 action，不能让图替代证据或可访问的文字总结。
+
+Fast-wait 的核心不是 lifecycle 术语列表，而是“同一个 fast signal 有两个可能原因”。[Mermaid source](day17-fast-wait-signal-vs-claim.mmd) 可直接放入 GitHub `mermaid` fence；[PNG preview](day17-fast-wait-signal-vs-claim.png)：
+
+![Fast wait signal versus stale-state claim](day17-fast-wait-signal-vs-claim.png)
+
+Retry 的核心不是罗列所有日志位置，而是“grep count 与 runtime retry 是两个不同量”。[Mermaid source](day17-retry-log-signal-vs-control-flow.mmd) 可直接放入 GitHub `mermaid` fence；[PNG preview](day17-retry-log-signal-vs-control-flow.png)：
+
+![Single log hit versus runtime retry evidence](day17-retry-log-signal-vs-control-flow.png)
+
+如果后续回复这两个 thread，优先结构应为：一句 plain-language finding -> 对应 inline Mermaid -> 一句 evidence boundary + requested action，而不是在现有 `85/1`、`72/1` prose 后再叠加图。图用于替换关系叙述，不是增加附件。
+
+该 gate 已加入 `code-review-growth` 主 workflow/pattern library、`karmada-pr-management` posting gate，并为 `project-mermaid` 增加 GitHub inline review comment mode。后者明确规定 one-off comment 的 approved fenced block 可作为 canonical source，无需为了评论额外提交 PNG；属于 report/reusable evidence 时仍交付 `.mmd + PNG`。
+
+[Day 22 safe-rescheduling infographic prompt](day22-karmada-meeting-rescheduling-infographic-prompt.md) 和对应的 [PNG](day22-karmada-meeting-rescheduling-infographic.png) 是正向先例。它没有要求读者从段落里自行拼出 `resource pressure -> explicit intent -> current safety gap -> target-first invariant -> workload-aware units`，而是把五阶段流、source-before-target-ready 的风险窗口和 target-first handoff 放在同一视野；底部又单独写明会议证据支持哪些方向、不批准哪些 API/ownership/persistence/rollback/implementation 结论，以及 ASR 的来源限制。虽然它是报告级信息图而不是 inline Mermaid，但其信息架构可以直接迁移到 review comment：图负责关系，邻近文字负责 finding、action 和 evidence boundary。
+
+Day 22 还示范了 proposal change comparison 的合理用色：现有组件和背景关系使用蓝色/中性色，拟议的 target-first invariant 用绿色突出，只有 service-loss risk 使用红色。PR proposal 如果是同一流程的节点变化，Mermaid 特别合适：current/proposed 保持相同的节点顺序和标签，unchanged/current 节点保持中性，changed/new 节点使用强调色，open question 用琥珀色，material risk 才用红色，removed 节点用灰色虚线；每种颜色仍需由文字标签、边框或线型重复表达。[Proposal change template](../.agents/skills/project-mermaid/assets/proposal-change-template.mmd) 使用 GitHub 可内联的基础 `classDef` 语法，并提供 [PNG preview](../.agents/skills/project-mermaid/assets/proposal-change-template.png)。两者由官方 Mermaid CLI 11.16.0 生成/校验并已做原图检查；首次因两个 subgraph 无连接而发生 proposed/current 重排，加入不可见布局约束后 current 固定在上、proposed 固定在下。
+
+这也补上一条防误用规则：Mermaid 不能只追求“比文字短”。如果图综合了会议、日志、实验或论文证据，必须明确 `supports`、`does not establish` 和 provenance limitation；否则视觉上的确定感反而可能把 inference 包装成事实。
+
+此外，作者正确回复并 resolve Copilot 的 job-text/run-ZIP 误报，接受并修复 member layout，拒绝 `grep -E` portability cleanup 可接受；但 Gemini flat-glob thread 虽已 resolved，line 96 仍不能从 artifact 根目录递归找到具体 component log，该命令正确性问题仍存在。
+
+#### Hard-wrap 的理论支撑与官方仓库对照
+
+这里不要求为本 PR 另做 Claude A/B；需要的是可引用的机制链：
+
+1. [CommonMark 0.31.2 soft line breaks](https://spec.commonmark.org/0.31.2/#soft-line-breaks) 将普通段落内的物理换行定义为 softbreak，并允许 renderer 输出 newline 或 space，说明 hard wrap 不是作者想表达的 Markdown 段落结构。
+2. [Claude Code skill lifecycle](https://code.claude.com/docs/en/skills#skill-content-lifecycle) 说明 rendered `SKILL.md` content 会作为 prompt/message 进入上下文；[Agent Skills reference parser](https://github.com/agentskills/agentskills/blob/38a2ff82958afee88dadf4831509e6f7e9d8ef4e/skills-ref/src/skills_ref/parser.py#L45-L50) 只切除 frontmatter 并对 body 做外层 `strip()`，内部 newline 保留。
+3. Sclar et al. 的 ICLR 2024 论文 [Quantifying Language Models' Sensitivity to Spurious Features in Prompt Design](https://arxiv.org/abs/2310.11324) 专门研究 meaning-preserving prompt formats，证明 separator/format 选择能形成可区分的内部表示，并可能显著改变模型行为；该论文同时指出不存在跨模型恒定的“最佳格式”。
+4. 官方工程实践提供独立的 convention baseline。旧 [OpenAI `skills@49f948f`](https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431) README 已标记 deprecated 并指向当前 [OpenAI Plugins repository](https://github.com/openai/plugins/tree/11c74d6ba24d3a6d48f54a194cd00ef3beea18f9)，因此不再把旧仓库的 `skill-creator` 当现行主依据。新仓库说明每个 plugin 可包含 `skills/`；在固定 SHA 实际枚举到 608 个 `SKILL.md`，包括 [`openai-developers`](https://github.com/openai/plugins/tree/11c74d6ba24d3a6d48f54a194cd00ef3beea18f9/plugins/openai-developers/skills) 与 [`github`](https://github.com/openai/plugins/tree/11c74d6ba24d3a6d48f54a194cd00ef3beea18f9/plugins/github/skills) bundles，repo-local [`plugin-creator`](https://github.com/openai/plugins/blob/11c74d6ba24d3a6d48f54a194cd00ef3beea18f9/.agents/skills/plugin-creator/SKILL.md) 也是当前 prompt source example。Anthropic 的 [`skill-creator`](https://github.com/anthropics/skills/blob/9d2f1ae187231d8199c64b5b762e1bdf2244733d/skills/skill-creator/SKILL.md#L86-L99) 明确强调 progressive disclosure，并要求 [imperative、explain why、避免僵硬格式](https://github.com/anthropics/skills/blob/9d2f1ae187231d8199c64b5b762e1bdf2244733d/skills/skill-creator/SKILL.md#L115-L139)。
+
+2026-07-16 固定并检查了 [OpenAI `plugins@11c74d6`](https://github.com/openai/plugins/tree/11c74d6ba24d3a6d48f54a194cd00ef3beea18f9) 与 [Anthropic `skills@9d2f1ae`](https://github.com/anthropics/skills/tree/9d2f1ae187231d8199c64b5b762e1bdf2244733d)。统计使用本机 `markdown-it-py 3.0.0` default rules（CommonMark 加 table parsing）：去掉 YAML frontmatter 后，仅计 `paragraph_open -> inline` AST 节点；只要 inline child 含 `softbreak` 就算多物理行段落。Heading、code fence、table 等不会混入 paragraph 计数。初次用纯 CommonMark preset 时 table 会被当成 paragraph，因此最终统计统一启用 table rule。
+
+| Corpus | `SKILL.md` | Paragraphs | 含 softbreak | 比例 | Softbreaks |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| OpenAI current `plugins` repository, all | 608 | 32956 | 1910 | 5.8% | 5412 |
+| OpenAI `openai-developers` bundle | 5 | 425 | 12 | 2.8% | 16 |
+| OpenAI repo-local `plugin-creator` | 1 | 66 | 8 | 12.1% | 11 |
+| OpenAI `github` bundle | 4 | 166 | 0 | 0.0% | 0 |
+| Anthropic official `skills/` | 17 | 1375 | 45 | 3.3% | 64 |
+| Anthropic `skill-creator` | 1 | 170 | 1 | 0.6% | 1 |
+| PR #7764 `1972f0b4e` | 1 | 35 | 21 | 60.0% | 47 |
+
+该统计不把官方惯例冒充规范：OpenAI 当前 `plugin-creator` 有 8 个多行段落，Anthropic `skill-creator` 也有一个带 softbreak 的 list paragraph，所以不能声称“官方禁止 hard wrap”。OpenAI 全库还混合了大量 partner-contributed skills，5.8% 是刻意保留异质写法的 broad baseline。它能支持的更窄结论是：本 PR 的系统性约 80 列折行仍是明显 outlier，而“一个 semantic paragraph 一个 source line”是两家当前官方 corpus 的主流写法。
+
+因此可防守的结论不是“每个 hard wrap 都会降低效果”，而是：hard wrap 会给 prompt 增加没有 Markdown 语义目的的 formatting separators，而模型并不保证对等价格式不敏感；让一个 semantic paragraph 保持一个 source line，是避免 accidental structure 的 robustness convention。
+
+#### 回复状态与未发布候选
+
+Artifact scope、fast wait、retry 三条仍是未发布候选。Hard-wrap 回复已按用户确认发布，正文保留在本节作为 exact handoff record。
+
+Artifact scope：
+
+```text
+Thanks, agreed that init and operator installation tests are outside this skill's
+scope. The remaining case is compatibility E2E:
+`.github/workflows/ci-schedule-compatibility.yaml` names the job `e2e test`, runs
+`hack/run-e2e.sh`, and uploads
+`karmada_e2e_log_<apiserver>_<karmada>`. Could the skill either say it covers
+only base/scheduled-base E2E, or download the exact name selected from the
+preceding artifact list?
+```
+
+Fast wait / Retry：本节原有 `57/6`、`61/5` 草稿已被可理解性复盘中的 `85/1`、`72/1` 版本取代；上文两个单行代码块是唯一 canonical draft，旧稿不再用于发布。
+
+Hard-wrap：
+
+```text
+Yes. This is a format-sensitivity argument, not an A/B claim.
+
+[CommonMark](https://spec.commonmark.org/0.31.2/#soft-line-breaks) defines an intra-paragraph line ending as a soft break. The [Agent Skills reference parser](https://github.com/agentskills/agentskills/blob/38a2ff82958afee88dadf4831509e6f7e9d8ef4e/skills-ref/src/skills_ref/parser.py#L45-L50) preserves those line endings in the Markdown body, and [Claude Code](https://code.claude.com/docs/en/skills#skill-content-lifecycle) loads skill content into the model context. Sclar et al. ([ICLR 2024](https://arxiv.org/abs/2310.11324)) show that meaning-equivalent prompt formats can still materially affect model behavior.
+
+Official practice provides a useful baseline. At fixed SHAs, paragraphs containing soft breaks account for 1,910/32,956 (5.8%) across the 608 skills in the [current OpenAI plugins repository](https://github.com/openai/plugins/tree/11c74d6ba24d3a6d48f54a194cd00ef3beea18f9), including 12/425 (2.8%) in its `openai-developers` bundle. The [Anthropic skills repository](https://github.com/anthropics/skills/tree/9d2f1ae187231d8199c64b5b762e1bdf2244733d) has 45/1,375 (3.3%), and its `skill-creator` has 1/170 (0.6%). This file has 21/35 (60%), containing 47 soft breaks.
+
+Neither repository prescribes one style, and I do not have direct evidence that hard wrapping makes this skill perform worse. The comparison only shows that keeping each semantic paragraph on one source line is the more common style in these repositories. Either form is valid; this was intended as a non-blocking consistency suggestion.
+```
+
+`draft_metrics.py` 统计 reviewer-visible words/nonblank lines 分别为：artifact scope `51/7`、fast wait `85/1`、retry `72/1`、hard-wrap `168/4`，均低于 250 词 soft limit。前三条仍为 draft；hard-wrap 已发布为 [discussion reply `3593371150`](https://github.com/karmada-io/karmada/pull/7764#discussion_r3593371150)。初次发布错误地沿用了本地约 80 列排版；经用户确认后只把每个段落内部 newline 替换为空格，四段措辞、链接和段落边界均未改变。API 回读与本地代码块逐字一致，thread `PRRT_kwDOEpM8m86Qrd8S` 仍为 unresolved。本轮没有回复另外三条、resolve thread 或提交新 review。
+
 ## VS Code 无法切换到 `intern` 的原因
 
 `/home/karmada` 当前在 `feature/cert-mode-rotate`，而 `intern` 已被 linked worktree 占用：
@@ -374,10 +501,12 @@ code --reuse-window /tmp/karmada-intern-worktree
 4. 第 5 条已确认日志命中数不能替代 queue/reconcile 证据；第 6 条已有完整 producer/collector 证据。
 5. Copilot 关于 single-job log ZIP 的评论已经用真实 job 验证为误报。
 6. Review 状态为 `COMMENTED`；未修改 upstream branch、代码、labels、assignees 或 approval state。
+7. Fast-wait 与 retry 原评论技术方向成立，但没有通过 standalone comprehension gate；作者两次明确表示难以理解。已把该 miss 提升为 `code-review-growth` 和 `karmada-pr-management` 的强制 review-comment 规则，不能再用礼貌问句和术语列表代替通俗因果解释。
+8. 复杂关系还必须通过 visualization gate：3 个以上 actor/state/step、分支原因、retry/时序或 current-vs-proposed 默认比较 inline Mermaid，不能把本应画成箭头的内容继续压成大段 prose。Day17 已交付 fast-wait/retry 两组 `.mmd + PNG`；Day22 safe-rescheduling 信息图是正向先例，并补出 proposal 节点变化的颜色语义，以及 `supports` / `does not establish` / provenance limitation 的证据边界要求。
 
 ## 下一步
 
-1. 当前 head `44e708220` 只是 patch-equivalent rebase；等待作者真正修改 skill patch 后再做增量 review。比较 force-push 时使用 `range-diff`/patch-id，不再把 base advancement 当成 PR 变更。当前 resolved 的 Gemini thread 仍需确认 flat glob 是否改成 recursive + component-scoped search。
+1. 当前 head `1972f0b4e` 已修复 member layout，但 artifact compatibility scope、fast-wait stale inference、single-hit retry inference 和 flat glob 仍未处理。Hard-wrap 理论/官方 corpus 回复已发布且 thread 保持 unresolved；artifact scope、fast wait、retry 三条发布前必须先通过 standalone comprehension 与 visualization gates，并由用户确认 exact target/text。Fast-wait/retry 已有文字重写与可直接内联的 Mermaid source，暂未发布。
 2. 第 4 条临时目录安全边界暂不追加评论，避免一次 review 过载；只有作者更新后仍保留无 ownership cleanup 时再决定。
 3. 如作者扩展 skill 到 init/operator，再分别按其不同 artifact 名称和 host-only layout 验证。
 4. 等已有 `intern` worktree 修改被安全保存后，再决定是否将该 worktree 移出 `/tmp` 或释放 branch 占用。

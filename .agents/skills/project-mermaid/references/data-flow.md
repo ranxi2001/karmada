@@ -56,6 +56,22 @@ classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-dasharray:6 4;
 
 Use color to communicate roles. Add a compact legend when three or more colors or line styles are essential to interpretation.
 
+### Proposal Change Comparisons
+
+When a PR proposal changes nodes within an otherwise comparable flow, show current and proposed versions with the same reading direction, node order, and stable labels. Keep unchanged/current nodes neutral so the changed or new nodes carry the visual emphasis.
+
+Use a restrained semantic palette:
+
+- unchanged/current: neutral gray or existing-component blue;
+- changed/new in the proposed flow: green or teal;
+- unresolved design decision: amber;
+- material behavioral risk: red;
+- removed node: gray with a dashed border.
+
+Repeat every color distinction in text such as `Current`, `Proposed`, `New`, `Changed`, `Removed`, `Open question`, or `Risk`. Prefer basic `classDef` declarations because GitHub renders Mermaid inside PR and Markdown fences, while its Mermaid version may lag the latest release. Avoid external CSS and experimental syntax.
+
+Start from the [proposal change template](../assets/proposal-change-template.mmd) and inspect its [PNG preview](../assets/proposal-change-template.png). It keeps the current flow neutral and uses labeled colors only in the proposed flow, so the reader can scan node changes without reconstructing two unrelated layouts.
+
 ## Review Checklist
 
 - Can a reader find the entry point and terminal outcome without reading surrounding prose?

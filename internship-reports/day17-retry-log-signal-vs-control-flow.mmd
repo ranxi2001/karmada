@@ -1,0 +1,13 @@
+flowchart LR
+    FIRST["First attempt"]:::process --> MATCH["Log includes<br/>object name"]:::signal
+    RETRY["Later retry"]:::process --> OTHER["Different message, verbosity,<br/>replica, or rotated file"]:::risk
+    MATCH --> COUNT["grep count = 1"]:::signal
+    OTHER -. "not matched" .-> COUNT
+    COUNT -. "does not prove" .-> NORETRY["No runtime retry"]:::claim
+    CONTROL["Queue or control-flow evidence:<br/>Result/error, handleErr, Forget"]:::evidence --> NORETRY
+
+    classDef process fill:#d5e8d4,stroke:#82b366,color:#14532d;
+    classDef signal fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-dasharray:6 4;
+    classDef evidence fill:#e1d5e7,stroke:#9673a6,color:#4c1d95;
+    classDef claim fill:#fff2cc,stroke:#d6b656,color:#713f12;

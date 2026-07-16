@@ -28,7 +28,7 @@
 - [Day 14：知名开源维护者 Agent Skills 调研](day14-expert-agent-skills-research.md)
 - [Day 15：#7621 复杂工作负载安全重调度特性尽调](day15-issue-7621-safe-rescheduling-feature.md)（[#7662 本地中文 review 图](day15-pr7662-review-infographic.png) / [架构图 PNG](day15-issue-7621-current-proposed-flow.png) / [组件定位图 PNG](day15-pr7662-karmada-component-position.png) / [draw.io](day15-pr7662-karmada-component-position.drawio) / [Mermaid](day15-pr7662-karmada-component-position.mmd)）
 - [Day 16：Karmada Upstream Issue / PR 简洁写作规范](day16-karmada-upstream-writing-style.md)
-- [Day 17：PR #7764 E2E Root Cause Analysis Skill Review](day17-pr7764-e2e-root-cause-skill-review.md)
+- [Day 17：PR #7764 E2E Root Cause Analysis Skill Review](day17-pr7764-e2e-root-cause-skill-review.md)（[fast-wait Mermaid](day17-fast-wait-signal-vs-claim.mmd) / [PNG](day17-fast-wait-signal-vs-claim.png)；[retry Mermaid](day17-retry-log-signal-vs-control-flow.mmd) / [PNG](day17-retry-log-signal-vs-control-flow.png)）
 - [Day 18：drawio-skill v1.34.0 升级与版本同步缺陷](day18-drawio-skill-v1.34-upgrade.md)
 - [Day 19：Codex CLI 模型流中断等待问题](day19-codex-cli-stream-stall-issue.md)
 - [Day 20：PR #7623 Reconcile Cache 提交时机 Review](day20-pr7623-reconcile-cache-review.md)

@@ -163,3 +163,30 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Inspect both parent SHAs, compare each `parent..head` patch, then run `git range-diff old^! new^!` and stable `git patch-id` before reviewing the incremental change.
 - Evidence to gather: Old/new parent and head SHAs, range-diff result, patch IDs, PR REST changed-file list, and direct equality of the files under review.
 - Test or fix cue: Mark `=` plus identical patch IDs as a patch-equivalent rebase; carry prior findings forward unchanged and wait for a real patch delta.
+
+## Prompt-Formatting Claims Need A Mechanism Chain
+
+- Pattern: A parser preserving whitespace proves representation, not by itself that formatting helps or harms model behavior; a prompt-quality review needs the semantic, transport, and model-sensitivity links.
+- Seen in: `karmada-io/karmada#7764`, where a hard-wrap comment needed references after the author challenged an unsupported “artificial boundaries” claim.
+- Miss symptom: A reviewer presents a prompt-style preference as a model-performance fact, or retreats to “needs an A/B test” without using existing standards and research.
+- Review check: Establish whether the format change is meaning-preserving in the document grammar, whether the client preserves it into prompt context, whether primary literature shows models can be sensitive to equivalent formatting or separators, and whether official prompt corpora follow a consistent convention.
+- Evidence to gather: The markup specification, exact client/reference-parser implementation, product context-loading documentation, peer-reviewed prompt-format sensitivity research, and AST-based counts from official repositories pinned to exact SHAs.
+- Test or fix cue: Frame the result as a robustness mechanism (`may introduce accidental structure`), not a deterministic performance delta. Treat official corpus style as corroborating convention rather than normative specification, report counterexamples, and keep the recommendation non-blocking unless the product contract requires one format.
+
+## Polite Review Questions Still Need Standalone Causal Context
+
+- Pattern: `Could ...?` softens a request but does not explain it; a review comment must carry enough local context for the author to reconstruct the observation, counterexample, inference gap, and requested change without the reviewer's private notes.
+- Seen in: `karmada-io/karmada#7764`, where the author explicitly found the fast-wait and single-log-hit comments hard to understand even though their technical evidence existed in the local review report.
+- Miss symptom: The comment leads with an abstract conclusion such as “keep this as a hypothesis,” then lists lifecycle or queue terms. The reviewer sees the intended distinction, while the author cannot tell what concrete case contradicts the current text.
+- Review check: With the local report and chat hidden, ask whether the author can state (1) the exact current claim, (2) one concrete counterexample, (3) what the observed signal actually proves, (4) the missing evidence, and (5) the smallest edit.
+- Evidence to gather: The quoted code/text, one minimal alternative execution that produces the same signal, the direct behavioral consequence, and only the implementation terms needed to verify the distinction.
+- Test or fix cue: Draft in `observation -> counterexample -> reasoning -> action` order. Put `Could ...?` at the action, translate jargon into its role, and treat an “I do not understand” reply as a reason to rewrite rather than repeat the same abstraction.
+
+## Visualize Branching Or Temporal Review Arguments
+
+- Pattern: When a review asks the author to compare multiple causes, actors, state layers, or event order, a compact diagram can remove more cognitive load than another explanatory paragraph.
+- Seen in: `karmada-io/karmada#7764`, where fast-wait and retry comments described branching evidence boundaries in prose and the author still could not reconstruct the distinction. The Day 22 safe-rescheduling infographic is the positive precedent: its five-stage flow makes the current safety gap and target-first invariant scannable, restrained green emphasizes the proposed invariant while red marks the service-loss risk, and a bottom band separates supported direction from unapproved API, ownership, persistence, rollback, and implementation claims.
+- Miss symptom: The comment accumulates lifecycle, queue, cache, retry, or timestamp terminology while the actual point is a small graph such as “one signal -> two possible causes” or “attempt -> queue decision -> retry/forget.”
+- Review check: Ask whether the reader must track three or more nodes, a temporal order, competing causes, or current-versus-proposed behavior. If yes, compare a 4-10 node Mermaid diagram against prose before posting.
+- Evidence to gather: Proven actors/states, arrow direction, branch conditions, synchronous versus asynchronous edges, which relationships remain hypotheses, and the source's approval/provenance boundary.
+- Test or fix cue: Use one sentence of conclusion, the smallest inline Mermaid diagram, then one sentence of requested action. For a proposal change comparison, preserve node order and labels, keep unchanged/current nodes neutral, and color changed/new nodes while repeating the distinction in text or line style. For evidence synthesis, add compact `supports` / `does not establish` / source-limit text. Keep a prose summary for accessibility; do not use a diagram for a single local fact.

@@ -45,15 +45,61 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
    - If a finding depends on an untested path, suggest a focused regression test.
    - For flakes, apply the evidence and stop gates below; a green rerun is classification evidence, not root-cause proof.
 
-6. Write review comments as findings.
-   - Lead with the impact and concrete failing scenario.
-   - Include file/line context, why the code behaves that way, and the smallest credible fix or test.
+6. Write review comments as standalone findings.
+   - Treat the line anchor as location, not explanation. State the current behavior or claim in plain language before challenging it.
+   - Lead with one concrete scenario or counterexample, explain the resulting impact or inference gap, and end with the smallest credible change or test.
+   - When disputing a conclusion, explicitly separate the **signal** (what the observation proves) from the **claim** (what the code or text concludes) and name the missing evidence bridge.
+   - Translate domain terms into their role before listing symbols or functions. A list such as UID/generation/resourceVersion or `handleErr`/`Forget` does not explain why it matters by itself.
+   - Use polite forms such as `Could ...?` only for the requested action. Politeness does not replace the causal explanation that precedes it.
+   - Apply the Review Visualization Gate below before turning a multi-actor, branching, or temporal argument into another prose paragraph.
    - Avoid style nits unless they block maintainability, correctness, or project conventions.
 
 7. Close the learning loop.
    - When a maintainer or later review reveals a missed reusable pattern, update `references/review-patterns.md`.
    - Keep each pattern short: symptom, review check, evidence to gather, and test/fix cue.
    - Do not edit upstream-facing topic branches only to store learning notes; update local learning branches or internship records.
+
+## Review Comment Comprehension Gate
+
+A technically correct comment still fails review quality when the author needs the reviewer's private investigation, local report, or follow-up chat to understand it. Before posting a non-trivial comment, hide that private context and verify that a reader with only the diff and thread can answer:
+
+1. What exact behavior, sentence, or conclusion is under review?
+2. What concrete input, event order, or counterexample exposes the problem?
+3. What does the current evidence prove, and what stronger claim does it not prove?
+4. Why does that distinction matter to behavior, diagnosis, compatibility, or maintenance?
+5. What is the smallest requested change, and how would it close the gap?
+
+Use this compact structure without requiring literal labels:
+
+- **Observation**: quote or paraphrase the current behavior.
+- **Counterexample or failure**: give one concrete case that produces the same signal or bad outcome.
+- **Reasoning**: connect the example to the impact or missing evidence.
+- **Action**: request a specific wording, code, or test change.
+
+For inference-boundary comments, make the contrast explicit: `signal = one grep match; claim = no runtime retry`, or `signal = fast return; claim = stale previous-lifecycle state`. Do not make the author infer this distinction from a list of implementation terms.
+
+If the author says the comment is hard to understand, treat that as a review-quality defect. Rewrite from the concrete observation and one plain-language counterexample before adding more references or jargon. A link can support the explanation, but it cannot carry context that the comment itself omits.
+
+## Review Visualization Gate
+
+Use a visualization when it makes the disputed relationship materially easier to understand, not merely because a comment is technical. Default to a compact inline Mermaid diagram when the explanation contains any of these:
+
+- three or more actors, state layers, or dependent transitions;
+- ordering, retry, cleanup, race, or recovery behavior;
+- one signal with multiple plausible causes;
+- a current-versus-proposed flow whose invariant is hard to scan in prose.
+
+Use `flowchart` for branching causes or decision logic, `sequenceDiagram` for actor order and retries, and `stateDiagram-v2` for lifecycle transitions. Keep a review diagram focused on one question and usually 4-10 nodes. Follow `project-mermaid` for source grounding, labels, and syntax validation.
+
+For a PR proposal that changes nodes within the same flow, preserve the node order and labels across current/proposed views. Keep unchanged/current nodes neutral, accent changed or new nodes, use amber for open questions and red only for material risk, and repeat those meanings in labels or line styles.
+
+Structure a visual review comment as:
+
+1. one sentence stating the finding or inference gap;
+2. the smallest Mermaid diagram that exposes the relationship;
+3. one sentence stating the evidence boundary and requested action.
+
+Do not force Mermaid onto a single condition or one-step fix. Do not make the diagram the only explanation: retain a prose conclusion for accessibility, label hypotheses as hypotheses, and cite the code/log evidence for consequential arrows. When a diagram synthesizes meeting, log, experiment, or research evidence, state what the source supports, what it does not establish, and its provenance limits. If a prose comment keeps growing because it narrates arrows or event order, stop compressing sentences and draw the relationship.
 
 ## Evidence Model
 
