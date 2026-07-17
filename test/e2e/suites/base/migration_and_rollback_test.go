@@ -114,13 +114,10 @@ var _ = ginkgo.Describe("Seamless migration and rollback testing", func() {
 				klog.Infof("Waiting for Deployment ready on Karmada control plane")
 				framework.WaitDeploymentStatus(kubeClient, deployment, *deployment.Spec.Replicas)
 
-				binding, err := karmadaClient.WorkV1alpha2().ResourceBindings(deployment.Namespace).Get(context.TODO(), bindingName, metav1.GetOptions{})
-				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-				items := binding.Status.AggregatedStatus
-				gomega.Expect(len(items)).ShouldNot(gomega.Equal(0))
-				gomega.Expect(items[0].Applied).Should(gomega.BeTrue())
-				gomega.Expect(items[0].Health).Should(gomega.Equal(workv1alpha2.ResourceHealthy))
+				framework.WaitResourceBindingFitWith(karmadaClient, deployment.Namespace, bindingName, func(binding *workv1alpha2.ResourceBinding) bool {
+					items := binding.Status.AggregatedStatus
+					return len(items) > 0 && items[0].Applied && items[0].Health == workv1alpha2.ResourceHealthy
+				})
 			})
 
 			// Step 4, Delete resource template and check whether member cluster resource is preserved
