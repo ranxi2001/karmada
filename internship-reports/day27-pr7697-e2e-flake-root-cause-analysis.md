@@ -381,6 +381,7 @@ Remediation controller 日志只有 `13:03:40-13:04:34` 的 8 次初始 reconcil
 - `E2`：共同物理 trigger 仍未闭环。同步 `fdatasync` 明显强化 shared-runner storage stall 假设，但当前没有 host `iostat`、I/O PSI、`vmstat`、kernel block-layer error 或 hypervisor 指标，不能区分 backing-storage latency、CPU scheduling starvation 和更广泛的 host contention。
 - 此红灯不改变 #7777 的 Remedy E4 counterfactual，也不证明 Remedy E2E 通过或失败，因为该 Serial spec 根本没有执行。
 - 当前动作是只重跑 v1.35 job，不修改 PR #7777 的产品逻辑。若再次出现同簇 failure，应在 CI harness 增加周期性 `iostat -xz`、`vmstat`、`/proc/pressure/{io,cpu,memory}`、disk usage 和 container stats 采集，再决定 runner/harness 修复。
+- Deferred review TODO（`2026-07-18`）：下次更新 #7777 时接受 [Gemini review suggestion](https://github.com/karmada-io/karmada/pull/7777#discussion_r3603254907)，把 `sets.NewString` 改为 `sets.New`，并为双方 `RemedyActions` 都为空的常见路径增加 fast path；随后重跑 focused unit test 与 upstream CI。完整 stale-cache lifecycle test 和 controller restart convergence 属于独立 follow-up，不扩大本 PR。
 
 ## 周报可复用摘要
 
