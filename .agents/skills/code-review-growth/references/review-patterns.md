@@ -110,6 +110,24 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Key-generation path, all command-line flags referencing the key, verifier key sets, rollout order, token lifetime, and whether old/new verification overlap exists.
 - Test or fix cue: Preserve the shared signing key when only renewing its certificate, or design explicit old/new verification overlap; add a regression test for pre-rotation tokens and mixed-version replicas.
 
+## Certificate Renewal Must Preserve Persisted Identity Inputs
+
+- Pattern: A renewal command must treat the existing certificate as persisted identity state; rebuilding SANs only from current flags, nodes, DNS, or the execution host can silently remove endpoints that were valid when the certificate was first issued.
+- Seen in: `karmada-io/karmada#7697`, where rotate reused the install-time config builder and therefore recomputed apiserver SANs from current control-plane nodes plus the current machine's externally queried Internet IP.
+- Miss symptom: The operator replays every explicit installation flag, but running recovery from another machine or without the original Internet-IP lookup produces a renewed certificate that no longer verifies an existing endpoint.
+- Review check: Classify every certificate subject/SAN input as explicit, auto-discovered, persisted, or environment-derived. Compare old and new identities and ask whether renewal can remove an old DNS/IP value without an explicit removal request.
+- Evidence to gather: Existing leaf certificate subject/SANs, original and current flags, auto-discovery/network calls, current topology, execution-host identity, and the endpoint clients actually use.
+- Test or fix cue: Preserve the existing SAN set or reject reductions before mutation; add remote-execution and discovery-failure tests. Do not make disaster recovery depend on an unbounded third-party identity lookup.
+
+## CA Equality Is Not Cluster Identity
+
+- Pattern: Matching trust roots proves that two credentials are in the same trust domain, not that a local artifact belongs to the selected cluster; organizations may intentionally reuse one CA across multiple clusters.
+- Seen in: `karmada-io/karmada#7697`, where local kubeconfig refresh compared only CA DER before retaining its server endpoint and embedding credentials from the remotely selected cluster.
+- Miss symptom: With clusters A and B sharing a CA, rotating B can rewrite a kubeconfig that still points to A. If both client certificates carry the same privileged CN/O, the mixed file may authenticate successfully and hide the target error.
+- Review check: List independent remote and local selectors, then identify a target-specific stable identity beyond the issuer, such as an existing client public key, cluster UID, or persisted installation ID.
+- Evidence to gather: Local endpoint and client certificate/key, target Secret certificate/key, CA reuse contract, client-auth subject mapping, and mutation ordering on mismatch.
+- Test or fix cue: Compare a stable target-specific identity before any local or remote mutation. For key-preserving renewal, client public-key equality survives normal renewals and partial-failure reruns; test same CA with different cluster keys and endpoints.
+
 ## Local Artifacts Must Be Bound To The Remote Target Before Refresh
 
 - Pattern: A command can select remote state through one kubeconfig/context while separately using a default local data path, so rewriting a local config without proving identity can mix credentials from two clusters.
@@ -117,7 +135,7 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Miss symptom: Both the remote Secret update and local file write are individually valid, but the resulting local kubeconfig combines an endpoint from one control plane with trust/client material from another.
 - Review check: For commands that read remote state and refresh local artifacts, list every independent selector (remote kubeconfig/context, namespace, data path, filename) and identify the stable cluster identity checked before mutation.
 - Evidence to gather: Selected remote CA or cluster ID, local artifact endpoint and embedded/referenced CA, path defaults, and the ordering of local/remote writes on mismatch.
-- Test or fix cue: Compare a stable identity such as parsed CA DER before rewriting, fail before any local or remote mutation on mismatch, and add a two-cluster regression test asserting both states remain unchanged.
+- Test or fix cue: Compare a target-specific stable identity such as the existing client public key or a persisted installation ID before rewriting; CA DER is sufficient only when the contract guarantees one CA per cluster. Fail before any mutation on mismatch and add a two-cluster regression with shared CA but different keys/endpoints.
 
 ## Long-Running Operations Need A Deletion Path, Not Only A Cancel Field
 
@@ -154,6 +172,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Name the production producer, its interface contract, the reachable preconditions, and the recovery behavior before assigning bug severity or blocking a PR.
 - Evidence to gather: Real logs or reproduction when available; otherwise exact error contracts, validation and locking rules, concurrent writers, retry/resync/restart paths, and the persistence of user-visible impact.
 - Test or fix cue: Inject only errors or states the real boundary permits. Label code-proven but unobserved cases as reachable latent bugs; keep unproven cases as questions or evidence gaps.
+
+## Reachable Edge Cases Are Not Automatically Valuable
+
+- Pattern: A scenario may be source-proven or observed yet still be a poor contribution target when it requires deliberately invalid input, an extreme unobserved configuration, or a failure that framework recovery already maps to the same final state.
+- Seen in: The 2026-07-17 Karmada scan initially ranked PRs `#7774` and `#7647` highly because they were reachable, green, and lacked human review. In `#7774`, controller-runtime recovered the nil panic and rate-limited the same reconcile while the invalid resource remained stuck; the patch mainly changed diagnostics. In `#7647`, the real trigger was an explicitly invalid `--etcd-pvc-size=abc`, making the fix narrow CLI hygiene.
+- Miss symptom: A scan equates `observed bug`, test volume, green CI, no assignee, or no reviewer with project value, then spends full-diff and mock-analysis tokens on cases outside normal production workflows.
+- Review check: Before deep analysis, classify trigger normality, prevalence, final outcome after recovery, root-cause leverage, maintainer demand, and the complexity added by the fix. Ask whether users are materially better off or only receive a different error/log for the same terminal state.
+- Evidence to gather: Supported input/operation contract, real incident frequency, recovery/requeue behavior, process/data/availability impact, final state with and without the patch, and explicit maintainer priority.
+- Test or fix cue: Mark narrow hygiene `LIGHTWEIGHT` and mock-only/extreme/no-outcome-change work `SKIP`; stop after a compact reason. Prefer an existing boundary fix over nested guards, and allow `no worthwhile candidate` rather than forcing a ranked list. Treat this as an attention decision, not an automatic merge veto: abstain from commenting on a small correct patch unless it adds disproportionate complexity, violates a contract, or overstates impact.
 
 ## Force-Pushed Rebases Need Patch Comparison, Not Head Comparison
 

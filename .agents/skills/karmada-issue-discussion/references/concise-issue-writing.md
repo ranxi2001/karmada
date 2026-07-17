@@ -41,7 +41,7 @@ These are review triggers. A source-backed RCA, proposal, or umbrella tracker ma
 
 ### Bug
 
-Use the repository bug template. Put the minimal failing scenario first, then expected behavior, reproduction, the smallest decisive log/source link, and environment fields that affect the result. Label an unproven cause as a hypothesis. A fault-injected test is not production evidence by itself: name the real producer and reachable preconditions, or describe the report as a source-proven latent risk or question rather than an observed bug.
+Apply the Production Relevance Gate before drafting. `Observed` does not mean `important`: an intentionally invalid value, mock-only error, extreme unobserved scheduler state, or framework-recovered failure with the same final outcome should normally be skipped or kept as lightweight hygiene unless it has material security, integrity, availability, compatibility, repeated-incident, or maintainer-priority impact. Then use the repository bug template: put the minimal failing scenario first, followed by expected behavior, decisive evidence, and environment fields. A fault-injected test is not production evidence by itself; name the real producer and reachable preconditions or label the claim as latent/question.
 
 ### Flake
 

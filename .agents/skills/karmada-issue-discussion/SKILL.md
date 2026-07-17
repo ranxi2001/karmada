@@ -19,7 +19,7 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
 - Chinese analysis belongs in `internship-reports/`.
 - Search for related issues/PRs before proposing a new direction.
 - Distinguish explicit maintainer comments from engineering inference.
-- For bug claims based on fault injection, mocks, or constructed state, also use `code-review-growth` and apply its Production Reachability Gate before drafting or posting.
+- For bug claims based on fault injection, mocks, or constructed state, also use `code-review-growth` and apply both its Production Reachability Gate and Contribution Value Gate before deep analysis, drafting, or posting.
 - For flake issues, also use `code-review-growth` and apply its Flake Root-Cause Gate. Label statements as symptom, hypothesis, or root cause; do not use root cause before `E3` evidence.
 - Distinguish human maintainers/reviewers from automation bots, CI, merge gates, and AI reviewer output.
 - Do not post comments, `/assign`, reviewer requests, or maintainer mentions without explicit user approval of the exact text and target.
@@ -28,13 +28,10 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
 ## Workflow
 
 1. Identify target issue/PR numbers and related links.
-2. Fetch compact thread context first:
-   - issue/PR title, body, state, labels, milestone, assignees
-   - `/assign` and `/unassign` comments
-   - issue comments
-   - if PR: base/head branch, changed files, commits, reviews, review comments
-3. Fetch full JSON only when the compact brief is insufficient for quoting, code review, timeline checks, or exact reviewer wording.
-4. Extract:
+2. For batch scans, fetch minimal list/API metadata first: title, short body snippet, state, labels, assignees, linked PR, changed-file count, and last update. Do not run `thread_brief.py` for every item.
+3. Apply the Production Relevance Gate below. If the item is `SKIP`, record one sentence and stop; do not fetch full JSON, read the full diff, or run mock/fault-injection tests merely to manufacture a review opportunity.
+4. For items that pass, fetch compact thread context with `thread_brief.py`. Fetch full JSON only when the brief is insufficient, the user explicitly targets the item, or exact evidence is needed for a material exception.
+5. Extract:
    - problem statement
    - proposed solutions
    - participant roles and comment weight
@@ -42,14 +39,34 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
    - open questions
    - blocked, duplicate, or conflicting work
    - related issue/PR graph
-5. For every bug claim, apply the Bug Reachability Gate below before choosing a bug title, label, or definitive wording.
-6. For a flake investigation, trace producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and self-healing behavior. At `E0-E2`, record missing causal edges instead of presenting a complete RCA diagram; at `E3`, build the timestamp/code table and Mermaid sequence diagram.
-7. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
-8. Produce Chinese internal summary first when planning or learning.
-9. Produce English upstream comment only when asked to draft or post.
-10. Run the concise-first publishing gate below before presenting exact text for approval.
-11. Include GitHub cross-links with short relevance notes.
-12. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+6. For every bug claim, apply the Bug Reachability Gate below before choosing a bug title, label, or definitive wording.
+7. For a flake investigation, trace producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and self-healing behavior. At `E0-E2`, record missing causal edges instead of presenting a complete RCA diagram; at `E3`, build the timestamp/code table and Mermaid sequence diagram.
+8. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
+9. Produce Chinese internal summary first when planning or learning.
+10. Produce English upstream comment only when asked to draft or post.
+11. Run the concise-first publishing gate below before presenting exact text for approval.
+12. Include GitHub cross-links with short relevance notes.
+13. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+
+## Production Relevance Gate
+
+Reachability answers whether a path can happen; it does not answer whether the issue deserves analysis or code. During community scans, use only compact metadata to classify each item before reading the full diff:
+
+1. **Trigger**: Prefer supported, ordinary production workflows. Default to `SKIP` for arbitrary invalid values, manual state corruption, mock-only errors, or extreme scheduling/configuration combinations without real workload evidence.
+2. **Outcome**: Identify the final user/system effect after recovery. A panic recovered by the framework and converted to the same rate-limited retry is not a process crash; changing it to an ordinary error is usually diagnostic hygiene. A CLI panic on an intentionally invalid value is narrow UX hardening unless the input is plausibly common.
+3. **Prevalence**: Require a real incident pattern, normal-path source evidence, user demand, or maintainer direction. One deliberately constructed reproduction proves reachability, not prevalence.
+4. **Fix leverage**: Prefer a fix that restores behavior or enforces the contract at its existing boundary. Downgrade patches that only wrap the symptom while the resource remains stuck, or that add guard/validation layers for unsupported input without a material outcome change.
+5. **Complexity budget**: Reject defensive nesting, new state, or broad validation generated only to satisfy mocks. Test volume, green CI, no assignee, and no human review are availability signals, not value signals.
+
+Classify the result:
+
+- **PRIORITIZE**: normal production path or material security, data integrity, process-wide availability, compatibility, repeated incident, or explicit maintainer priority.
+- **LIGHTWEIGHT**: real but narrow hygiene with a small root-boundary fix; do not displace strategic work or expand the review into speculative edge cases.
+- **SKIP**: mock-only, intentionally invalid/unsupported, extreme unobserved state, self-healing with no final-outcome change, or a defensive patch whose complexity exceeds its value.
+
+`No worthwhile candidate` is a correct scan result. If the user explicitly asks to review a low-value target, explain the classification and keep the review proportional unless a material exception emerges.
+
+This gate controls our analysis budget and task recommendations, not upstream merge eligibility. For a small correct `LIGHTWEIGHT` patch, prefer no comment over telling the contributor the work is unnecessary. Do not demand proof of a company incident. Post a negative or blocking review only when the patch has a concrete cost or defect, such as defensive state/branches disproportionate to impact, a wrong contract, regression risk, or an overstated production claim.
 
 ## Bug Reachability Gate
 
@@ -66,6 +83,8 @@ Before opening a bug issue or describing a scenario as a confirmed bug:
    - **Hypothesis/question**: production reachability remains unproven; ask for confirmation or diagnostics instead of filing a definitive bug claim.
 
 A mock only proves conditional behavior. Do not use an arbitrary fake error, impossible object, or unsupported event order as the sole basis for a bug issue, root-cause claim, severity label, or requested fix.
+
+Reachability is necessary but not sufficient for prioritization. An observed path caused by deliberately invalid input may still be `LIGHTWEIGHT` or `SKIP` when recovery preserves the same final behavior and the patch only changes diagnostics. Mock coverage never raises contribution priority by itself.
 
 ## Concise-First Publishing Gate
 
@@ -91,14 +110,14 @@ Long form is justified only for source-backed RCA, necessary reproduction materi
 
 ## Fetching Thread Context
 
-Use the compact briefing script first:
+After an item passes the Production Relevance Gate, use the compact briefing script:
 
 ```bash
 python3 .agents/skills/karmada-issue-discussion/scripts/thread_brief.py <number>
 python3 .agents/skills/karmada-issue-discussion/scripts/thread_brief.py <number> --repo karmada-io/karmada
 ```
 
-It prints a token-efficient Markdown brief with metadata, assignees, `/assign` signals, body snippet, issue comments, and PR files/commits/review comments when applicable.
+It prints metadata, assignees, `/assign` signals, body snippet, issue comments, and PR files/commits/review comments when applicable. During batch scans, do not call it before the relevance gate; use list/API metadata to reject low-value items first.
 
 Use the full JSON script when exact raw context is needed:
 

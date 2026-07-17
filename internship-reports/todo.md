@@ -1,6 +1,6 @@
 # 实习任务 TODO
 
-更新时间：2026-07-15
+更新时间：2026-07-17
 
 这个文档用于管理 Karmada 实习期间的后续任务。日报记录每天做了什么，TODO 记录现在还要做什么、优先级是什么、做到哪里、卡在哪里。
 
@@ -28,10 +28,10 @@
 | P0 | 建立 Karmada 术语表 | DOING | 低 | 低 | 0.5 天 | [intern-glossary.md](intern-glossary.md) | 随源码阅读补充 Cluster、Work、Binding、PropagationPolicy、OverridePolicy、interpreter、estimator 等术语 |
 | P0 | 跑基础测试命令并记录成本 | TODO | 中 | 低 | 0.5-1 天 | `make test` / 聚焦 `go test` 结果 | 先跑轻量目标，再决定是否跑完整 `make test` 和 `make verify` |
 | P0 | 建立提交前 lint 检查习惯 | DOING | 低 | 低 | 0.5 天 | [Day 3 CI lint 失败复盘](day3-certificate-management-task-triage.md#ci-lint-失败复盘) | 新增 Go 包或导出 API 后，提交前必须跑 `golangci-lint run ./pkg/karmadactl/cmdinit/...`，不要只跑 `go test` |
-| P1 | 分析 Karmada 社区 issue / PR 动态 | REVIEW | 中 | 低 | 0.5-1 天 | [Day 12 新 Issue / PR 机会扫描](day12-new-issue-pr-opportunities.md)；[#7757 复现/review 评论](https://github.com/karmada-io/karmada/issues/7757#issuecomment-4953788174)；[#7692 flake comment review](https://github.com/karmada-io/karmada/pull/7692#pullrequestreview-4681354181)；失败产物时序、代码 review 和 compile/CI 验证已归档 | #7692 等作者或 test OWNERS 回复，不重复催促；#7757 等维护者确认与作者 PR |
+| P1 | 分析 Karmada 社区 issue / PR 动态 | REVIEW | 中 | 低 | 0.5-1 天 | [Day 12 新 Issue / PR 机会扫描](day12-new-issue-pr-opportunities.md)；[Day 25 社区扫描与 relevance-gate 复盘](day25-karmada-community-scan-2026-07-17.md)；[#7757 复现/review 评论](https://github.com/karmada-io/karmada/issues/7757#issuecomment-4953788174)；[#7692 flake comment review](https://github.com/karmada-io/karmada/pull/7692#pullrequestreview-4681354181) | 当前无值得新介入的候选；#7774 是 recovered panic 的诊断 hygiene，#7647 是刻意非法 CLI 值的窄 UX hardening，均停止深挖。后续先过 production relevance gate，允许返回“无候选”；#7764 follow-up 仍需可理解性/可视化 gate 和 exact-text 确认 |
 | P1 | 调研证书管理相关 issue / PR 并拆任务 | DONE | 中 | 低 | 0.5 天 | [Day 3 证书管理任务整理](day3-certificate-management-task-triage.md) | 优先跟进 #6051 Helm 证书命名规范；先做差距表，不直接改代码 |
 | P1 | 准备证书 layout upstream 提案 | DONE | 中 | 低 | 0.5 天 | [Upstream issue #7690](https://github.com/karmada-io/karmada/issues/7690)；[Day 3 发布记录](day3-certificate-management-task-triage.md#upstream-issue-发布记录) | 等 maintainer review；回复前不急着开 PR |
-| P1 | 持续维护 `karmadactl init` 证书轮换 PR #7697 直到 merge | REVIEW | 高 | 中 | 持续至 merge | [Upstream issue #7693](https://github.com/karmada-io/karmada/issues/7693)；[Upstream PR #7697](https://github.com/karmada-io/karmada/pull/7697)；[Day 13 持续合并维护](day13-pr7697-review-and-merge-maintenance.md)；远端 head `4b6fa135f`，4 个 P1 已修复，聚焦/cmdinit/完整 karmadactl CLI tests、lint、docs/import-alias/diff check 和 exact-SHA 17/17 checks 全部通过；隔离 kind v1.36.1 的 10m leaf 真实过期、rotate、7 workload rollout、旧 SA token 和最终恢复断言均通过；241 词精简 body 已发布并逐字回读 | 等待 human review；评论、thread resolve 或 reviewer request 分别取得 exact text 授权后再执行，PR 未 merge 前不标记 `DONE` |
+| P1 | 持续维护 `karmadactl init` 证书轮换 PR #7697 直到 merge | REVIEW | 高 | 中 | 持续至 merge | [Upstream issue #7693](https://github.com/karmada-io/karmada/issues/7693)；[Upstream PR #7697](https://github.com/karmada-io/karmada/pull/7697)；[Day 13 持续合并维护](day13-pr7697-review-and-merge-maintenance.md)；current head `3d1bc25b0` 与真实过期实验 tree 相同，current-SHA 完整 karmadactl/CLI tests 和 17/17 checks 通过；复审新增 SAN reconstruction、shared-CA local kubeconfig identity 两个 P1，并确认 external etcd trust-root replacement 需要 scope decision | `REVIEW_BLOCKED`；先收敛 3 个设计/correctness 边界并补回归，再经 exact action 授权更新 PR、重跑 CI、处理 threads 和请求 human review；PR 未 merge 前不标记 `DONE` |
 | P1 | 跟进 estimator / FlinkDeployment / ResourceQuota e2e flake | DONE | 中 | 低 | 0.5-1 天 | [Upstream issue #7719](https://github.com/karmada-io/karmada/issues/7719) 已关闭；[Upstream PR #7732](https://github.com/karmada-io/karmada/pull/7732) 已 `/lgtm`、`/approve` 并合并为 `d0714678`；[Day 11 维护者 RCA、纠偏与 Mermaid](day11-ci-flake-statistics.md#维护者-rca-与原分析纠偏) | 归档完成；后续 flake 强制使用 E0-E4 证据等级、源码时序和 no-self-heal 分析，不再从 rerun/timing 推测直接提出补丁 |
 | P1 | 建立 Karmada CI flake 专项台账 | REVIEW | 中 | 低 | 0.5-1 天 | [Day 11 CI flake 专项统计](day11-ci-flake-statistics.md)；GitHub Actions 2026-06-26 至 2026-07-09 run/job 统计；#6841/#7388/#7719/#7691/#7692/#5323/#3667 等关联台账 | 补最近 schedule workflow artifacts，把 37 个 schedule e2e/setup 失败按具体 Ginkgo spec 或 setup 阶段归类；如每周复用则沉淀脚本 |
 | P1 | 调研知名开源维护者公开 Agent Skills | DONE | 中 | 低 | 0.5 天 | [Day 14 Expert Skills 调研](day14-expert-agent-skills-research.md)；已核验作者、固定 SHA、license、hooks 和 executable tree；最小规则已合并进 repo-local `code-review-growth` / `karmada-pr-management` 并通过 forward tests | 不整包安装；以后只在出现新真实 review lesson 时增量更新本地 skill |
@@ -88,8 +88,8 @@
 
 交付维护线是 `karmadactl init` 证书轮换 PR #7697：
 
-- 最终 head `4b6fa135f` 已推送，真实过期恢复验证和 17/17 checks 已完成。
-- 精简 PR body 已发布并回读验证；当前等待 human review，PR merge 前持续维护但不再扩大 scope。
+- 当前 head `3d1bc25b0` 为单 commit，tree 与已完成真实过期恢复验证的 `4b6fa135f` 相同，current-SHA 17/17 checks 与完整 karmadactl/CLI tests 均通过。
+- 精简 PR body 已发布并回读验证；当前因 SAN preservation、shared-CA local identity 和 external etcd scope 决策转为 `REVIEW_BLOCKED`，处理并验证后再请求 human review。
 
 ## 卡点记录模板
 

@@ -475,6 +475,19 @@ Neither repository prescribes one style, and I do not have direct evidence that 
 
 `draft_metrics.py` 统计 reviewer-visible words/nonblank lines 分别为：artifact scope `51/7`、fast wait `85/1`、retry `72/1`、hard-wrap `168/4`，均低于 250 词 soft limit。前三条仍为 draft；hard-wrap 已发布为 [discussion reply `3593371150`](https://github.com/karmada-io/karmada/pull/7764#discussion_r3593371150)。初次发布错误地沿用了本地约 80 列排版；经用户确认后只把每个段落内部 newline 替换为空格，四段措辞、链接和段落边界均未改变。API 回读与本地代码块逐字一致，thread `PRRT_kwDOEpM8m86Qrd8S` 仍为 unresolved。本轮没有回复另外三条、resolve thread 或提交新 review。
 
+### 四次刷新：`7570842fb5` 只落实 hard-wrap 建议
+
+2026-07-17 社区扫描发现 PR head 已从 `1972f0b4e` force-push 为 `7570842fb54cb7924ccc3a2625c952e33beb24ab`。两者 parent 都是 `2f47894fa6`；直接比较只修改 `.claude/skills/e2e-root-cause-analysis/SKILL.md`，为 `+24/-71`。逐块 diff 显示作者把普通 prose 和 list item 内的物理换行合并，没有修改命令或 RCA wording。
+
+这意味着 hard-wrap 建议已实际采纳，尽管对应 thread 仍为 `unresolved=true/outdated=true`。其余状态按代码而非 thread resolution 判定：
+
+- artifact scope thread `unresolved/current`；compatibility E2E 的双版本 artifact 名称仍不匹配固定下载名；
+- fast-wait thread `resolved/outdated`，但 `usually means stale state` 原文仍在，lifecycle evidence gate 未加入；
+- retry thread `unresolved/outdated`，但单次日志命中仍直接推出 `did not retry`；
+- flat component glob 仍未变成递归搜索。
+
+当前 exact head 的 17 个 checks 全部 success，只有 Tide pending。CI 证明该 Markdown commit 通过仓库门禁，不解决上述 RCA inference boundary。扫描中未发布回复、未 resolve/reopen thread、未 request reviewer。
+
 ## VS Code 无法切换到 `intern` 的原因
 
 `/home/karmada` 当前在 `feature/cert-mode-rotate`，而 `intern` 已被 linked worktree 占用：
@@ -506,7 +519,7 @@ code --reuse-window /tmp/karmada-intern-worktree
 
 ## 下一步
 
-1. 当前 head `1972f0b4e` 已修复 member layout，但 artifact compatibility scope、fast-wait stale inference、single-hit retry inference 和 flat glob 仍未处理。Hard-wrap 理论/官方 corpus 回复已发布且 thread 保持 unresolved；artifact scope、fast wait、retry 三条发布前必须先通过 standalone comprehension 与 visualization gates，并由用户确认 exact target/text。Fast-wait/retry 已有文字重写与可直接内联的 Mermaid source，暂未发布。
+1. 当前 head `7570842fb5` 已修复 member layout 并合并 prose 段内换行；artifact compatibility scope、fast-wait stale inference、single-hit retry inference 和 flat glob 仍未处理。后续回复必须先通过 standalone comprehension 与 visualization gates，并由用户确认 exact target/text。Fast-wait/retry 已有文字重写与可直接内联的 Mermaid source，暂未发布。
 2. 第 4 条临时目录安全边界暂不追加评论，避免一次 review 过载；只有作者更新后仍保留无 ownership cleanup 时再决定。
 3. 如作者扩展 skill 到 init/operator，再分别按其不同 artifact 名称和 host-only layout 验证。
 4. 等已有 `intern` worktree 修改被安全保存后，再决定是否将该 worktree 移出 `/tmp` 或释放 branch 占用。

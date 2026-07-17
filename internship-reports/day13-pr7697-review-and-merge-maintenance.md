@@ -519,6 +519,78 @@ Target: `PRRT_kwDOEpM8m86Ndu-X` / `discussion_r3503187434`
 Addressed in the latest push. Secret update errors now include the target `namespace/name` and wrap the original error with `%w`. `TestCommandInitOption_updateCertsSecretsIncludesSecretIdentityOnUpdateFailure` verifies both the error context and `apierrors.IsInternalError`.
 ```
 
+## 2026-07-17 当前 head 全量复审与方案评审
+
+### 当前证据快照
+
+| 项目 | 结果 |
+| --- | --- |
+| PR head | `3d1bc25b094f4d93caca37db1384618351e01896`，1 个 signed-off commit |
+| Tree identity | 当前 squash tree 与完成真实过期实验的 `4b6fa135f` 相同，均为 `988230d483306d60ef79715b90f0c029d17b6e4e` |
+| Base advancement | PR 原 parent 为 `3d4d14d74`；当前 `upstream/master@ee34629b5` 前进 9 commits，未修改本 PR 的 10 个路径 |
+| Merge simulation | `git merge-tree --write-tree upstream/master upstream/pr-7697` 成功，无冲突 |
+| Current-SHA CI | 17/17 check-runs success；Tide 仅等待 `lgtm/approved` |
+| Human review | 尚无实质性 human code/design review；16 个 line threads 均为 bot，12 current、4 outdated，当前代码已处理原有建议但 threads 未 resolve |
+| Current-SHA local test | `go test ./pkg/karmadactl/... ./cmd/karmadactl/... ./cmd/kubectl-karmada/... -count=1` 通过；`cmdinit/kubernetes` 为 `226.650s` |
+
+Contribution Value Gate 结论为 `PRIORITIZE`。#4787 有真实证书过期导致控制面 CrashLoop 的生产案例和一键续期诉求，#7693 又是 maintainer/contributor 明确提出的第一阶段实现方向；这是正常生命周期与 process-wide availability 问题，不是 mock 或刻意异常输入。
+
+### P1 / Blocking：rotate 从当前执行环境重建 SAN，会丢失旧证书的隐式 SAN
+
+`buildInitCertConfigs()` 没有读取旧 leaf certificate 的 SAN，而是重新组合：
+
+- 本次 flags 中的 `--cert-external-ip` / `--cert-external-dns`；
+- 本次 host cluster 当前 control-plane Node IP；
+- `utils.InternetIP()` 通过 `https://myexternalip.com/raw` 查询到的当前执行机公网 IP。
+
+随后 `prepareRotatedCertAndKeyData()` 用这组新值同时重签 `karmada.crt` 和 `apiserver.crt`。这意味着“重放原安装 flags”仍不能重放原安装时自动发现的公网 IP；从另一台机器执行、第三方公网 IP 服务不可用、host control-plane 节点集合变化，都会让旧 SAN 静默消失。
+
+具体反例：安装时机器 A 的公网 IP 被自动加入 apiserver SAN；证书过期后，管理员按支持的远程恢复路径在机器 B 上执行 rotate。即使所有显式 flags 完全相同，新证书也会包含 B 的公网 IP，而不再包含 A 的 IP。仍通过 A 端点访问的客户端在组件 restart 后会收到 hostname/IP verification failure。
+
+这个风险还让灾难恢复路径依赖一个无总超时的第三方 HTTP 请求。当前测试只覆盖显式 DNS/IP 和相同环境，没有断言 old SAN 是 new SAN 的子集。
+
+合并前建议：以现有 `apiserver.crt` / `etcd-server.crt` 为续签基线，保留旧 DNS/IP SAN，或者在写入前检测并拒绝任何 SAN reduction。rotate 路径不应把当前执行机的 `InternetIP()` 当作证书身份来源。回归测试应覆盖“不同执行机/公网查询失败，但旧 SAN 不丢失”。
+
+### P1 / Blocking：CA 相同不能证明本地 kubeconfig 属于目标集群
+
+`refreshLocalAdminKubeconfigIfExists()` 当前只比较本地 kubeconfig CA 与目标 `karmada-cert` Secret CA。CA 相同就保留原 `server` / context，并写入目标集群新生成的 `karmada.crt` / `karmada.key`。
+
+具体反例：集群 A 和 B 都通过受支持的 `--ca-cert-file/--ca-key-file` 使用同一个企业 CA，但各自生成不同的 `karmada.key`。管理员用 host kubeconfig 指向 B 执行 rotate，默认 `--karmada-data` 中却保留 A 的 admin kubeconfig。CA 比较会通过，文件仍指向 A，却被写入 B 的凭据。
+
+这里不会可靠地 fail closed：两个凭据都由同一 CA 签发，且当前 `karmada.crt` 都是 `CN=system:admin, O=system:masters`。Kubernetes 按签发 CA、CN 和 O 做 client-certificate authentication/authorization，因此 B 的证书也可能以 cluster-admin 身份成功访问 A，造成静默的跨集群目标混淆。
+
+合并前建议：在覆盖本地 kubeconfig 前，加载其现有 client certificate，并比较它的 public key 与目标 Secret 中现有/新 `karmada.crt` 的 public key。由于本 PR 明确保留 `karmada.key`，这个 key identity 在续签和部分失败重跑之间稳定；只比较 CA 不足以作为 cluster identity。回归测试应使用“同一 CA、不同 karmada key、不同 server”的两个集群，并断言文件和所有 Secrets 均不修改。
+
+### P1 / Blocking design decision：external etcd 路径实际允许 trust-root replacement
+
+PR body 声明 root CAs preserved、第一版不做 CA rotation；internal etcd 路径也始终复用旧 `etcd-ca`。但 external etcd 路径在提供 `--external-etcd-ca-cert-path` 时直接读取任意 bytes，并用它覆盖 `etcd-ca.crt`；提供 client cert/key 时也只读取 bytes，没有 PEM、key-pair 或有效期检查。现有正向测试还明确使用一套与旧数据不同的新 external etcd CA/client tuple，证明当前行为是替换而非保留。
+
+这不是普通无关的非法 CLI 值：external etcd credential renewal 是证书运维的正常信任边界，错误 tuple 会在 restart 后让 apiserver 无法访问数据存储，属于 control-plane availability 风险。
+
+合并前需要选定一种合同：
+
+1. 第一版严格只续签 init-managed leaves，external etcd CA/client material 一律从现有 Secret 保留，并拒绝不同文件；或者
+2. 明确把 external etcd credential/trust-root replacement 纳入 scope，更新 PR body/release note，并在任何 Secret/local file mutation 前至少解析 CA PEM、验证 client cert/key pair 和证书有效期。
+
+当前“代码允许 external CA replacement，但文字说不轮转 CA”的状态不应直接请求 `lgtm`。
+
+### 不升级为 blocker 的剩余项
+
+- **多 Secret 顺序更新**：internal path 的 old/new leaves 由相同 CA 签发，`karmada.key` 稳定；因此第 N 个 Update 失败后的混合状态通常仍可互信，下一次 rotate 可重新 preflight resourceVersion 并覆盖收敛。它应补 Nth-failure/rerun test，但当前证据不支持为了模拟跨资源事务而引入 rollback/state machine。external etcd scope 处理完成后再确认这个判断。
+- **本地文件 owner/group/ACL**：atomic rename 保留 permission bits，但新 inode 不保留原 owner/group、ACL 和 xattrs。默认 root-owned `/etc/karmada` 风险有限，先作为兼容性说明或 follow-up；若社区支持 `root:karmada 0640` 等共享访问，应补平台相关 metadata preservation。
+- **版本跨度**：真实实验只覆盖同一 tree 的 install -> expire -> rotate。不过 `certList` 和 `karmadaConfigList` 在 v1.15.0、v1.16.0、v1.17.0、v1.18.0 完全相同，当前没有证据把 version skew 升级为 blocker。用户文档仍应定义“使用哪个 karmadactl 版本”和受支持的跨版本范围。
+- **PR process**：body 的 CI 行仍引用 tree 等价的旧 head `4b6fa135f`；当前 `3d1bc25b0` 自身也已 17/17 success。下次更新 body 时应改为当前 SHA或删除动态 SHA。16 个 bot threads 已被代码处理，但 resolve/reply 和 human reviewer request 仍需单独授权。
+
+### 方案评审结论
+
+方案的大方向正确：把入口放在 `karmadactl init --cert-mode=rotate` 是 #7693 明确提出的 UX；将 install/rotate dispatch 分开、复用现有 CA、保留 ServiceAccount signing key、update-only 写已有 Secrets、手工 restart 而不在第一版引入 controller/cert-manager，都是合理的第一阶段边界。真实过期实验也证明了核心恢复链路，而不只是 fake-client control flow。
+
+但它应被定位为“当前 karmadactl init legacy certificate layout 的兼容续签工具”，不是 Karmada 最终证书架构。官方 v1.18 Certificate Framework 明确说明当前只有 community deploy script 已按 component-specific identity 标准落地，`karmadactl init` 等安装方式以后再对齐；本 PR 仍复用共享的 `system:admin` client identity、legacy multi-CA/Secret layout。不要在本 PR 顺带拉入 #7690 split layout 或 component-specific identity 重构，但需要在 follow-up 中保留这条迁移边界。
+
+当前维护状态从 `WAITING_HUMAN_REVIEW` 调整为 `REVIEW_BLOCKED`。先处理 SAN preservation 和 shared-CA local identity 两个 correctness blocker，并让 maintainer 对 external etcd 合同做明确选择；之后重跑 focused/full tests、fork/upstream exact-SHA CI，再清理 bot threads 和请求 human review。
+
+本轮是只读 upstream review：未 push、未编辑 PR body、未 resolve thread、未发布 review/comment、未 request reviewer。
+
 ## Stop Conditions
 
 本任务只在以下条件全部满足后标记 `DONE`：

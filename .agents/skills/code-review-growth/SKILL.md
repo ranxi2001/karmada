@@ -11,7 +11,8 @@ Use this skill to make code review repeatable and cumulative. It complements rep
 
 ## Review Workflow
 
-1. Gather the exact review surface.
+1. For community scans or target selection, apply the Contribution Value Gate before downloading full artifacts or reading the complete diff. If the user explicitly requests one PR, explain a low-value classification and keep depth proportional.
+2. Gather the exact review surface.
    - Read the PR body, linked issue, changed files, relevant surrounding code, CI state, and prior discussion.
    - After a delayed review, rebase, or base-branch advancement, compare every changed file against the current base and overlapping merged PRs. Distinguish a change that was unrelated when proposed from one that was originally relevant but is now redundant.
    - On GitHub PRs, read both conversation comments and line review comments. Issue comments alone miss review threads:
@@ -22,12 +23,12 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --paginate
 gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
 ```
 
-2. Build a change model.
+3. Build a change model.
    - State the intended behavior in one sentence.
    - Map entry points, call chain, data flow, side effects, and external contracts.
    - Compare the PR description against the actual diff; treat mismatches as review leads.
 
-3. Classify risk surfaces before looking for findings.
+4. Classify risk surfaces before looking for findings.
    - Correctness: wrong result, missed state transition, bad default, lost error.
    - Control flow: early return, abort, panic/recover, timeout/cancel, retry, cleanup.
    - Concurrency and lifecycle: races, goroutine leaks, watch/reconnect, stale caches.
@@ -36,17 +37,17 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
    - Observability: metric scope, label cardinality, logging signal, health/readiness semantics.
    - Tests: whether the changed behavior has positive, negative, and boundary coverage.
 
-4. Trace non-happy paths explicitly.
+5. Trace non-happy paths explicitly.
    - For each modified entry point, check normal success, invalid input, auth failure, not-found/unmatched route, size limit, timeout, cancellation, panic, partial failure, and cleanup.
    - For middleware, controllers, schedulers, and retries, reason about who wraps whom and which code still runs after an early exit or panic.
 
-5. Validate before posting.
+6. Validate before posting.
    - Prefer local tests, targeted reproduction, source-level proof, logs, or CI artifacts.
    - Separate confirmed findings from questions and speculative concerns.
    - If a finding depends on an untested path, suggest a focused regression test.
    - For flakes, apply the evidence and stop gates below; a green rerun is classification evidence, not root-cause proof.
 
-6. Write review comments as standalone findings.
+7. Write review comments as standalone findings.
    - Treat the line anchor as location, not explanation. State the current behavior or claim in plain language before challenging it.
    - Lead with one concrete scenario or counterexample, explain the resulting impact or inference gap, and end with the smallest credible change or test.
    - When disputing a conclusion, explicitly separate the **signal** (what the observation proves) from the **claim** (what the code or text concludes) and name the missing evidence bridge.
@@ -55,10 +56,30 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
    - Apply the Review Visualization Gate below before turning a multi-actor, branching, or temporal argument into another prose paragraph.
    - Avoid style nits unless they block maintainability, correctness, or project conventions.
 
-7. Close the learning loop.
+8. Close the learning loop.
    - When a maintainer or later review reveals a missed reusable pattern, update `references/review-patterns.md`.
    - Keep each pattern short: symptom, review check, evidence to gather, and test/fix cue.
    - Do not edit upstream-facing topic branches only to store learning notes; update local learning branches or internship records.
+
+## Contribution Value Gate
+
+Production reachability and contribution value are separate gates. Before spending substantial review tokens or recommending a task, determine:
+
+1. **Workflow relevance**: Does the trigger occur during supported, ordinary use? Deliberately invalid values, manual corruption, mock-only errors, and extreme scheduler/configuration constructions default to low value without evidence from real workloads.
+2. **Material outcome**: Does the patch prevent security exposure, data loss/corruption, process-wide unavailability, broken compatibility, or a persistent wrong result? Trace framework recovery and retries; a recovered panic and a returned error may enter the same queue path and leave the same object stuck.
+3. **Prevalence and ownership**: Look for repeated incidents, ordinary-path source evidence, user demand, or maintainer direction. `Observed once under a constructed input`, green CI, no assignee, and no human review do not establish priority.
+4. **Root-cause leverage**: Prefer fixing the existing validation, contract, ownership, or state-transition boundary. Downgrade symptom wrappers that only improve logs, and fixes that add defensive branches while preserving the bad final state.
+5. **Complexity cost**: Do not grow nested validation, guards, retry states, or tests for unsupported inputs merely because a mock can reach them. The implementation and maintenance cost must be proportionate to production impact.
+
+Classify the target before deep review:
+
+- **PRIORITIZE**: normal workflow or material security, integrity, availability, compatibility, repeated-incident, or maintainer-priority impact.
+- **LIGHTWEIGHT**: narrow but real hygiene with a small boundary fix; review briefly only when it does not displace strategic work.
+- **SKIP**: mock-only, deliberately invalid/unsupported, extreme unobserved state, self-healing/no final-outcome change, or defensive complexity greater than likely benefit.
+
+It is valid to return `no worthwhile candidate`. When a target is `SKIP`, stop after a compact reason instead of fetching full JSON, reading every file, running fault injection, or inventing more edge cases. Explicit user requests for that exact PR override the stop, but not the evidence labels or proportionality requirement.
+
+The classification governs our attention, not whether another contributor's patch may merge. A correct low-complexity hygiene fix does not warrant a discouraging review comment merely because we would not choose it. Lack of a company production incident is not a technical blocker. Comment only when there is a specific defect or cost: disproportionate defensive complexity, wrong behavior/contract, regression risk, missing material evidence for a strong impact claim, or conflict with maintainer direction.
 
 ## Review Comment Comprehension Gate
 
@@ -139,7 +160,7 @@ Apply this gate before calling an unobserved scenario a bug or posting it as a b
    - **Reachable latent bug**: source or contract evidence proves the trigger can occur, and a focused test proves the bad outcome, but no real occurrence has been observed.
    - **Hypothetical scenario**: only a synthetic test or imagined ordering creates the trigger; production reachability is unproven.
 
-Fault injection proves conditional control flow, not production reachability. A reachable latent bug may still block when the trigger is a routine external failure mode and the impact violates a correctness or safety invariant. If reachability is unproven, write a question or evidence gap and request a realistic test; do not present it as a confirmed bug.
+Fault injection proves conditional control flow, not production reachability. A reachable latent bug may still block when the trigger is a routine external failure mode and the impact violates a correctness or safety invariant. If reachability is unproven, write a question or evidence gap and request a realistic test; do not present it as a confirmed bug. If reachability is proven, still apply the Contribution Value Gate: `can happen` does not imply `worth implementing or deeply reviewing`.
 
 ## Flake Root-Cause Gate
 
