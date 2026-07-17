@@ -1,0 +1,79 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+---
+sequenceDiagram
+    autonumber
+    participant Test as Remedy E2E test
+    participant Repro as Event-handler regression
+    participant API as Karmada API
+    participant Cache as Manager informer cache
+    participant Handler as Cluster update handler
+    participant Queue as Remedy work queue
+    participant RC as Remedy controller
+
+    Note over Test,RC: Test timestamps use the runner clock, controller timestamps use the kind-node clock.<br/>Use per-source order and API observations, not sub-second cross-clock ordering.
+
+    rect rgb(254, 242, 242)
+    Note over Test,RC: Observed failure on PR #7697 attempt 1
+    Test->>API: Create Remedy at 08:34:55.435
+    Test->>API: Set DNS condition False at 08:34:55.444
+    API-)Cache: Remedy and Cluster watch events
+    Cache-)Queue: Enqueue member1
+
+    Queue-)RC: Reconcile at 08:34:55.448
+    RC->>Cache: Read a not-yet-aligned Remedy/Cluster view
+    RC-->>Queue: Desired actions are empty
+
+    Queue-)RC: Reconcile at 08:34:55.492
+    RC->>Cache: Read Remedy plus False condition
+    RC->>API: Update remedyActions to TrafficControl
+    API-->>Test: Direct GET observes TrafficControl
+
+    Test->>API: Delete Remedy at 08:34:55.519
+    API-)Cache: Remedy delete event
+    Cache-)Queue: Enqueue member1
+    Queue-)RC: Reconcile at 08:34:55.576
+    RC->>Cache: Remedy is gone, cached actions are still empty
+    Note over RC,Cache: UpdateStatus compares desired empty actions<br/>with the stale cached empty actions.
+    RC--xAPI: Skip Status.Update as a DeepEqual no-op
+    RC-->>Queue: Log success with empty actions
+
+    API-)Cache: Earlier TrafficControl status becomes visible
+    Cache-)Handler: Cluster update with unchanged Conditions<br/>and RemedyActions empty to TrafficControl
+    Handler->>Handler: Compare Conditions only
+    Handler--xQueue: RemedyActions-only update is not enqueued
+
+    loop Direct API polling for 420 seconds
+        Test->>API: GET Cluster member1
+        API-->>Test: remedyActions still contains TrafficControl
+    end
+
+    Note over Cache,RC: No periodic requeue and no later Remedy reconcile.<br/>The stale action cannot converge in this lifecycle.
+    end
+
+    rect rgb(255, 247, 237)
+    Note over Repro,Queue: Deterministic regression replays the same dropped recovery edge
+    Repro->>Handler: old/new Conditions equal<br/>RemedyActions empty to TrafficControl
+    Handler--xQueue: Current code leaves queue length 0
+    Queue-->>Repro: Assertion fails: got 0, want 1
+    end
+
+    rect rgb(240, 253, 244)
+    Note over API,RC: Fixed invariant: ignore an update only when both Conditions and RemedyActions are unchanged
+    API-)Cache: TrafficControl status becomes visible
+    Cache-)Handler: Same Conditions and changed RemedyActions
+    Handler-)Queue: Enqueue member1
+    Queue-)RC: Compensation reconcile
+    RC->>Cache: Read TrafficControl and no matching Remedy
+    RC->>API: Update remedyActions to empty
+    API-)Cache: Empty remedyActions becomes visible
+    Cache-)Handler: RemedyActions changed again
+    Handler-)Queue: Enqueue one final reconciliation
+    Queue-)RC: Reconcile current empty state
+    RC--xAPI: Skip equal Status.Update
+    Note over Queue,RC: No new API write means no further Cluster update event.<br/>The compensation terminates without periodic requeue.
+    end

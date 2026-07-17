@@ -1,0 +1,41 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+---
+sequenceDiagram
+    autonumber
+    participant Test as Migration E2E test
+    participant Deploy as Karmada Deployment status
+    participant WSC as Work status controller
+    participant Work as Work status
+    participant RBSC as ResourceBinding status controller
+    participant RB as ResourceBinding status
+
+    rect rgb(255, 247, 237)
+    Note over Test,RB: Current behavior: deployment readiness and binding health converge through separate status streams.
+    WSC->>Work: Record Deployment Health=Unhealthy (03:10:27.444)
+    WSC->>Work: Record Deployment Health=Healthy (03:10:28.914)
+    Work-)RBSC: Work status update enqueues binding reconcile
+    RBSC->>RB: Update AggregatedStatus (03:10:29.257)
+    RBSC->>RBSC: Reconcile again (03:10:29.963)
+    Deploy-->>Test: Replicas are ready (status updated 03:10:29.961)
+    Test->>RB: Single GET (03:10:30.035)
+    RB-->>Test: Applied=true, Health=Unhealthy
+    Test-xTest: Fail immediately
+    RBSC->>RB: Complete a later AggregatedStatus update (03:10:30.872)
+    Note over RBSC,RB: The recovery update arrives after the terminal assertion.<br/>The artifact does not snapshot its final health value.
+    end
+
+    rect rgb(240, 253, 244)
+    Note over Test,RB: Proposed invariant: wait for the ResourceBinding state that the test claims to verify.
+    Deploy-->>Test: Replicas are ready
+    loop Bounded by the existing PollTimeout
+        Test->>RB: GET ResourceBinding
+        RB-->>Test: Current AggregatedStatus
+    end
+    RB-->>Test: Applied=true and Health=Healthy
+    Test->>Test: Continue migration assertions
+    end

@@ -37,6 +37,8 @@
 - [Day 23：PR #7662 2026-06-30 社区会议全量转录与对齐](day23-pr7662-meeting-2026-06-30-transcript-and-alignment.md)
 - [Day 24：Karmada 资源传播、部署与调度组件详解](day24-karmada-resource-propagation-scheduling-components.md)（[PNG](day24-karmada-resource-propagation-scheduling-components.png) / [SVG](day24-karmada-resource-propagation-scheduling-components.svg) / [draw.io](day24-karmada-resource-propagation-scheduling-components.drawio) / [Mermaid](day24-karmada-resource-propagation-scheduling-components.mmd)）
 - [Day 25：2026-07-17 Karmada 社区 Issue / PR 扫描](day25-karmada-community-scan-2026-07-17.md)
+- [Day 26：PR #7697 针对性证书轮转修复与 Review 收尾](day26-pr7697-targeted-certificate-rotation-fixes.md)
+- [Day 27：可通过 PR 消除的 CI Flake 候选与 #7697 E2E RCA](day27-pr7697-e2e-flake-root-cause-analysis.md)（[v1.35 Mermaid](day27-pr7697-e2e-v135-etcd-io-stall-rca.mmd) / [PNG](day27-pr7697-e2e-v135-etcd-io-stall-rca.png)；[v1.36 Mermaid](day27-pr7697-e2e-v136-remedy-cache-race-rca.mmd) / [PNG](day27-pr7697-e2e-v136-remedy-cache-race-rca.png)；[migration Mermaid](day27-migration-resourcebinding-health-sync.mmd) / [PNG](day27-migration-resourcebinding-health-sync.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

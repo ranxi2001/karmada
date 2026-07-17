@@ -539,3 +539,29 @@ After the user approved the exact target and full replacement text, GitHub issue
 - The failure is [`e2e test (v1.35.0)` job 87832263874](https://github.com/karmada-io/karmada/actions/runs/29563506143/job/87832263874); `e2e test (v1.34.0)` and `e2e test (v1.36.1)` are still running.
 - No failure log classification has been completed, so this record does not attribute the failure to the PR or label it a flake.
 - The next loop must inspect the first hard failure and compare the other matrix results before changing code, rerunning CI, cleaning review threads, or requesting human review.
+
+### 2026-07-17: Two-file scope explanation prepared
+
+The earlier 10-file diff included `config/types.go` and `config/config_test.go`. Those changes were removed when rotation became a CLI-only operation. Current head `bf24e47ce` changes eight files: four product files (`+829/-25`), three test files (`+1197/-1`), and one generated command reference (`+5/-2`).
+
+The proposed two-file prototype covers mode dispatch and root-CA selection, but it is not behaviorally equivalent. Existing `cert.GenCerts` also creates new front-proxy and internal-etcd CAs, replaces `karmada.key`, writes a local PKI directory, and derives SANs only from current inputs. It has no existing-Secret update contract or local target-identity check.
+
+Plain prose is clearer than a diagram for this comment because the explanation is a static file-responsibility mapping plus one concrete counterexample, not an event sequence or branching flow.
+
+<!-- pr7697-two-file-scope-comment-start -->
+
+````md
+I rechecked whether this can be reduced to two files.
+
+A two-file prototype can branch before install-only initialization and change the root-CA source, but it is not equivalent to the current behavior. Existing `GenCerts` also creates new front-proxy/internal-etcd CAs, replaces `karmada.key` (also the ServiceAccount signing key), writes local PKI, and rebuilds SANs from current inputs. It does not preserve Secret metadata, bind the local kubeconfig to the selected cluster, or address partial Secret updates.
+
+The four product files follow package ownership: `cmdinit.go` registers the flag, `deploy.go` owns init lifecycle and Secret construction, `cert.go` provides PEM parsing/encoding, and `cert_rotation.go` isolates rotation-only logic. If a smaller first version is preferred, we should narrow the supported contract, such as Secret-only CA reuse or deferring external-etcd support, rather than put the same behavior into two files or remove safety checks.
+````
+
+<!-- pr7697-two-file-scope-comment-end -->
+
+No GitHub comment has been posted. The exact target and text require user approval.
+
+### 2026-07-17: Two-file scope comment posted
+
+After the user approved the exact target and full text, the two-file scope explanation was posted as [PR #7697 comment 5001025218](https://github.com/karmada-io/karmada/pull/7697#issuecomment-5001025218). The final comment deliberately omits the earlier correction of the user's remembered file count and focuses only on behavioral equivalence, package ownership, and the option to narrow the supported contract. No PR field, review thread, label, title, or reviewer request was changed.

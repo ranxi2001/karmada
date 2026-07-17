@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fix Karmada E2E Flakes"
+  short_description: "Turn proven E2E flakes into causal fixes"
+  default_prompt: "Use $fix-e2e-flakes to align a Karmada flake RCA, reproduction, minimal fix, E4 validation, and fork branch review."

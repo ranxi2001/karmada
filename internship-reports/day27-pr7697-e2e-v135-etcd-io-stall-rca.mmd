@@ -1,0 +1,39 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+---
+sequenceDiagram
+    autonumber
+    participant Test as E2E test
+    participant API as Karmada API
+    participant Etcd as Karmada etcd
+    participant FS as Runner filesystem
+    participant Kubelet
+
+    Test->>Test: Create two temporary kind clusters<br/>07:30-08:28
+    Note over Test,FS: Six kind node containers share a 4-CPU runner.<br/>This is correlation, not a proven physical trigger.
+
+    API->>Etcd: Request linearizable reads
+    Etcd->>FS: Persist Raft WAL entries
+    par WAL persistence stalls
+        FS-->>Etcd: fdatasync returns after 29.956s<br/>logged at 08:09:10
+    and ReadIndex cannot make timely progress
+        loop 08:08:38 onward
+            Etcd--xAPI: ReadIndex retry or request timeout
+        end
+    and Health checks fail
+        Kubelet->>API: Probe Karmada and host APIs<br/>08:08:42 onward
+        API--xKubelet: HTTP 500 or timeout
+        Kubelet->>Etcd: Probe /readyz at 08:08:46
+        Etcd--xKubelet: Context deadline exceeded
+    end
+
+    Test->>API: Unjoin member-e2e-fv56g
+    API--xTest: 503 GOAWAY at 08:09:41
+    Test->>API: AfterSuite cleanup
+    API--xTest: Connection refused at 08:11:08
+
+    Note over Etcd,FS: Proven cause inside the run: WAL I/O stalls blocked etcd progress.<br/>The artifact does not prove why the runner filesystem stalled.

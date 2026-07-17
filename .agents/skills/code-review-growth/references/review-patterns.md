@@ -65,6 +65,24 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: First hard-failure logs, controller create/delete timestamps, cache/status collection timestamps, consumer plugin input, error classification, queue transition, update-event predicates, and count of later enqueue/schedule attempts.
 - Test or fix cue: Require an `E3` code-backed Mermaid timeline before patch design and an `E4` reproduction, regression, or observable baseline-versus-patch counterfactual when feasible. A reasoned counterfactual is design evidence, not causal validation. The patch must name the exact causal edge it cuts; otherwise add diagnostics and keep the proposal labeled as a hypothesis.
 
+## A Flake Census Must End In A Fix-Candidate Decision
+
+- Pattern: Counting unrelated CI failures and proving they are flakes does not identify which failures can be eliminated by a useful code change.
+- Seen in: Karmada Day 27, where an initial 23-run/29-job census documented #7697 thoroughly but left Remedy status cleanup behind an unnecessary “wait for another reproduction” gate and did not inspect a migration test's one-shot read across two asynchronous status streams.
+- Miss symptom: The report is dominated by run counts and rerun evidence, while the reader still cannot tell which cluster is ready for a PR, already fixed, blocked on RCA, or unsuitable for a code fix.
+- Review check: For every flake cluster, state prevalence, supported-workflow reachability, E0-E4 level, the exact causal edge a patch would cut, minimum files/tests, and the missing evidence that blocks implementation.
+- Evidence to gather: Cross-run occurrences, first hard failures, source-level no-self-heal chain, existing or closed fixes, current base behavior, and a counterfactual regression plan.
+- Test or fix cue: End the census with `READY / DONE / NEEDS_RCA / NO_FIX`. A same-SHA green rerun must not demote a repeated E3 defect; conversely, repeated terminal symptoms without a common causal edge must not be turned into timeout, generic retry, or defensive-nesting PRs.
+
+## Recovery-Event Fixes Must Prove Semantic Equality And Termination
+
+- Pattern: Expanding an update predicate can restore a dropped recovery event while also enqueueing representation-only changes or creating a controller feedback loop.
+- Seen in: Karmada Day 27 Remedy fix, where `RemedyActions: [] -> [TrafficControl]` had to enqueue, but `nil` and `[]` both represented the same empty action set.
+- Miss symptom: A new `reflect.DeepEqual` field check makes the regression pass, yet nil/empty, ordering, or duplicate differences trigger unnecessary reconciles; the test proves the first enqueue but not the final no-op.
+- Review check: Identify whether the watched field is a list, set, map, or ordered sequence; use its semantic equality and trace `status write -> watch event -> enqueue -> reconcile` until no further write occurs.
+- Evidence to gather: Field producer and normalization, API serialization shape, old/new informer objects, status helper equality, downstream write condition, and queue length after the terminal state.
+- Test or fix cue: Pair the changed-state regression with a semantically equal final-state no-op case, including nil/empty when relevant. In the sequence diagram, show both the compensation reconcile and the event that terminates without another write.
+
 ## Verify Assertion-Control-Flow Comments Before Patching
 
 - Pattern: AI review comments about assertion helpers can be false when they assume ordinary Go control flow instead of framework-specific retry/fail semantics.
