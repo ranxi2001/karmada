@@ -1,0 +1,47 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+---
+sequenceDiagram
+    autonumber
+    actor Operator
+    participant CLI as karmadactl init
+    participant File as Local admin kubeconfig
+    participant API as Host cluster API
+    participant CP as Control plane workloads
+
+    Operator->>CLI: Run --cert-mode=rotate with original install options
+    CLI->>API: Read existing init-managed Secrets
+    API-->>CLI: Existing CAs, leaves, and metadata
+    CLI->>CLI: Validate target, CA, etcd mode, and identities
+    CLI->>CLI: Renew init-managed leaf certificates
+    Note over CLI,API: Preserve CAs, karmada.key, Secret metadata,<br/>and external-etcd credentials
+
+    opt Matching local admin kubeconfig exists
+        CLI->>File: Atomically refresh embedded certificates
+    end
+
+    CLI->>API: Preflight all 11 target Secrets
+    loop Sequential updates until error or completion
+        CLI->>API: Update next existing Secret
+        API-->>CLI: Success or API error
+    end
+
+    alt API error after a partial write set
+        API--xCLI: Timeout, conflict, or transport error
+        CLI-->>Operator: Return error, do not restart
+        Operator->>CLI: Rerun the same rotate command
+        CLI->>API: Rebuild and update all targets
+        API-->>CLI: All 11 Secrets converge
+    else All updates succeed
+        API-->>CLI: All 11 Secrets updated
+    end
+
+    CLI-->>Operator: Print restart guidance after success
+    Operator->>CP: Rolling restart affected workloads
+    CP->>CP: Load renewed files at process start
+    Operator->>CP: Verify readiness and API health
+    CP-->>Operator: Ready and available
