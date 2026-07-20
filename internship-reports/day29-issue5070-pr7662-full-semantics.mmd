@@ -1,0 +1,67 @@
+flowchart TB
+    WR["WorkloadRebalancer<br/>Reschedule / Full"]:::source
+    TRIGGER["Write spec.rescheduleTriggeredAt"]:::current
+    WR -->|explicit request| TRIGGER
+
+    subgraph MEMORY["Two independent scheduling memories"]
+        direction LR
+        RESET["RESET<br/>Previous replica assignment<br/>spec.clusters preference"]:::reset
+        RETAIN["RETAIN<br/>Top-level affinity cursor<br/>status.schedulerObservingAffinityName"]:::retained
+    end
+
+    TRIGGER -->|Fresh assignment mode| RESET
+    TRIGGER -->|current scheduler behavior| RETAIN
+
+    subgraph EXCLUSIVE["Multiple exclusive top-level clusterAffinities"]
+        direction LR
+        A["Term A<br/>preferred / recovered"]:::missed
+        B["Term B<br/>currently observed"]:::current
+        START["getAffinityIndex(B)"]:::retained
+        RESULT_B["Fresh replica assignment<br/>inside B and later terms"]:::current
+        A -. "not reconsidered" .-> START
+        B --> START --> RESULT_B
+    end
+
+    RETAIN --> START
+    RESET --> RESULT_B
+
+    subgraph OVERFLOW["Supported v1.18 alternative: one observed term with ordered tiers"]
+        direction LR
+        TERM["Observed term T"]:::current
+        PRIMARY["Tier 0: primary A"]:::supported
+        FALLBACK["Tier 1+: overflow B"]:::current
+        RESULT_A["Full can place replicas<br/>back on recovered A"]:::supported
+        TERM --> PRIMARY -->|capacity remains| FALLBACK
+        PRIMARY -->|capacity is sufficient| RESULT_A
+    end
+
+    RETAIN --> TERM
+    RESET --> PRIMARY
+
+    LIMIT["Scope limit<br/>overflowAffinities requires Divided +<br/>Aggregated or dynamic Weighted"]:::open
+    FALLBACK -.-> LIMIT
+
+    subgraph SEPARATE["Separate #7662 primitive"]
+        direction LR
+        CHOSEN["Caller supplies from / to"]:::source
+        OPEN["Open target and wait Ready"]:::supported
+        COMMIT["Commit source reduction"]:::supported
+        CHOSEN --> OPEN --> COMMIT
+    end
+
+    NOTE["SafeMigration controls how a chosen move executes.<br/>It does not restart scheduler affinity-group selection."]:::note
+    SEPARATE --> NOTE
+
+    GAP["Unresolved contract: should Full also restart<br/>exclusive affinity evaluation at term A?<br/>#5070 / #5172"]:::risk
+    RESULT_B --> GAP
+    GAP -. "not resolved by a caller-chosen move" .-> CHOSEN
+
+    classDef source fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef current fill:#f5f5f5,stroke:#666666,color:#262626;
+    classDef reset fill:#d5e8d4,stroke:#82b366,color:#14532d,stroke-width:2px;
+    classDef supported fill:#d9ead3,stroke:#38761d,color:#14532d,stroke-width:2px;
+    classDef retained fill:#fff2cc,stroke:#d6b656,color:#713f12,stroke-width:2px;
+    classDef missed fill:#f5f5f5,stroke:#9ca3af,color:#4b5563,stroke-dasharray:5 5;
+    classDef open fill:#fff2cc,stroke:#d6b656,color:#713f12,stroke-dasharray:5 5;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-width:2px,stroke-dasharray:6 4;
+    classDef note fill:#ffffff,stroke:#6c8ebf,color:#172554,stroke-dasharray:4 3;

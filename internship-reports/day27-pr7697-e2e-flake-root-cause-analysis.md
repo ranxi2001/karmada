@@ -383,9 +383,70 @@ Remediation controller 日志只有 `13:03:40-13:04:34` 的 8 次初始 reconcil
 - 当前动作是只重跑 v1.35 job，不修改 PR #7777 的产品逻辑。若再次出现同簇 failure，应在 CI harness 增加周期性 `iostat -xz`、`vmstat`、`/proc/pressure/{io,cpu,memory}`、disk usage 和 container stats 采集，再决定 runner/harness 修复。
 - Deferred review TODO（`2026-07-18`）：下次更新 #7777 时接受 [Gemini review suggestion](https://github.com/karmada-io/karmada/pull/7777#discussion_r3603254907)，把 `sets.NewString` 改为 `sets.New`，并为双方 `RemedyActions` 都为空的常见路径增加 fast path；随后重跑 focused unit test 与 upstream CI。完整 stale-cache lifecycle test 和 controller restart convergence 属于独立 follow-up，不扩大本 PR。
 
+## 滚动 72 小时复核：2026-07-17 至 2026-07-20
+
+- UTC 窗口：`2026-07-17T03:19:27Z` 至 `2026-07-20T03:19:27Z`
+- 查询范围：`karmada-io/karmada` 的 `pull_request` workflow runs；逐 job 展开失败和取消的主 CI，避免只按 run conclusion 误判
+- 总量：88 runs，其中 `CI Workflow` 22 runs，Chart、CLI、Operator 各 22 runs
+- 主 CI 快照：11 success、5 failure、5 cancelled、1 in progress；5 个 failed runs 中 1 个只有 codegen 失败，排除后剩 4 个 E2E failed jobs
+- 辅助 workflow：Chart、CLI、Operator 各 19 success、3 cancelled、0 failure；5 个 cancelled 主 CI 中也没有被取消状态掩盖的 failed/timed-out E2E job
+
+> 注释：这是一个与前文固定统计重叠的独立滚动窗口，不把 4 个 jobs 直接累加到 `83 runs / 23 flake runs / 29 flake jobs`。其中 #7777 已在上一节单独记录。
+
+### 失败台账与证据等级
+
+| PR / job | First hard failure | 反证与因果证据 | 等级与动作 |
+| --- | --- | --- | --- |
+| [`#7782` v1.35 / job 88187044015](https://github.com/karmada-io/karmada/actions/runs/29684548763/job/88187044015) | `Karmadactl register` 等待 agent Deployment 超时 | 同 SHA fork [`run 29684547277`](https://github.com/Priyanshu8023/karmada/actions/runs/29684547277) 成功；artifact 中 etcd WAL `fdatasync` 最长 `39.956s`，随后 `ReadIndex` 堵塞、`/readyz` linearizable read 503 和 API 请求超时 | `E1` 非确定性；in-run collapse 链为 `E3`，物理 trigger 仍为 `E2`。归入 control-plane / etcd 簇，`NEEDS_RCA`，不修改 scheduler cache PR |
+| [`#7779` v1.36 / job 88100450786](https://github.com/karmada-io/karmada/actions/runs/29651981782/job/88100450786) | `Karmadactl cordon/uncordon` cleanup 删除 kind cluster 时，Docker daemon 报 `could not kill: tried to kill container, but did not receive an exit event` | 同 run 的 v1.34/v1.35 E2E 通过；后续 etcd timeout 发生在 cleanup 已失败之后；没有同 SHA rerun，也没有相同错误的历史样本 | 仅 `E0` 环境候选，`NEEDS_RCA`。先等待重复样本和 containerd/Docker daemon 证据，不因一次 daemon 异常增加通用 cleanup retry |
+| [`#7777` v1.35 / job 87889887276](https://github.com/karmada-io/karmada/actions/runs/29581580350/job/87889887276) | CPP cleanup 请求失败，随后多个 API surface refused | 同 SHA fork [`run 29575820186`](https://github.com/ranxi2001/karmada/actions/runs/29575820186) 成功；三个独立 etcd 同窗 `fdatasync` stall，详细链见上一节 | `E1` 非确定性 + in-run `E3` collapse；该红灯 `NO_FIX` 于 Remedy 代码，control-plane 物理 trigger 继续 `NEEDS_RCA` |
+| [`#7723` v1.32 / job 87838360219](https://github.com/karmada-io/karmada/actions/runs/29565545054/job/87838360219) | 264/264 specs 全部通过，post-E2E restart check 发现 controller-manager restart count 为 1 | 同 SHA fork [`run 29565541964`](https://github.com/SipengShen01/karmada/actions/runs/29565541964) 成功；artifact 已建立 `etcd readiness failure -> lease renewal timeout -> leader election lost -> restart` | `E1` 非确定性；归入同一 control-plane / etcd 簇，对 workflow action 变更 `NO_FIX`，物理 trigger 继续 `NEEDS_RCA` |
+
+### 跨 PR 聚类结论
+
+4 个 E2E 红灯中，#7782、#7777、#7723 都是同 SHA 在另一条 CI 路径成功的高置信 flake，并共享 `etcd 不健康 -> API 或 leader election 失败 -> 测试/收尾失败` 这一故障家族。#7777 与 #7782 的 artifact 进一步给出 WAL `slow fdatasync`、`ReadIndex` 和 readiness 的连续日志；#7723 由 restart check 暴露同一控制面后果。这个滚动窗口把该簇从“单 PR 偶发红灯”提升为跨 PR 重复问题，但仍不能把 backing storage、CPU starvation 或 host contention 中的任意一个写成已证明的物理根因。
+
+该簇沿用上文 [v1.35 etcd I/O stall RCA 图](day27-pr7697-e2e-v135-etcd-io-stall-rca.png)及其[可编辑 Mermaid 图源](day27-pr7697-e2e-v135-etcd-io-stall-rca.mmd)，因为 producer、datastore、API 和 terminal failure 的因果节点没有变化。下一步仍应先补 runner host `iostat -xz`、`vmstat`、I/O/CPU/memory PSI、disk usage 和 container stats，再判断是否存在可验证的 CI harness 修复；不能在无关业务测试中增加 timeout、sleep 或防御分支。
+
+#7779 是另一类 container-runtime teardown failure。当前只有 Docker daemon 的单次退出事件缺失，既不能与 etcd 簇合并，也不足以证明 cleanup retry 能收敛，因此暂时不产生修复 PR。
+
+### #7782 的次生 data race
+
+#7782 的 race detector 还观察到一个真实但非本次超时根因的问题：[`KarmadactlBuilder.execWithFullOutput`](../test/e2e/framework/karmadactl.go) 在 timeout 分支调用 `Process.Kill()` 后立即格式化 `cmd.Stdout/cmd.Stderr`，却没有先等待 goroutine 中的 `cmd.Wait()` 返回。`os/exec` 的输出复制仍可能写入同一个 `bytes.Buffer`，因此日志读取与写入并发。
+
+这条问题可列为独立 `LIGHTWEIGHT` helper hygiene 候选，但不能包装成 #7782 flake 修复：即使先等待 `cmd.Wait()` 消除 race，etcd stall 仍会让 register command 超时。若后续处理，最小边界是 kill 后消费 `errCh` 再读取 buffer，并增加 timeout-path race regression；不得顺带延长 register timeout。
+
+### 本窗口修复候选决策
+
+| 故障簇 | 决策 | 理由 |
+| --- | --- | --- |
+| control-plane / etcd persistence stall | `NEEDS_RCA` | 已重复且 in-run 链清楚，但 host physical trigger 未达到 E3；先补观测，暂不改业务逻辑 |
+| Docker kind-container kill failure | `NEEDS_RCA` | 只有一个 E0 样本，不知道 retry 是否能收敛，也没有 daemon 侧根因 |
+| KarmadactlBuilder timeout buffer race | `LIGHTWEIGHT` | source branch 与 race observation 对齐，可独立修复诊断路径，但不消除本窗口任何 timeout producer |
+| 新的 source-proven flake fix | `NONE` | 本窗口没有新增达到 E3 causal edge + E4 counterfactual 的解决性 PR 候选 |
+
+## #7777 current head: v1.34 post-test artifact upload timeout
+
+- PR/head: [#7777](https://github.com/karmada-io/karmada/pull/7777) `dcd150b1739d448790b2e1c6d629c2273f93e619`
+- Upstream run/job: [run 29713746444 / job 88263419523](https://github.com/karmada-io/karmada/actions/runs/29713746444/job/88263419523)
+- Window boundary: the job failed at `2026-07-20T04:03:12Z`, after the rolling 72-hour window above ended at `2026-07-20T03:19:27Z`; do not add it to that window's numerator or denominator.
+
+This red check is not an E2E spec failure. The `run e2e` step passed all `273/273` specs with `0 Failed`, printed `E2E run successfully`, and passed all component restart checks. The three Remedy E2E cases also completed their expected `[] -> TrafficControl -> []` transitions. The first and only hard failure occurred afterward in `actions/upload-artifact@v7.0.1`:
+
+```text
+2026-07-20T04:00:58.4383347Z Root directory input is valid!
+2026-07-20T04:03:12.7817530Z Failed to CreateArtifact: Unable to make request: ETIMEDOUT
+```
+
+The request timed out while creating `karmada_e2e_log_v1.34.0`, before blob upload began. The immediately following 2 KiB kind-log artifact succeeded, as did the same run's v1.35/v1.36 E2E artifacts. The exact same SHA's fork push [run 29713744861 / v1.34 job 88263094313](https://github.com/ranxi2001/karmada/actions/runs/29713744861/job/88263094313) also passed E2E and uploaded its artifact successfully.
+
+Classification: high-confidence CI infrastructure flake. The terminal causal edge is proven at the post-test `CreateArtifact` request; available evidence cannot distinguish a transient GitHub artifact-service failure from the hosted runner's network path. This is a new signature relative to Day 11 and the rolling 72-hour ledger, but one sample does not justify adding retries, `continue-on-error`, or workflow defenses. The correct PR action is `/retest`; #7777 code remains `NO_FIX` for this red check.
+
 ## 周报可复用摘要
 
 本周完成一项已合并 flake 修复闭环：#7732 修复 FlinkDeployment cleanup/APIEnablements 竞态并关闭 #7719。Day 11 之后的 83 个 upstream PR `CI Workflow` runs 中，严格排除代码错误后有 23 runs、29 jobs 被归为 flake。Remedy status cleanup 已跨窗口出现三条新样本，#7697 日志与源码达到 E3；最小的 `RemedyActions`-only 补偿 enqueue 和 focused regression 已发布为 #7776/#7777。Migration e2e 的独立 fork patch 则使用现有 `WaitResourceBindingFitWith` 等待其实际断言的 Applied + Healthy 状态。其余 25 jobs 仍需 RCA，不能用 timeout 或通用 retry 伪装修复。统计快照后的 #7777 v1.35 红灯不是 Remedy 回归，而是 control-plane collapse 新样本：三个独立 etcd 同时出现 6.7-9.4 秒 fdatasync stall；该样本不纳入上述统计，当前只应重跑并补 host I/O observability。
+
+`2026-07-20` 的独立滚动 72 小时复核又发现 4 个 E2E failed jobs：#7782、#7777、#7723 为 E1 高置信 flake，且共同强化 control-plane / etcd stall 的跨 PR 重复性；#7779 为单次 Docker teardown E0 候选。该窗口没有新增可直接开解决性 PR 的 flake；#7782 同时暴露一个可独立处理但不会消除 timeout 的 KarmadactlBuilder buffer data race。
 
 ## 本轮方法改进
 
@@ -395,3 +456,5 @@ Remediation controller 日志只有 `13:03:40-13:04:34` 的 8 次初始 reconcil
 - 同 SHA rerun 只判断 nondeterminism/reproducibility，不替代源码因果链，也不能用一次转绿否定 timing-dependent product defect。
 - 多个独立 etcd 在同一亚秒窗口出现 `slow fdatasync` 是强 common-host correlation，但在缺少 host I/O、PSI、kernel 与 hypervisor 指标时，不能把 runner backing storage 写成已达到 E3 的物理 root cause。
 - Flake 专项报告必须输出 `READY / DONE / NEEDS_RCA` 候选决策、最小修改面和证据缺口；只统计 red jobs 或证明“与原 PR 无关”不能回答哪些 flake 值得开 PR。
+- 后续滚动窗口与固定历史窗口重叠时，单独报告窗口、run/job 分母和重复 PR，不把新样本直接累加到旧总量。
+- Race detector 命中可以证明并发缺陷真实存在，但不能自动证明它是 terminal failure 的 producer；必须先按日志顺序区分“导致 timeout”与“timeout cleanup 触发的次生 race”。

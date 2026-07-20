@@ -218,6 +218,24 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Original and current base SHAs, original/current changed-file lists, the overlapping merged PR or commit, file-level patches, and the PR body/test text that may now be stale.
 - Test or fix cue: Ask for a rebase, name the already-merged change, and state the expected residual diff. Afterward, verify the redundant patch disappeared, update the PR body and validation scope, preserve sign-off during history rewriting, and compare patch/tree identity across force-pushes.
 
+## Eligibility And Capacity Must Change Before Selection
+
+- Pattern: A scheduler fix that changes eligibility or allocatable capacity only during final assignment is too late when scoring, spread selection, or overflow tiering has already planned against the old capacity.
+- Seen in: `karmada-io/karmada#6863`, where an unhealthy existing primary looked able to satisfy all replicas during overflow tiering, then its scale-up capacity was zeroed during assignment and the scheduler returned `Unschedulable` before trying a healthy overflow tier.
+- Miss symptom: The local assignment unit test passes, but a full scheduling path either selects the wrong cluster set or fails before a fallback group is evaluated. A separate policy success reason, such as explicit taint toleration, may also be silently overwritten.
+- Review check: Trace each eligibility and capacity value from filter result through score, group/spread selection, tier budgeting, assignment, and retry. List every reason a candidate can pass filtering and preserve distinctions that carry user intent.
+- Evidence to gather: The stage that first computes capacity, all downstream consumers, fallback/error short-circuits, policy exceptions, previous assignments, and one full-path counterexample with a healthy alternative.
+- Test or fix cue: Make policy-aware effective capacity visible before every planning consumer, preserve already-assigned replicas separately from new capacity, and test existing-but-ineligible, explicitly allowed, fallback-tier, and fresh-recalculation paths.
+
+## Fresh Operations Must Enumerate Every Retained Decision
+
+- Pattern: An operation described as `Fresh`, `Full`, or "complete recalculation" may reset the previous output while another persisted cursor, selected group, cache entry, or status field still constrains the new candidate space.
+- Seen in: `karmada-io/karmada#5070` and proposal PR `#7662`, where explicit WorkloadRebalancer rescheduling resets dynamic replica assignment but retains `status.schedulerObservingAffinityName`, so a recovered earlier top-level `clusterAffinities` term is never reconsidered.
+- Miss symptom: Tests prove that a trigger was written, a Fresh enum was selected, or scheduling completed, but never seed a later observed group and verify which earlier candidates are visible. Documentation then treats "new replica distribution" as "new scheduling context."
+- Review check: Enumerate every input derived from the previous decision across spec, status, annotations, caches, queues, and controller-owned resources. For each, state `reset`, `retained`, `recomputed`, or `out of scope`, and name the component that owns it.
+- Evidence to gather: The trigger path, outer candidate-selection loop, inner assignment mode, persisted status/cursor fields, field ownership, supported policy matrix, official user-facing promise, and one production lifecycle that distinguishes resetting output from resetting search context.
+- Test or fix cue: Start from a non-initial cursor, restore an earlier candidate, trigger the alleged Fresh operation, and assert both candidate visibility and final output for every symmetric resource path. Keep scheduler-selected failback separate from caller-selected safe migration, and require a new explicit contract before changing retained state.
+
 ## Prompt-Formatting Claims Need A Mechanism Chain
 
 - Pattern: A parser preserving whitespace proves representation, not by itself that formatting helps or harms model behavior; a prompt-quality review needs the semantic, transport, and model-sensitivity links.

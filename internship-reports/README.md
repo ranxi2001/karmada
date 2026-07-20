@@ -39,6 +39,8 @@
 - [Day 25：2026-07-17 Karmada 社区 Issue / PR 扫描](day25-karmada-community-scan-2026-07-17.md)
 - [Day 26：PR #7697 针对性证书轮转修复与 Review 收尾](day26-pr7697-targeted-certificate-rotation-fixes.md)
 - [Day 27：可通过 PR 消除的 CI Flake 候选与 #7697 E2E RCA](day27-pr7697-e2e-flake-root-cause-analysis.md)（[v1.35 Mermaid](day27-pr7697-e2e-v135-etcd-io-stall-rca.mmd) / [PNG](day27-pr7697-e2e-v135-etcd-io-stall-rca.png)；[v1.36 Mermaid](day27-pr7697-e2e-v136-remedy-cache-race-rca.mmd) / [PNG](day27-pr7697-e2e-v136-remedy-cache-race-rca.png)；[migration Mermaid](day27-migration-resourcebinding-health-sync.mmd) / [PNG](day27-migration-resourcebinding-health-sync.png)）
+- [Day 28：PR #6863 Scheduler Health Review](day28-pr6863-scheduler-health-review.md)（[Mermaid](day28-pr6863-late-health-capacity-flow.mmd) / [PNG](day28-pr6863-late-health-capacity-flow.png)）
+- [Day 29：Issue #5070 与 PR #7662 的 Fresh / Full 语义调研](day29-issue5070-pr7662-fresh-rescheduling-research.md)（[Mermaid](day29-issue5070-pr7662-full-semantics.mmd) / [PNG](day29-issue5070-pr7662-full-semantics.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
