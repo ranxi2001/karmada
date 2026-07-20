@@ -1,10 +1,12 @@
 # Day 27: Remedy Flake Upstream Submission
 
 - Date: `2026-07-17`
+- Last updated: `2026-07-20`
 - Target repository: `karmada-io/karmada`
 - PR base: `master`
 - PR head: `ranxi2001:fix/remedy-actions-reconcile`
-- PR commit: `3861906f2c3c51ec57eca114b71bff883d135fa3`
+- Initial PR commit: `3861906f2c3c51ec57eca114b71bff883d135fa3`
+- Current squashed head: `dcd150b1739d448790b2e1c6d629c2273f93e619`
 - Issue: [karmada-io/karmada#7776](https://github.com/karmada-io/karmada/issues/7776)
 - Assignment: [`/assign` comment](https://github.com/karmada-io/karmada/issues/7776#issuecomment-5003434878), applied to `ranxi2001`
 - PR: [karmada-io/karmada#7777](https://github.com/karmada-io/karmada/pull/7777), open and non-draft
@@ -132,7 +134,17 @@ karmada-controller-manager: Fixed an issue that Remedy actions might remain stal
 
 - Issue #7776 is open, authored by `ranxi2001`, and its API body matches the approved draft apart from the API-added trailing newline.
 - `/assign` was published exactly and the issue assignee is `ranxi2001`.
-- Directly adding `kind/flake` to the issue was rejected because `ranxi2001` lacks `AddLabelsToLabelable`; no fallback `/kind flake` comment was posted without separate approval.
-- PR #7777 is open and non-draft against `master`; its head is `ranxi2001:fix/remedy-actions-reconcile@3861906f2c3c51ec57eca114b71bff883d135fa3`.
-- The PR API reports exactly two changed files, one signed-off commit, and the expected `kind/bug` and `kind/flake` labels. DCO passed immediately and upstream CI started.
+- Directly adding `kind/flake` to the issue was rejected because `ranxi2001` lacks `AddLabelsToLabelable`. A later [`/kind flake` comment](https://github.com/karmada-io/karmada/issues/7776#issuecomment-5003473805) applied the label.
+- At creation, PR #7777 was open and non-draft against `master` with head `ranxi2001:fix/remedy-actions-reconcile@3861906f2c3c51ec57eca114b71bff883d135fa3`.
+- The initial PR API reported exactly two changed files, one signed-off commit, and the expected `kind/bug` and `kind/flake` labels. DCO passed immediately and upstream CI started.
 - The online PR body matches the approved 178-word draft apart from the API-added trailing newline. No reviewer was requested and no maintainer was mentioned.
+
+## 2026-07-20 Squash Update
+
+- A Gemini suggestion had added generic `sets.New` usage and an empty-action fast path in commit `13645be77042637fbd9c50efb93829555b6ecc0c`; all checks on that head passed, but the equal non-empty set branch was not covered.
+- Added a supported-state no-op case where old and new `RemedyActions` both contain `TrafficControl`. No invented action or invalid input was used because `TrafficControl` is the only current `RemedyAction` value.
+- With the set-equality return temporarily disabled, the new case failed with `queue length = 1, want 0`; after restoration, `go test ./pkg/controllers/remediation -count=1` and `go test -race ./pkg/controllers/remediation -count=1` passed. Local coverage reports `clusterEventHandler.Update` at 100%.
+- Squashed the two published commits and the new test into signed-off commit `dcd150b1739d448790b2e1c6d629c2273f93e619`. The desired tree stayed exactly `618f70c79efb9c90df68566de414d09d3ca94ef9` across the rewrite.
+- `upstream/master` advanced from `1f07b77c3` to `e4417e386` without touching either remediation file. The squash retained the original merge-base, and `git merge-tree --write-tree upstream/master HEAD` completed without conflict.
+- The force-push used an exact lease on old remote head `13645be77042637fbd9c50efb93829555b6ecc0c`. API verification shows PR #7777 is open, non-draft, mergeable, contains one signed-off commit, and still changes only `eventhandlers.go` and `eventhandlers_test.go`.
+- DCO passed on the new head; upstream CI Workflow, Chart, CLI, and Operator checks started. No PR body, comment, reviewer request, or maintainer mention was changed.
