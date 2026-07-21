@@ -201,3 +201,13 @@ karmada-controller-manager: Fixed an issue that Remedy actions might remain stal
 3. **形式门禁**：review submission 仍是 `COMMENTED`，没有 `/lgtm` 或 `/approve`；Tide 仍显示 `Needs approved, lgtm labels`，所以不能写成 PR 已批准或可合并。
 
 这也是一种可复用的 tradeoff review 写法：先主动承认代价，再分别约束事件频率和单次成本，最后给出接受或拒绝结论。它比只说“性能影响不大”更容易让其他 reviewer 核对判断依据。当前不需要修改代码或回复该 thread；下一步是等待 reviewer/approver 给出正式门禁标签，或提出新的 actionable comment。
+
+### Release Note Follow-Up
+
+`2026-07-21T12:16:42Z`，`@zhzhuang-zju` 在 [conversation comment](https://github.com/karmada-io/karmada/pull/7777#issuecomment-5033855501) 中表示 `Others LGTM~`，唯一要求是把 release note 收窄到具体 API 字段和关联资源。用户确认后，PR body 中 `release-note` fence 已更新为：
+
+```text
+karmada-controller-manager: Fixed an issue where `Cluster.status.remedyActions` could remain stale after an associated `Remedy` resource was removed.
+```
+
+REST API 回读确认新句子恰好出现一次、旧句子已不存在；PR 仍为 open、non-draft，base/head 与 commit `dcd150b1739d448790b2e1c6d629c2273f93e619` 均未改变。没有修改代码、推 PR branch 或发布额外回复。`Others LGTM~` 说明维护者没有其他内容意见，但它仍不是正式 `/lgtm` 或 `/approve` 命令；Tide 继续等待这两个标签。
