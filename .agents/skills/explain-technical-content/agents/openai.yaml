@@ -1,0 +1,4 @@
+interface:
+  display_name: "Explain Technical Content"
+  short_description: "Explain complex engineering work in plain language"
+  default_prompt: "Use $explain-technical-content to rewrite this technical analysis so a new contributor can understand it without losing evidence."

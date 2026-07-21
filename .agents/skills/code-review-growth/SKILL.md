@@ -14,6 +14,7 @@ Use this skill to make code review repeatable and cumulative. It complements rep
 1. For community scans or target selection, apply the Contribution Value Gate before downloading full artifacts or reading the complete diff. If the user explicitly requests one PR, explain a low-value classification and keep depth proportional.
 2. Gather the exact review surface.
    - Read the PR body, linked issue, changed files, relevant surrounding code, CI state, and prior discussion.
+   - When a current claim cites earlier work, follow the linked issue/PR through its closing or superseding event. Classify the relationship as the same symptom, the same root-cause class, a mitigation, a documented caller contract, a rejected option, or an accepted implementation. Do not turn "discussed before" into "community-approved solution."
    - After a delayed review, rebase, or base-branch advancement, compare every changed file against the current base and overlapping merged PRs. Distinguish a change that was unrelated when proposed from one that was originally relevant but is now redundant.
    - On GitHub PRs, read both conversation comments and line review comments. Issue comments alone miss review threads:
 
@@ -60,6 +61,7 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
    - When a maintainer or later review reveals a missed reusable pattern, update `references/review-patterns.md`.
    - Keep each pattern short: symptom, review check, evidence to gather, and test/fix cue.
    - Do not edit upstream-facing topic branches only to store learning notes; update local learning branches or internship records.
+   - For complex local review reports, use `$explain-technical-content`: write mostly in Chinese in the Karmada workspace, lead with a concrete plain-language example, then retain source-backed technical evidence as a second layer.
 
 ## Contribution Value Gate
 
@@ -101,6 +103,24 @@ Use this compact structure without requiring literal labels:
 For inference-boundary comments, make the contrast explicit: `signal = one grep match; claim = no runtime retry`, or `signal = fast return; claim = stale previous-lifecycle state`. Do not make the author infer this distinction from a list of implementation terms.
 
 If the author says the comment is hard to understand, treat that as a review-quality defect. Rewrite from the concrete observation and one plain-language counterexample before adding more references or jargon. A link can support the explanation, but it cannot carry context that the comment itself omits.
+
+## Prior-Art And Maintainer Reasoning Gate
+
+Use related discussions as evidence, not as authority by association. Before citing an earlier issue or PR:
+
+1. Read the root-cause discussion, competing options, decision-changing maintainer comments, closing reason, and any merged or abandoned follow-up.
+2. State in one sentence what the link proves and what it does not prove. Keep problem confirmation, root-cause similarity, implementation approval, and merge readiness separate.
+3. If the current bug shares a mechanism but exposes a new caller or recovery gap, name both the shared mechanism and the new concrete path.
+
+For a race, lifecycle, or multi-actor review, prefer the maintainer-readable structure below:
+
+1. Lead with the current stance: confirmed, largely confirmed, plausible, or not yet proven.
+2. Reconstruct the event order as numbered steps, with one actor, observation, or state transition per step.
+3. Summarize the violated invariant or race in one sentence.
+4. Compare global and caller-specific fixes by ownership, convergence, QPS, loop risk, compatibility, and testability when those tradeoffs matter.
+5. End with the exact next action and unresolved boundary.
+
+Before disagreeing, restate the author's model as a checkable question. When discussion stalls, organize alternatives by decision dimension and explicit tradeoffs instead of repeating positions. Cite the most relevant earlier comment or closing PR with a short relevance note; do not make readers reverse-engineer why a bare `#123` matters.
 
 ## Review Visualization Gate
 

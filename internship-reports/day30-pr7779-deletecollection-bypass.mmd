@@ -1,0 +1,19 @@
+flowchart TB
+    subgraph CURRENT["Current PR behavior"]
+        direction LR
+        C_SINGLE["Single DELETE<br/>/clusters/name"]:::current --> C_REST["REST.Delete<br/>(changed)"]:::changed --> C_VALIDATE["Protection<br/>validator"]:::changed --> C_FORBID["Forbidden"]:::changed
+        C_COLLECTION["Collection DELETE<br/>/clusters?labelSelector"]:::current --> C_PROMOTED["Promoted<br/>Store.DeleteCollection"]:::current --> C_STORE["Store.Delete<br/>receiver is *Store"]:::risk --> C_DELETED["Risk: protected<br/>Cluster is deleted"]:::risk
+    end
+
+    subgraph REQUIRED["Required collection path"]
+        direction LR
+        P_COLLECTION["Collection DELETE"]:::unchanged --> P_REST["REST.DeleteCollection<br/>(new)"]:::new --> P_VALIDATE["Compose protection +<br/>request validation"]:::new --> P_STORE["Store.DeleteCollection<br/>(unchanged)"]:::unchanged --> P_FORBID["Forbidden for<br/>protected item"]:::new
+    end
+
+    CURRENT ~~~ REQUIRED
+
+    classDef current fill:#f5f5f5,stroke:#666666,color:#262626;
+    classDef unchanged fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef changed fill:#d5e8d4,stroke:#82b366,color:#14532d,stroke-width:2px;
+    classDef new fill:#d9ead3,stroke:#38761d,color:#14532d,stroke-width:2px;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-dasharray:6 4;

@@ -442,6 +442,8 @@ The request timed out while creating `karmada_e2e_log_v1.34.0`, before blob uplo
 
 Classification: high-confidence CI infrastructure flake. The terminal causal edge is proven at the post-test `CreateArtifact` request; available evidence cannot distinguish a transient GitHub artifact-service failure from the hosted runner's network path. This is a new signature relative to Day 11 and the rolling 72-hour ledger, but one sample does not justify adding retries, `continue-on-error`, or workflow defenses. The correct PR action is `/retest`; #7777 code remains `NO_FIX` for this red check.
 
+Update on `2026-07-21`: `@zhzhuang-zju` issued `/ok-to-test` and `/retest`. Attempt 2 of [run 29713746444](https://github.com/karmada-io/karmada/actions/runs/29713746444/attempts/2) passed, including v1.34 E2E and both log artifact uploads. The failed attempt is therefore classified as a transient CI artifact-upload flake and no #7777 code or workflow change is warranted.
+
 ## 周报可复用摘要
 
 本周完成一项已合并 flake 修复闭环：#7732 修复 FlinkDeployment cleanup/APIEnablements 竞态并关闭 #7719。Day 11 之后的 83 个 upstream PR `CI Workflow` runs 中，严格排除代码错误后有 23 runs、29 jobs 被归为 flake。Remedy status cleanup 已跨窗口出现三条新样本，#7697 日志与源码达到 E3；最小的 `RemedyActions`-only 补偿 enqueue 和 focused regression 已发布为 #7776/#7777。Migration e2e 的独立 fork patch 则使用现有 `WaitResourceBindingFitWith` 等待其实际断言的 Applied + Healthy 状态。其余 25 jobs 仍需 RCA，不能用 timeout 或通用 retry 伪装修复。统计快照后的 #7777 v1.35 红灯不是 Remedy 回归，而是 control-plane collapse 新样本：三个独立 etcd 同时出现 6.7-9.4 秒 fdatasync stall；该样本不纳入上述统计，当前只应重跑并补 host I/O observability。

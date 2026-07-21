@@ -28,6 +28,7 @@ Use this skill for Karmada upstream PR work: branch prep, fork push CI, pre-PR d
 - Treat fork branch push CI plus code-change explanation as PR preflight. After pushing a topic branch to `origin` and before opening an upstream PR, inspect the diff, tests, CI state, deleted/extracted code, scope, and reviewer-facing rationale locally.
 - Keep internship reports, raw benchmark results, and Chinese-only notes out of upstream PRs unless explicitly intended.
 - For other contributors' PRs, do not draft comments or review suggestions until you have read the PR body, changed files, relevant docs/tests, and existing human review discussion.
+- For a PR that links or fixes an issue, read the linked issue's latest comments and timeline as part of the same review surface. Distinguish substantive issue reasoning from PR process commands such as `/retest`, `/assign`, and bot labels.
 - For every non-trivial upstream review comment, use `code-review-growth` and pass its Review Comment Comprehension Gate before asking for exact-text approval. The comment must be understandable from the diff and thread without the local internship report or chat.
 - Apply the `code-review-growth` Review Visualization Gate. For three or more actors/steps, competing causes, retries, lifecycle order, or proposal node changes within the same flow, default to a compact inline Mermaid diagram supported by a prose conclusion and action; use prose alone only when it is genuinely easier to scan. In current/proposed comparisons, keep unchanged/current nodes neutral and accent changed/new nodes without relying on color alone. If the diagram synthesizes meeting, log, experiment, or research evidence, include what the source supports, what it does not establish, and its provenance limits.
 - For `/kind flake` work, also use `code-review-growth`; its Flake Root-Cause Gate is the canonical evidence and stop policy.
@@ -361,7 +362,7 @@ If a PR is intentionally unfinished, use `[WIP]` in the title and still get user
 
 When review comments arrive:
 
-1. Read all comments first.
+1. Read all PR conversation and line-review comments first, then read the latest comments and decision-changing history on every linked issue, especially the issue named by `Fixes #...`.
 2. Classify commenters by role: human maintainer/reviewer, PR author, contributor, automation bot, CI bot, merge gate, or AI reviewer.
 3. Group actionable comments by category: correctness, tests, style, docs, generated code, scope.
 4. Prioritize human maintainer/reviewer comments; validate AI reviewer comments yourself before acting.
@@ -372,6 +373,7 @@ When review comments arrive:
 9. Reply directly and specifically after user approval when the reply is upstream-facing.
 10. If an author says a comment is hard to understand, do not repeat the same abstraction with more jargon. Restate the exact current claim, one concrete counterexample, what the signal does and does not prove, and the smallest requested change.
 11. If the clarification describes branches, actors, or event order, use a compact Mermaid diagram instead of making the prose denser.
+12. Report problem confirmation, root-cause agreement, implementation review, requested changes, approval labels, and merge readiness as separate states. A maintainer confirming the issue does not approve the patch unless they say so.
 
 Useful response format:
 

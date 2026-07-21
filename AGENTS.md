@@ -35,6 +35,8 @@ Use these files for local learning state:
 
 When writing learning reports, include process blockers and debugging evidence, not just the final successful path. Record failed commands, observed errors, likely root causes, and workarounds. For abstract Kubernetes or distributed-systems concepts, add short Markdown notes such as `> 注释：...` or `> 分析：...` near the relevant paragraph so a future reviewer can read the report without chat context.
 
+Write the majority of internship-report prose and headings in Chinese. Preserve exact code identifiers, API fields, commands, errors, upstream titles, links, and short source quotations in their original language. For API design, controller/scheduler flow, RCA, concurrency, lifecycle, or any explanation involving three or more dependent steps, put a `## 先说人话` or `## 通俗解释` section near the beginning. Explain the outcome with one concrete example before presenting source paths, field matrices, or implementation jargon. Use the order `结论 -> 具体例子 -> 运行过程 -> 技术证据 -> 未决边界 -> 下一步`, and use `.agents/skills/explain-technical-content/` for this comprehension pass.
+
 When preparing long reusable text such as upstream issue comments, PR descriptions, review comments, mentor summaries, or Mermaid explanations, write it into the appropriate report or draft file instead of only returning it in terminal/chat output. The terminal is inconvenient for copying and should not be the only handoff surface for content the user is expected to reuse.
 
 Treat upstream reviewer-facing text as an index, not as the full internship report. For ordinary PR bodies and comments, keep the problem, behavior, material risk, validation, and requested action within one screen when practical; leave file tables, complete test matrices, chronological debugging logs, dynamic CI status, and full RCA/proposal evidence in a stable linked issue, proposal, or local report. Apply the concise-first gates in `karmada-pr-management` and `karmada-issue-discussion`, and explicitly justify long-form exceptions.
@@ -65,6 +67,7 @@ At the end of each task, classify useful outcomes before stopping:
 - Temporary state that helps the next few runs goes into `PROGRESS.md`.
 - Evidence, source-reading notes, debugging process, benchmark context, and mentor-facing records go into `internship-reports/`.
 - Repeatable workflows with five or more steps go into `.agents/skills/<skill-name>/SKILL.md`.
+- Plain-language explanations and Chinese report readability use `.agents/skills/explain-technical-content/`.
 - Code review workflows and reusable missed-review lessons go into `.agents/skills/code-review-growth/`; use it when reviewing PRs or analyzing maintainer review comments.
 
 Do not store raw chat history. Keep conclusions concise, cite file paths or command evidence when useful, and replace outdated rules instead of letting contradictory notes accumulate.

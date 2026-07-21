@@ -262,3 +262,48 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Ask whether the reader must track three or more nodes, a temporal order, competing causes, or current-versus-proposed behavior. If yes, compare a 4-10 node Mermaid diagram against prose before posting.
 - Evidence to gather: Proven actors/states, arrow direction, branch conditions, synchronous versus asynchronous edges, which relationships remain hypotheses, and the source's approval/provenance boundary.
 - Test or fix cue: Use one sentence of conclusion, the smallest inline Mermaid diagram, then one sentence of requested action. For a proposal change comparison, preserve node order and labels, keep unchanged/current nodes neutral, and color changed/new nodes while repeating the distinction in text or line style. For evidence synthesis, add compact `supports` / `does not establish` / source-limit text. Keep a prose summary for accessibility; do not use a diagram for a single local fact.
+
+## Embedded REST Overrides Must Cover Every Exposed Verb
+
+- Pattern: Overriding one method on a wrapper that embeds a generic REST store does not automatically affect other promoted methods; an alternate verb can keep calling the embedded receiver and bypass wrapper-specific validation.
+- Seen in: `karmada-io/karmada#7779`, where `REST.Delete` enforced Cluster deletion protection but promoted `Store.DeleteCollection` called `Store.Delete` directly.
+- Miss symptom: Single-object tests pass and the wrapper appears to own deletion, while collection, bulk, status, proxy, or subresource operations still use an unmodified embedded implementation.
+- Review check: Enumerate the storage interfaces and routes actually exposed by the wrapper, then trace each supported verb to the concrete receiver that performs validation and mutation. Do not assume Go method calls dynamically return to an outer embedding type.
+- Evidence to gather: Generated client interfaces, REST interface assertions, API installer route registration, promoted method sets, concrete method receivers, and every single-versus-collection test path.
+- Test or fix cue: Add an explicit wrapper method for each verb that needs the invariant, pass the same validation into the generic implementation, and test through the public operation rather than only the validator helper. For non-atomic collection APIs, select one protected target so a failed request cannot leave ambiguous partial mutation.
+
+## Strict Timestamp Gates Need a Persisted-Precision Barrier
+
+- Pattern: An E2E can perform two logically ordered actions in the same persisted timestamp unit; after API serialization truncates precision, a strict `After`/`>` gate observes equal times and treats the second action as not pending.
+- Seen in: the #5070 WorkloadRebalancer A -> B -> A regression, where `metav1.Time` round-trips at RFC3339 second precision and `RescheduleRequired` requires `trigger > lastScheduledTime`.
+- Miss symptom: The workflow is correct in source order but flakes or times out because creation/update timestamps are equal after persistence; increasing the overall timeout does not change the causal ordering.
+- Review check: Read the type's JSON precision and the consumer comparison. For every strict timestamp transition, prove the producer timestamp is later after an API round trip, not merely later in process execution.
+- Evidence to gather: Persisted timestamps from both objects, serialization behavior, comparison operator, server/defaulting source of each time, and the generation/resource-version state proving the earlier transition has settled.
+- Test or fix cue: Add a bounded clock-tick barrier immediately before creating the later timestamped object, then wait for `observedGeneration == generation` or another source-backed settlement signal. Keep the barrier local to the causal transition; do not replace it with a fixed sleep or inflate unrelated timeouts.
+
+## Related Work Must Separate Shared Mechanism From Accepted Solution
+
+- Pattern: Two bugs can share a stale-cache or retry mechanism without inheriting the same accepted fix; a prior thread may end with a mitigation or caller contract rather than a merged implementation.
+- Seen in: `karmada-io/karmada#6858`, closed by documentation PR `#7632` after broad status-update proposals remained unmerged, and `#7776/#7777`, which expose a new remediation caller that can violate the documented convergence requirement.
+- Miss symptom: A review says the current patch "follows the solution from #6858" after reading only one option comment, or reads the current PR conversation while missing the linked issue's substantive maintainer reply.
+- Review check: Follow the earlier thread through closure and classify each link as same symptom, same root-cause class, mitigation, caller contract, rejected option, or accepted implementation. Keep confirmation of the bug separate from approval of the patch.
+- Evidence to gather: Root-cause comment, competing proposals and tradeoffs, closing comment/PR, merged versus abandoned changes, current caller event order, and the latest linked issue and PR replies.
+- Test or fix cue: Cite prior art with one relevance sentence that states both support and limit, then prove the current caller-specific convergence edge independently.
+
+## Numbered Event Sequences Make Race Reviews Auditable
+
+- Pattern: A race explanation is easier to verify when each numbered step contains one actor and one state transition, followed by a one-sentence invariant and an explicit next action.
+- Seen in: the maintainer confirmation on `karmada-io/karmada#7776`, which reconstructs eight steps from the Remedy status write through stale-cache equality, ignored `RemedyActions` update, and permanent non-convergence before promising a separate PR review.
+- Miss symptom: A dense paragraph mixes API writes, cache delivery, reconcile order, and event filtering, so readers cannot identify which transition is proven or whether agreement covers the problem or the solution.
+- Review check: Ask whether the sequence exposes producer, authoritative state, cache observation, consumer decision, recovery event, and terminal state; label uncertainty at the exact step.
+- Evidence to gather: Actor/function per step, state source, ordering evidence, event-filter decision, recovery path, violated invariant, and reviewer stance.
+- Test or fix cue: Write `stance -> numbered sequence -> race/invariant -> next action`; use a compact sequence diagram only when it reduces cognitive load further.
+
+## Accept Operational Tradeoffs With Frequency And Unit-Cost Bounds
+
+- Pattern: A reviewer can accept extra events, retries, or no-op reconciliations when the correctness benefit is clear and the operational cost is bounded by both low trigger frequency and low per-trigger work.
+- Seen in: `karmada-io/karmada#7777`, where `zhzhuang-zju` explicitly acknowledged that watching `RemedyActions` may enqueue additional no-op reconciliations, then accepted the solution because Remedy mutations are infrequent and remediation reconciliation is lightweight.
+- Miss symptom: A review either blocks every extra reconcile as a generic performance risk or dismisses it with "should be fine" without identifying workload frequency, fan-out, or unit cost.
+- Review check: Name the downside first, then evaluate trigger frequency, objects affected per trigger, work per reconcile, queue coalescing/rate limiting, loop termination, and the correctness or convergence benefit gained.
+- Evidence to gather: Event producers, expected mutation rate, fan-out cardinality, reconcile reads/writes, idempotence and no-op behavior, self-trigger potential, and any production scale or benchmark evidence needed for the risk level.
+- Test or fix cue: State `cost -> frequency/unit-cost bounds -> decision`. Add filtering, batching, metrics, or a scale test only when the trigger is frequent, fan-out is broad, work is heavy, or termination is uncertain.

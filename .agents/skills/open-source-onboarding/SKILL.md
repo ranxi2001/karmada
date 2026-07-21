@@ -30,8 +30,12 @@ Create a lightweight learning system around an existing repository without pollu
    - For upstream PRs, create a clean topic branch from the latest upstream default branch and include only one focused change.
 
 4. Write reports as evidence trails.
+   - Write most local report prose and headings in the user's preferred language; in this Karmada workspace, default to Chinese.
+   - For complex API, controller, scheduler, RCA, concurrency, or lifecycle analysis, use `$explain-technical-content` and put a plain-language section before the evidence inventory.
+   - Lead with one concrete example, then explain component roles and state flow before listing symbols or file paths.
    - Record failed commands, errors, root-cause hypotheses, workarounds, and final resolution.
    - Separate local measured data, upstream official facts, and engineering inference.
+   - When studying a review thread, record the decision method as well as the outcome: prior-art relevance, numbered event sequence, option tradeoffs, and the boundary between problem confirmation and solution approval.
    - Add short explanatory blockquotes for concepts that a future reviewer may not know.
 
 5. End each work loop with classification.
@@ -91,6 +95,9 @@ Adjust subsystem choices to the project. For Kubernetes projects, common tracks 
 ## Writing Standards
 
 - Prefer concise, source-grounded notes over generic summaries.
+- Optimize first for reader comprehension, then for evidence density. A technically correct report is incomplete when its conclusion requires private chat context or unexplained jargon.
+- Keep local daily reports mostly in Chinese while preserving exact technical identifiers and source quotations in English.
+- Use `结论 -> 具体例子 -> 运行过程 -> 技术证据 -> 未决边界 -> 下一步` for complex reports unless an established local template is clearer.
 - Keep `PROGRESS.md` short; do not duplicate daily reports there.
 - Do not paste secrets, private kubeconfigs, tokens, or raw chat history.
 - Do not create a new daily report too early when continuing the same investigation; extend the existing report until it becomes substantial.

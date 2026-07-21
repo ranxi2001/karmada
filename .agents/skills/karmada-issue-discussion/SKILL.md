@@ -39,6 +39,8 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
    - open questions
    - blocked, duplicate, or conflicting work
    - related issue/PR graph
+   - closing or superseding event for every prior thread used as evidence
+   - relationship of each prior thread: same symptom, same root cause, mitigation, documented contract, rejected option, or accepted implementation
 6. For every bug claim, apply the Bug Reachability Gate below before choosing a bug title, label, or definitive wording.
 7. For a flake investigation, trace producer, member/authoritative state, reflected cache/status, consumer, queue/retry, recovery event, and self-healing behavior. At `E0-E2`, record missing causal edges instead of presenting a complete RCA diagram; at `E3`, build the timestamp/code table and Mermaid sequence diagram.
 8. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
@@ -47,6 +49,12 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
 11. Run the concise-first publishing gate below before presenting exact text for approval.
 12. Include GitHub cross-links with short relevance notes.
 13. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
+
+When an issue and its fixing PR are both active, read the latest comments and timeline on both surfaces. A PR `/retest` or `/assign` is process state; a linked issue may contain the substantive problem confirmation or root-cause reasoning. Do not summarize one surface as the whole discussion.
+
+For long technical discussions, reconstruct the strongest maintainer method as well as the conclusion: note who restated the model as a question, who connected prior work, who supplied the numbered event chain, who compared options and costs, and who separated problem confirmation from solution approval. Store this learning locally; keep upstream replies focused on the current decision.
+
+For a very long prior thread, map the timeline first and then open the root-cause comment, decision-changing option comparisons, maintainer direction, and closing or superseding event. Completeness means covering the decisions and outcome, not replaying every acknowledgement or repeated position.
 
 ## Production Relevance Gate
 
@@ -142,6 +150,12 @@ https://api.github.com/repos/karmada-io/karmada/pulls/<number>/commits
 ## Chinese Summary Format
 
 ```md
+## 先说人话
+
+- 一句话结论：
+- 具体例子：
+- 现在能做什么 / 为什么还要等：
+
 ## Issue / PR 概览
 
 - 编号：
@@ -155,6 +169,10 @@ https://api.github.com/repos/karmada-io/karmada/pulls/<number>/commits
 ## 讨论脉络
 
 1. ...
+
+## 历史先例与实际关系
+
+- #...：同一现象 / 同一根因 / 缓解措施 / 已接受实现 / 被拒方案；能证明什么，不能证明什么。
 
 ## 参与者与评论权重
 
@@ -184,6 +202,8 @@ https://api.github.com/repos/karmada-io/karmada/pulls/<number>/commits
 
 1. ...
 ```
+
+For complex API, scheduler, controller, lifecycle, or RCA discussions, apply `$explain-technical-content` before finalizing the Chinese summary. Keep most local prose and headings in Chinese, introduce component roles before identifiers, and make the opening understandable without the rest of the investigation. Preserve exact English only for code, API names, errors, links, and short source quotations.
 
 ## English Comment Draft Format
 
@@ -263,11 +283,13 @@ sequenceDiagram
 
 - Use `#123` for same-repo references.
 - Explain why each link is relevant; do not dump links.
+- Read each material prior thread through closure or supersession before treating it as precedent.
 - State relationship clearly:
   - "related to #123"
   - "appears to be covered by #123"
   - "may be a follow-up to #123"
   - "blocked by the direction in #123"
+- Do not write "the solution in #123" when #123 only discussed that option, merged a narrower mitigation, or closed with a caller contract.
 
 ## Guardrails
 

@@ -41,6 +41,9 @@
 - [Day 27：可通过 PR 消除的 CI Flake 候选与 #7697 E2E RCA](day27-pr7697-e2e-flake-root-cause-analysis.md)（[v1.35 Mermaid](day27-pr7697-e2e-v135-etcd-io-stall-rca.mmd) / [PNG](day27-pr7697-e2e-v135-etcd-io-stall-rca.png)；[v1.36 Mermaid](day27-pr7697-e2e-v136-remedy-cache-race-rca.mmd) / [PNG](day27-pr7697-e2e-v136-remedy-cache-race-rca.png)；[migration Mermaid](day27-migration-resourcebinding-health-sync.mmd) / [PNG](day27-migration-resourcebinding-health-sync.png)）
 - [Day 28：PR #6863 Scheduler Health Review](day28-pr6863-scheduler-health-review.md)（[Mermaid](day28-pr6863-late-health-capacity-flow.mmd) / [PNG](day28-pr6863-late-health-capacity-flow.png)）
 - [Day 29：Issue #5070 与 PR #7662 的 Fresh / Full 语义调研](day29-issue5070-pr7662-fresh-rescheduling-research.md)（[Mermaid](day29-issue5070-pr7662-full-semantics.mmd) / [PNG](day29-issue5070-pr7662-full-semantics.png)）
+- [Day 30：PR #7779 Cluster 删除保护方案与代码 Review](day30-pr7779-cluster-deletion-protection-review.md)（[已发布评论正文](day30-pr7779-review-comment.md) / [Mermaid](day30-pr7779-deletecollection-bypass.mmd) / [PNG](day30-pr7779-deletecollection-bypass.png)）
+- [Day 30：PR #7662 维护者提出的 API 收敛方向](day30-pr7662-maintainer-api-direction.md)
+- [Day 31：WorkloadRebalancer API 设计与分阶段开发方案](day31-workload-rebalancer-api-development-plan.md)（[Mermaid](day31-workload-rebalancer-api-development-plan.mmd) / [PNG](day31-workload-rebalancer-api-development-plan.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
@@ -48,6 +51,7 @@
 
 每篇日报优先回答这些问题：
 
+- `## 先说人话`：复杂 API、调度、controller、RCA、并发或生命周期分析，先用一个具体例子解释结论和当前能否行动，再进入字段与源码证据。
 - 今天的目标是什么？
 - 读了哪些官方文档、源码文件、issue 或 PR？
 - 跑了哪些命令？成功和失败分别是什么？
@@ -55,6 +59,8 @@
 - 哪些结论有源码或测试证据？
 - 哪些只是推测，需要后续验证？
 - 下一步最小行动是什么？
+
+日报正文和标题默认大部分使用中文；代码标识符、API 字段、命令、错误、上游标题、链接和短引用保留原文。通俗解释必须保持证据强度，不能把维护者建议写成共识、把待确认问题写成硬性要求，或把可能风险写成已经发生的故障。
 
 遇到失败时不要只写“失败了”。至少记录命令、错误现象、初步原因、尝试过的方案、临时绕过方式和后续需要。
 

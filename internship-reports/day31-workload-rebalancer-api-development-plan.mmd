@@ -1,0 +1,41 @@
+flowchart TB
+    subgraph CURRENT["Current behavior"]
+        direction TB
+        C_WR["WorkloadRebalancer"]:::current -->|writes| C_LEGACY["Legacy timestamp<br/>rescheduleTriggeredAt"]:::current
+        C_LEGACY --> C_CURSOR["Reuse observed<br/>affinity-group cursor"]:::risk
+        C_CURSOR --> C_FRESH["Fresh replica assignment<br/>inside current group"]:::current
+        C_FRESH --> C_PATCH["Patch final<br/>spec.clusters"]:::current
+    end
+
+    subgraph TARGET["Maintainer-aligned target"]
+        direction TB
+        P_WR["WorkloadRebalancer<br/>optional behavior"]:::unchanged -->|new controller request| P_TYPED["Typed Binding request<br/>triggeredAt + behavior"]:::phase2
+        P_LEGACY["Deprecated timestamp<br/>still accepted"]:::unchanged --> P_LATEST{"Choose latest request<br/>new wins legacy ties"}:::phase2
+        P_TYPED --> P_LATEST
+
+        P_LATEST -->|Full: legacy, nil, or false| P_RESET["PR 1: restart affinity<br/>evaluation at term 0"]:::phase1
+        P_RESET --> P_FRESH["Fresh replica assignment"]:::phase1
+
+        P_LATEST -->|PreserveAvailableReplicas=true| P_STATUS["PR 2: read Deployment<br/>availableReplicas snapshot"]:::phase2
+        P_STATUS --> P_GUARD{"Status and policy<br/>contract satisfied?"}:::guard
+        P_GUARD -->|yes| P_BASE["Pin available replicas<br/>as an in-memory baseline"]:::phase2
+        P_BASE --> P_DELTA["Allocate only the<br/>unavailable replica delta"]:::phase2
+        P_GUARD -->|no| P_FAIL["Fail closed<br/>do not change placement"]:::failure
+
+        P_FRESH --> P_FINAL["Patch final<br/>spec.clusters once"]:::unchanged
+        P_DELTA --> P_FINAL
+    end
+
+    CURRENT ~~~ TARGET
+
+    OUT["Out of scope<br/>SafeMigration, automatic waterline,<br/>cancel, rollback, progress"]:::out
+    TARGET -.-> OUT
+
+    classDef current fill:#f5f5f5,stroke:#666666,color:#262626;
+    classDef unchanged fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef phase1 fill:#d5e8d4,stroke:#38761d,color:#14532d,stroke-width:2px;
+    classDef phase2 fill:#d9ead3,stroke:#0f766e,color:#134e4a,stroke-width:2px;
+    classDef guard fill:#fff2cc,stroke:#d6b656,color:#713f12,stroke-width:2px;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-width:2px;
+    classDef failure fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-dasharray:6 4;
+    classDef out fill:#ffffff,stroke:#777777,color:#404040,stroke-dasharray:5 5;
