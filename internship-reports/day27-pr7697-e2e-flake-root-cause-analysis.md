@@ -444,9 +444,11 @@ Classification: high-confidence CI infrastructure flake. The terminal causal edg
 
 Update on `2026-07-21`: `@zhzhuang-zju` issued `/ok-to-test` and `/retest`. Attempt 2 of [run 29713746444](https://github.com/karmada-io/karmada/actions/runs/29713746444/attempts/2) passed, including v1.34 E2E and both log artifact uploads. The failed attempt is therefore classified as a transient CI artifact-upload flake and no #7777 code or workflow change is warranted.
 
+Merge follow-up: #7777 received formal `/lgtm` and `/approve`, merged to `master` as [`eb2e7c75ff82`](https://github.com/karmada-io/karmada/commit/eb2e7c75ff828afbb34f625a105a24f5a973c1cc) on `2026-07-21T12:22:20Z`, and automatically closed #7776 as completed.
+
 ## 周报可复用摘要
 
-本周完成一项已合并 flake 修复闭环：#7732 修复 FlinkDeployment cleanup/APIEnablements 竞态并关闭 #7719。Day 11 之后的 83 个 upstream PR `CI Workflow` runs 中，严格排除代码错误后有 23 runs、29 jobs 被归为 flake。Remedy status cleanup 已跨窗口出现三条新样本，#7697 日志与源码达到 E3；最小的 `RemedyActions`-only 补偿 enqueue 和 focused regression 已发布为 #7776/#7777。Migration e2e 的独立 fork patch 则使用现有 `WaitResourceBindingFitWith` 等待其实际断言的 Applied + Healthy 状态。其余 25 jobs 仍需 RCA，不能用 timeout 或通用 retry 伪装修复。统计快照后的 #7777 v1.35 红灯不是 Remedy 回归，而是 control-plane collapse 新样本：三个独立 etcd 同时出现 6.7-9.4 秒 fdatasync stall；该样本不纳入上述统计，当前只应重跑并补 host I/O observability。
+本周完成两项已合并 flake 修复闭环：#7732 修复 FlinkDeployment cleanup/APIEnablements 竞态并关闭 #7719；#7777 修复 Remedy cleanup 的 stale-cache/event-filter 竞态并关闭 #7776。Day 11 之后的 83 个 upstream PR `CI Workflow` runs 中，严格排除代码错误后有 23 runs、29 jobs 被归为 flake。Remedy status cleanup 跨窗口出现三条新样本，#7697 日志与源码达到 E3；最小的 `RemedyActions`-only 补偿 enqueue 和 focused regression 已合并为 `eb2e7c75ff82`。Migration e2e 的独立 fork patch 则使用现有 `WaitResourceBindingFitWith` 等待其实际断言的 Applied + Healthy 状态。其余 25 jobs 仍需 RCA，不能用 timeout 或通用 retry 伪装修复。统计快照后的 #7777 v1.35 红灯不是 Remedy 回归，而是 control-plane collapse 新样本：三个独立 etcd 同时出现 6.7-9.4 秒 fdatasync stall；该样本不纳入上述统计，当前只应重跑并补 host I/O observability。
 
 `2026-07-20` 的独立滚动 72 小时复核又发现 4 个 E2E failed jobs：#7782、#7777、#7723 为 E1 高置信 flake，且共同强化 control-plane / etcd stall 的跨 PR 重复性；#7779 为单次 Docker teardown E0 候选。该窗口没有新增可直接开解决性 PR 的 flake；#7782 同时暴露一个可独立处理但不会消除 timeout 的 KarmadactlBuilder buffer data race。
 

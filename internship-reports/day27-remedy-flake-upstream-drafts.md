@@ -7,10 +7,11 @@
 - PR head: `ranxi2001:fix/remedy-actions-reconcile`
 - Initial PR commit: `3861906f2c3c51ec57eca114b71bff883d135fa3`
 - Current squashed head: `dcd150b1739d448790b2e1c6d629c2273f93e619`
+- Merge commit: [`eb2e7c75ff828afbb34f625a105a24f5a973c1cc`](https://github.com/karmada-io/karmada/commit/eb2e7c75ff828afbb34f625a105a24f5a973c1cc)
 - Issue: [karmada-io/karmada#7776](https://github.com/karmada-io/karmada/issues/7776)
 - Assignment: [`/assign` comment](https://github.com/karmada-io/karmada/issues/7776#issuecomment-5003434878), applied to `ranxi2001`
-- PR: [karmada-io/karmada#7777](https://github.com/karmada-io/karmada/pull/7777), open and non-draft
-- Posting state: published and API-verified
+- PR: [karmada-io/karmada#7777](https://github.com/karmada-io/karmada/pull/7777), merged
+- Posting state: merged; issue closed as completed
 
 ## Completed Publishing Sequence
 
@@ -155,8 +156,8 @@ karmada-controller-manager: Fixed an issue that Remedy actions might remain stal
 
 | 对象 | 当前状态 | 决策含义 |
 | --- | --- | --- |
-| [Issue #7776](https://github.com/karmada-io/karmada/issues/7776) | open；assignee `@ranxi2001`；`kind/bug`、`kind/flake` | `@zhzhuang-zju` 已基本确认这是现实问题，并确认其根因与 #6858 非常相似 |
-| [PR #7777](https://github.com/karmada-io/karmada/pull/7777) | open、non-draft；head `dcd150b17`；assignee `@zhzhuang-zju`；17 个 check runs 全部成功 | 维护者已明确接受当前方案方向，但 review state 仍为 `COMMENTED`，尚无 `lgtm` 或 `approved`；Tide 只等待后两项标签 |
+| [Issue #7776](https://github.com/karmada-io/karmada/issues/7776) | closed as completed；assignee `@ranxi2001`；`kind/bug`、`kind/flake` | PR merge 后由 `karmada-bot` 自动关闭 |
+| [PR #7777](https://github.com/karmada-io/karmada/pull/7777) | merged；head `dcd150b17`；merge `eb2e7c75ff82`；`lgtm`、`approved` | 维护者接受方案并完成正式门禁，Tide 合并到 `master` |
 | [CI run 29713746444 attempt 2](https://github.com/karmada-io/karmada/actions/runs/29713746444/attempts/2) | success | 原 v1.34 post-test artifact upload timeout 已通过重跑消失；这只清除了 CI 门禁，不替代代码 review |
 
 维护者在 [#7776 的回复](https://github.com/karmada-io/karmada/issues/7776#issuecomment-5033508979) 中没有只说“能复现”，而是按八个步骤重建了完整竞态：先写入 `TrafficControl`，manager cache 尚未观察到写入时删除 Remedy，delete event 触发 reconcile，`UpdateStatus` 从旧 cache 读到空 actions 并因相等跳过 API 写，随后较早的 `TrafficControl` 更新到达 informer，却又被只比较 `Conditions` 的 handler 忽略，最终没有后续 reconcile 清理 API 中的旧状态。
@@ -211,3 +212,12 @@ karmada-controller-manager: Fixed an issue where `Cluster.status.remedyActions` 
 ```
 
 REST API 回读确认新句子恰好出现一次、旧句子已不存在；PR 仍为 open、non-draft，base/head 与 commit `dcd150b1739d448790b2e1c6d629c2273f93e619` 均未改变。没有修改代码、推 PR branch 或发布额外回复。`Others LGTM~` 说明维护者没有其他内容意见，但它仍不是正式 `/lgtm` 或 `/approve` 命令；Tide 继续等待这两个标签。
+
+## 2026-07-21 Merge Completion
+
+- `@zhzhuang-zju` 于 `2026-07-21T12:21:36Z` 发布正式 [`/lgtm` 和 `/approve`](https://github.com/karmada-io/karmada/pull/7777#issuecomment-5033918759)，PR 随后获得 `lgtm`、`approved` 标签，head commit 的 Tide status 转为 success。
+- `karmada-bot` 于 `2026-07-21T12:22:20Z` 将 PR 合并为 [`eb2e7c75ff828afbb34f625a105a24f5a973c1cc`](https://github.com/karmada-io/karmada/commit/eb2e7c75ff828afbb34f625a105a24f5a973c1cc)。该 merge commit 的两个 parent 分别是 merge 前 `master@4926be09bc35` 和 PR head `dcd150b1739d`，API 回读时它也是 upstream `master` HEAD。
+- Issue #7776 于 `2026-07-21T12:22:21Z` 由 `karmada-bot` 自动关闭，`state_reason=completed`；这证明 `Fixes #7776` 的 closing contract 已实际生效。
+- Merge-push SHA 触发 9 个 workflows。归档快照时 `FOSSA` 与 `latest chart to DockerHub` 已成功，CI Workflow、Chart、CLI、Operator、image-scanning 和两个 image publish workflows 仍在运行；它们是 merge 后默认分支验证，不改变 PR 已完成合并的事实。
+
+最终结论：#7776/#7777 已完成从真实 flake 样本、E3 stale-cache/event-filter RCA、caller-specific E4 regression、fork/upstream CI、维护者 tradeoff review、release-note 收敛到正式批准和合并的完整闭环。后续若相同 E2E 再失败，应先核对是否仍为相同 `RemedyActions` recovery edge；不能因为历史 test name 相同就自动重开本问题。
