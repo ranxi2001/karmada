@@ -78,7 +78,7 @@ This workspace currently has `origin` configured as the personal fork: `https://
 
 Keep `intern` for internship notes and learning assets. For upstream-facing changes, create a clean topic branch from the latest upstream `master`, include one focused change, run the relevant verification commands, and keep internship records out of the PR branch. Before opening an upstream PR, issue, review comment, maintainer mention, or community-facing proposal, get explicit user confirmation on the exact target and English text.
 
-Do not create PRs against the personal fork just to run CI. Karmada's `.github/workflows/ci.yml` already runs on `push` to fork branches, except `dependabot/**`, and on `pull_request`. For pre-upstream validation, push the topic or validation branch to `origin` and watch the commit SHA Actions/checks directly. If a push-triggered fork CI failure differs from upstream PR CI, classify it as code issue, fork environment difference, or CI flake before changing code.
+Do not create PRs against the personal fork just to run CI. Push the topic branch to `origin` because it is the upstream PR head, but do not wait for, report, or cite fork push CI by default; the official upstream PR CI is the authoritative validation surface and runs when the PR is opened. Inspect fork workflows only when the user explicitly asks or when diagnosing an already observed fork-specific failure.
 
 ## Security and Configuration
 

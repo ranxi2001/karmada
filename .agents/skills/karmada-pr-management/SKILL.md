@@ -3,8 +3,8 @@ name: karmada-pr-management
 description: >-
   Use when preparing, validating, submitting, updating, or reviewing Karmada
   upstream pull requests: enforce fork/upstream branch hygiene for
-  karmada-io/karmada, run fork push CI before upstream PRs, inspect fork branch
-  diffs as PR preflight, prepare file-level code-change explanations including
+  karmada-io/karmada, inspect topic-branch diffs and local tests as PR preflight,
+  prepare file-level code-change explanations including
   deleted or extracted code, draft concise reviewer-facing PR bodies, fill the
   official PR template, map files to OWNERS, choose make test/verify/update
   commands, disclose AI assistance, track review state, read other
@@ -14,7 +14,7 @@ description: >-
 
 # Karmada PR Management Skill
 
-Use this skill for Karmada upstream PR work: branch prep, fork push CI, pre-PR diff explanation, template filling, issue linking, test selection, OWNERS mapping, review tracking, and update strategy.
+Use this skill for Karmada upstream PR work: branch prep, local preflight, upstream PR CI, diff explanation, template filling, issue linking, test selection, OWNERS mapping, review tracking, and update strategy.
 
 ## Required Context
 
@@ -24,8 +24,8 @@ Use this skill for Karmada upstream PR work: branch prep, fork push CI, pre-PR d
 - Keep `intern` for internship reports, Chinese notes, local benchmark records, and local skills.
 - Do not open an upstream PR, draft PR, WIP PR, issue, upstream review, or upstream comment without explicit user confirmation immediately before posting.
 - Prepare the branch, diff, tests, and exact title/body/comment locally first, then ask for approval.
-- Prefer fork-only validation before involving `karmada-io/karmada`. Karmada's upstream `.github/workflows/ci.yml` already runs on branch `push` in fork repositories, except `dependabot/**`, so push a topic or validation branch to `origin` and watch the commit SHA Actions/checks. Do not create PRs against the personal fork just to run CI.
-- Treat fork branch push CI plus code-change explanation as PR preflight. After pushing a topic branch to `origin` and before opening an upstream PR, inspect the diff, tests, CI state, deleted/extracted code, scope, and reviewer-facing rationale locally.
+- Push the topic branch to `origin` because it is the head of the upstream PR, but do not wait for, report, or cite fork push CI by default. The upstream PR CI is authoritative. Inspect fork workflows only when the user explicitly asks or when diagnosing an already observed fork-specific failure.
+- Treat local tests, branch diff, and code-change explanation as PR preflight. Before opening an upstream PR, inspect deleted/extracted code, scope, compatibility, and reviewer-facing rationale locally.
 - Keep internship reports, raw benchmark results, and Chinese-only notes out of upstream PRs unless explicitly intended.
 - For other contributors' PRs, do not draft comments or review suggestions until you have read the PR body, changed files, relevant docs/tests, and existing human review discussion.
 - For a PR that links or fixes an issue, read the linked issue's latest comments and timeline as part of the same review surface. Distinguish substantive issue reasoning from PR process commands such as `/retest`, `/assign`, and bot labels.
@@ -55,7 +55,7 @@ Approval request must include:
 - For a non-trivial review comment, confirmation that the exact text names the current claim, gives one concrete counterexample or failing scenario, explains the impact or evidence gap in plain language, and requests a specific change.
 - When the visualization gate triggers, the exact Mermaid source plus local render/syntax status; when prose is retained, the reason it is clearer than a diagram.
 
-If the goal is only to run CI, push the branch to the personal fork and inspect the push-triggered GitHub Actions checks. Do not open a self-fork PR.
+Do not open a self-fork PR. For an approved upstream change, open the official PR and use its pull-request CI as the validation surface.
 
 ## Branch Workflow
 
@@ -103,37 +103,28 @@ git push origin <branch>
 
 Do not push to `upstream`.
 
-### Fork Push CI Validation
+### CI Validation
 
-Karmada differs from repositories where CI is `pull_request`-only: `.github/workflows/ci.yml` explicitly runs on every `push` to upstream/fork repositories except `dependabot/**`. Use this for pre-upstream confidence.
+Push the topic branch to `origin` so it can be used as the head of the upstream PR. Do not make fork push workflows a default prerequisite, status report, or PR-body evidence. After the user approves and the upstream PR is opened, monitor the PR's own CI.
 
-Recommended validation flow:
+Recommended preparation flow:
 
 ```bash
 git fetch upstream master
 git switch -c <kind>/<short-topic> upstream/master
 # edit and commit the focused change
 git push origin <kind>/<short-topic>:<kind>/<short-topic>
-# inspect GitHub Actions for the pushed commit SHA in ranxi2001/karmada
-# inspect the local diff while CI runs
 git diff --stat upstream/master...HEAD
 git diff --name-status upstream/master...HEAD
 ```
 
-If you need a separate validation branch, use `test/<topic>` or `ci/<topic>` and push it directly:
-
-```bash
-git switch -c test/<topic>-validation
-git push origin test/<topic>-validation:test/<topic>-validation
-```
-
-Do not create a PR against `ranxi2001/karmada` merely to run CI. Push CI success is not enough to open an upstream PR: first prepare the pre-PR diff explanation, including why each changed file exists and whether deleted code was removed, moved, or replaced. If push CI fails, inspect job logs and uploaded artifacts, then classify the failure as a code issue, fork environment difference, missing tag/history difference, CI flake, or upstream-only gate before changing code.
+If the user explicitly requests a fork workflow check, use `karmada-push-ci-check` and keep its result out of the PR body unless the user asks otherwise. Do not create a PR against `ranxi2001/karmada` merely to run CI.
 
 Use `git commit -s` by default for upstream-facing commits. If a commit is missing `Signed-off-by` and the branch is only yours, repair it with `git commit --amend --no-edit --signoff` or `git rebase HEAD~N --signoff`, then update with `git push --force-with-lease`.
 
 ## Pre-PR Diff Explanation
 
-Use this workflow after a topic branch is pushed to `origin` and fork CI is running or complete, before opening an upstream PR. This is the local reviewer-readiness step: explain the implementation before asking upstream reviewers to spend attention on it.
+Use this workflow after a topic branch is pushed to `origin` and before opening an upstream PR. This is the local reviewer-readiness step: explain the implementation before asking upstream reviewers to spend attention on it.
 
 Confirm branch base and commit identity:
 
@@ -159,11 +150,11 @@ Prepare a local explanation in the internship report or review notes before upst
 - File-by-file changes: why each changed file was touched and how it maps to the design.
 - Deleted code: state whether it was truly removed, extracted into a new abstraction, renamed, or replaced by existing behavior.
 - Behavior compatibility: default path, upgrade impact, feature gate or config impact, and failure modes.
-- Tests and evidence: local commands, fork push CI status, commit SHA, and any skipped or blocked checks.
+- Tests and evidence: local commands, behavior-specific regression evidence, and any local blockers.
 - Reviewer notes: risky areas, open questions, and the exact parts where maintainer feedback is needed.
 - Flake evidence when applicable: first hard failure, an `E3` timestamp/code timeline, Mermaid sequence diagram with evidence for every causal arrow, why recovery does not self-heal, the exact invariant introduced, and `E4` counterfactual validation or its explicit limitation.
 
-If this explanation exposes broad unrelated changes, split the branch or reduce scope before opening the PR. If fork CI fails, analyze the failure first and avoid opening a PR only to ask maintainers to debug basic validation. Do not copy this file-level matrix, complete test inventory, or investigation timeline into the PR body; compress it through the reviewer-attention gate below.
+If this explanation exposes broad unrelated changes, split the branch or reduce scope before opening the PR. Do not copy this file-level matrix, complete test inventory, or investigation timeline into the PR body; compress it through the reviewer-attention gate below.
 
 ## PR Planning Checklist
 
@@ -306,7 +297,7 @@ Before requesting approval for a PR body:
 1. Start from `.github/PULL_REQUEST_TEMPLATE.md` and keep every required field.
 2. State the problem and resulting behavior in one short paragraph.
 3. Add no more than three reviewer notes unless a material compatibility, safety, or residual-risk boundary requires another.
-4. Summarize validation in one line or compact bullet. Prefer the main command and exact-SHA result over a complete case list.
+4. Summarize validation in one line or compact bullet. Prefer the main local command and behavior-specific evidence over a complete case list; do not cite fork CI by default.
 5. Keep AI disclosure to one sentence and write a concrete release note or `NONE`.
 6. Measure reviewer-visible text:
 
@@ -344,7 +335,7 @@ Fixes #<issue>
 **Special notes for your reviewer**:
 
 - Scope/compatibility: <only when material>
-- Tests: `<most relevant command>` passed; <exact-SHA CI or focused evidence when useful>.
+- Tests: `<most relevant local command>` passed; <focused behavior evidence when useful>.
 - AI assistance: Codex helped inspect the change and draft tests/text; I reviewed the code and validation results.
 
 **Does this PR introduce a user-facing change?**:
@@ -356,7 +347,7 @@ NONE
 
 For partial work use `Part of #<issue>` or `Refs #<issue>` instead of `Fixes #<issue>`.
 
-If a PR is intentionally unfinished, use `[WIP]` in the title and still get user approval before creation. Prefer fork branch push CI for WIP validation unless upstream maintainers explicitly need to see the work.
+If a PR is intentionally unfinished, use `[WIP]` in the title and still get user approval before creation.
 
 ## Review Management
 
@@ -402,9 +393,9 @@ python3 .agents/skills/karmada-issue-discussion/scripts/thread_brief.py <pr-numb
 
 - Do not create upstream PRs, draft PRs, WIP PRs, issues, or comments without immediate user approval of the exact title/body/comment.
 - Do not use upstream PRs as disposable CI runners.
-- Do not create self-fork PRs just to run CI; use Karmada's existing push-triggered fork CI.
-- Do not open an upstream PR before fork push CI state and pre-PR diff explanation are prepared locally.
-- Do not treat fork push CI success as sufficient PR readiness without explaining file-level changes, deleted code, tests, and residual risk.
+- Do not create self-fork PRs just to run CI.
+- Do not wait for, report, or cite fork push CI unless the user explicitly requests it or a fork-specific failure needs diagnosis.
+- Do not open an upstream PR before the local pre-PR diff explanation, focused tests, and exact posting approval are prepared.
 - Do not open or endorse a flake fix whose rationale stops at rerun success, timing correlation, or a generic wait. Require the `code-review-growth` `E3` causal timeline and an invariant-specific patch.
 - Do not ignore the official PR template.
 - Do not comment on or mention maintainers in read-only PR analysis unless the user approves and upstream input is genuinely needed.

@@ -1,13 +1,13 @@
 ---
 name: karmada-push-ci-check
-description: Check GitHub Actions push CI for Karmada fork branches and commits, especially ranxi2001/karmada feature branches after pushing or force-pushing validation commits. Use this skill when Codex needs to verify fork push CI, summarize workflow status, poll Actions runs, or inspect failed jobs without opening an upstream PR.
+description: Check GitHub Actions push CI for Karmada fork branches and commits when the user explicitly asks for a fork CI check or an observed fork-specific failure needs diagnosis. Use to verify a requested fork run, summarize workflow status, poll Actions runs, or inspect failed jobs; do not use as a default upstream PR gate or PR-body evidence.
 ---
 
 # Karmada Push CI Check
 
 ## Overview
 
-Use this skill to check GitHub Actions runs on a Karmada fork branch from the CLI. It is intended for the local fork workflow: sync from `upstream/master`, push a feature branch to the fork, then check push-triggered Actions before opening or updating an upstream PR.
+Use this skill to check GitHub Actions runs on a Karmada fork branch from the CLI only when the user explicitly requests that check or a known fork-specific failure needs diagnosis. Do not invoke it as a default prerequisite for opening or updating an upstream PR, and do not cite its result in a PR body unless the user asks.
 
 ## Quick Start
 

@@ -43,7 +43,7 @@
 - [Day 29：Issue #5070 与 PR #7662 的 Fresh / Full 语义调研](day29-issue5070-pr7662-fresh-rescheduling-research.md)（[Mermaid](day29-issue5070-pr7662-full-semantics.mmd) / [PNG](day29-issue5070-pr7662-full-semantics.png)）
 - [Day 30：PR #7779 Cluster 删除保护方案与代码 Review](day30-pr7779-cluster-deletion-protection-review.md)（[已发布评论正文](day30-pr7779-review-comment.md) / [Mermaid](day30-pr7779-deletecollection-bypass.mmd) / [PNG](day30-pr7779-deletecollection-bypass.png)）
 - [Day 30：PR #7662 维护者提出的 API 收敛方向](day30-pr7662-maintainer-api-direction.md)
-- [Day 31：WorkloadRebalancer API 设计与分阶段开发方案](day31-workload-rebalancer-api-development-plan.md)（[Mermaid](day31-workload-rebalancer-api-development-plan.mmd) / [PNG](day31-workload-rebalancer-api-development-plan.png)）
+- [Day 31：WorkloadRebalancer API 设计、分阶段开发与 #5070 第一阶段实现](day31-workload-rebalancer-api-development-plan.md)（[Mermaid](day31-workload-rebalancer-api-development-plan.mmd) / [PNG](day31-workload-rebalancer-api-development-plan.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

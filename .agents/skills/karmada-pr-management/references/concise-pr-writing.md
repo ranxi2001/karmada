@@ -29,7 +29,7 @@ These are review triggers, not hard correctness limits. Do not delete evidence r
 1. One sentence stating the user or maintainer problem and the resulting behavior.
 2. The exact `Fixes #N`, `Part of #N`, or `Refs #N` relationship.
 3. At most three reviewer notes covering only material scope, compatibility, safety, or residual risk.
-4. One compact validation line with the most relevant commands/results and exact-SHA CI only when useful.
+4. One compact validation line with the most relevant local commands and behavior-specific results. Do not cite fork CI unless the user explicitly requests it.
 5. One sentence disclosing AI assistance and human validation.
 6. A concrete release note, or `NONE`.
 
@@ -57,7 +57,7 @@ Before requesting approval, ask:
 - Can a reviewer state the problem, behavior change, risk, and validation after one screen?
 - Does each paragraph change a review decision?
 - Is any detail duplicated in the issue, proposal, diff, or local report?
-- Are test and CI claims tied to a command or exact SHA rather than a transient status?
+- Are test claims tied to a concrete local command or behavior-specific result rather than a transient CI status?
 - Would the body still be accurate next week?
 
 Measure visible size with:
