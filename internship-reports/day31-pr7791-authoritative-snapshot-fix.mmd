@@ -1,0 +1,39 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+  flowchart:
+    curve: basis
+    htmlLabels: true
+---
+flowchart TB
+    subgraph CURRENT["Initial six-line version: informer order can lose failback"]
+        direction LR
+        C_RESTORE["Restore member1<br/>in Cluster API"]:::current --> C_REQUEST["WorkloadRebalancer<br/>updates Binding first"]:::current
+        C_REQUEST --> C_STALE["Scheduler reads stale<br/>Cluster informer cache"]:::risk
+        C_STALE --> C_FALLBACK["group1 FitError<br/>group2 succeeds"]:::risk
+        C_FALLBACK --> C_CONSUMED["LastScheduledTime advances<br/>request consumed"]:::risk
+        C_CONSUMED --> C_FILTERED["Delayed member1 event<br/>filtered by group2 cursor"]:::risk
+        C_FILTERED --> C_STUCK["Binding remains<br/>on member2"]:::risk
+    end
+
+    subgraph PROPOSED["Current PR #7791: request-scoped authoritative snapshot"]
+        direction LR
+        P_RESTORE["Restore member1<br/>in Cluster API"]:::unchanged --> P_REQUEST["WorkloadRebalancer<br/>updates Binding first"]:::unchanged
+        P_REQUEST --> P_LIST["Scheduler lists Clusters<br/>Most Recent read"]:::changed
+        P_LIST -->|success| P_SNAPSHOT["Build one consistent snapshot<br/>for all affinity terms"]:::new
+        P_SNAPSHOT --> P_GROUP1["group1 sees restored member1<br/>and succeeds"]:::new
+        P_GROUP1 --> P_DONE["Advance LastScheduledTime<br/>Binding moves to member1"]:::new
+        P_LIST -.->|API error| P_RETRY["Return error<br/>request remains pending"]:::open
+    end
+
+    CURRENT ~~~ PROPOSED
+
+    classDef current fill:#f5f5f5,stroke:#666666,color:#262626;
+    classDef unchanged fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef changed fill:#d5e8d4,stroke:#82b366,color:#14532d,stroke-width:2px;
+    classDef new fill:#d9ead3,stroke:#38761d,color:#14532d,stroke-width:2px;
+    classDef open fill:#fff2cc,stroke:#d6b656,color:#713f12;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-dasharray:6 4;

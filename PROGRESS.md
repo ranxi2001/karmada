@@ -6,10 +6,11 @@
 
 阶段目标：在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。
 
-当前主线：围绕 Karmada upstream 真实贡献建立稳定产出能力。WorkloadRebalancer 不再等待 #7662 作者先改稿，按 maintainer 方向分阶段实现：先推动无 API 变更的 [PR #7791](https://github.com/karmada-io/karmada/pull/7791) 完成已认领 #5070 的 Full affinity cursor reset，再用独立端到端 PR 交付 typed request + 第一版 Deployment preserve-available；#7621 的 SafeMigration/自动水位不混入。#7697 证书轮换继续作为交付维护线直到 merge，不扩大 scope。
+当前主线：围绕 Karmada upstream 真实贡献建立稳定产出能力。WorkloadRebalancer 不再等待 #7662 作者先改稿，按 maintainer 方向分阶段实现：先推动无 API 变更的 [PR #7791](https://github.com/karmada-io/karmada/pull/7791) 完成已认领 #5070 的 Full affinity cursor reset 和 request-scoped current Cluster snapshot，再用独立端到端 PR 交付 typed request + 第一版 Deployment preserve-available；#7621 的 SafeMigration/自动水位不混入。#7697 证书轮换继续作为交付维护线直到 merge，不扩大 scope。
 
 ## Last Run
 
+- 2026-07-22：独立 review PR [#7791](https://github.com/karmada-io/karmada/pull/7791) 的 6 行初版 `1117aa6e20`，确定 E2E cache barrier 掩盖可达的跨 informer one-shot request 丢失；修复采用 pending request 的 Most Recent Cluster List 和 request-scoped snapshot，normal path 不 List，List error 保持请求 pending。用户确认后已 amend/force-with-lease push 单个 signed-off current head `8992dabd62`，8 文件 `+544/-32`，DCO 与本地 full/race/因果验证通过；未发过期 review 评论。Day 31 报告及主 `.mmd/.png` 已更新为修复前、6 行初版、当前 PR、后续 typed API 四阶段对照，细节图和 TODO 同步；下一步等待上游 CI 或真人 review。
 - 2026-07-22：定位 upstream PR [#7791](https://github.com/karmada-io/karmada/pull/7791) 首轮 CI 唯一红灯：v1.34 [job 88817778041](https://github.com/karmada-io/karmada/actions/runs/29886071749/job/88817778041) 在已有 223 specs 通过后收到 runner shutdown signal；当时既有 CronFederatedHPA 用例仍停在设计内的 90 秒等待，尚未执行断言。PR 新增 A -> B -> A spec 已在同一 v1.34 job 提前通过，v1.35/v1.36 也通过；没有产品断言、API/etcd 或 scheduler 失败。分类为 `Actions runner interruption / NO_FIX for #7791`，底层 service stop、VM 回收或单 job 取消无法从现有元数据区分；下一步仅 `/retest`，不改代码和 timeout。
 - 2026-07-22：按用户反馈，将 PR #7791 的 6 行生产修复补充为 Day 31 可独立阅读的中文解释：明确 6 行是 RB/CRB 各 3 行、三个时间/状态字段的职责、`[A,B,C]` 在普通与显式调度下的搜索顺序、现有循环为何让 index reset 足够、成功后的 one-shot 语义，以及“不清真实 status、不自动 failback、不实现 typed behavior”的边界。实现章节同时区分原始验证 commit `06840d220` 与 rebase 后 PR head `1117aa6e20`，保留 stable patch-id 关系；未修改产品代码或 upstream PR。
 - 2026-07-22：用户确认 exact target/title/body 后，已创建 upstream [PR #7791](https://github.com/karmada-io/karmada/pull/7791)：`master <- ranxi2001:feature/reset-affinity-on-reschedule@1117aa6e20`。REST 回读确认 PR 为 open/non-draft/mergeable，标题和正文与确认稿一致，只有 API 保留的末尾换行；diff 仍严格为 scheduler 生产逻辑、RB/CRB 单测和真实 A -> B -> A E2E 三个文件，`+299/-17`。`Fixes #5070` 已建立 issue cross-reference，未另发 #5070/#5425 评论或 maintainer mention；DCO 已通过，上游 PR CI 已启动。`karmada-bot` 按 OWNERS 自动请求 `seanlaii`、`mohamedawnallah` review；创建时记录的 Copilot review request 因账户 quota 未执行，没有代码 finding。
@@ -158,7 +159,7 @@
 ## Next
 
 - #7779：P1 `DeleteCollection` 绕过保护的 [line review](https://github.com/karmada-io/karmada/pull/7779#discussion_r3620214882) 已发布并精确回读。等待作者回复或更新 commit；之后只检查显式 `REST.DeleteCollection`、同一 composed validator 和单 protected selector 回归，不催促、不追加无关意见。
-- #5070 / #5172：[PR #7791](https://github.com/karmada-io/karmada/pull/7791) 已发布，head `1117aa6e20` 仍为 3 文件；下一步等待上游 CI 和真人 review，只处理有源码或测试证据的反馈。不接管 #5172 ownership，不把 #7662 typed/preserve API 混入当前 PR。
+- #5070 / #5172：[PR #7791](https://github.com/karmada-io/karmada/pull/7791) 当前 head 为 `8992dabd62`，8 文件包含 cursor reset、request-scoped current Cluster snapshot 和因果回归；下一步等待上游 CI 和真人 review，只处理有源码或测试证据的反馈。不接管 #5172 ownership，不把 #7662 typed/preserve API 混入当前 PR。
 - #7623：blocking line review 已发布；等待作者回复或更新 commit。后续只检查 cache commit 是否移到完整 executor rebuild/status reconciliation 成功之后，以及是否新增 status failure retry 的 controller regression；不要复述 Copilot 的 false data-race finding，也不要把已有 map cleanup gap 混入当前 blocker。
 - #7764：当前 head `7570842fb5` 已修 member layout 并合并普通段落 hard-wrap；compatibility artifact scope、fast-wait stale inference、single-hit no-retry inference 和 flat glob 仍待处理。Artifact thread open/current，fast-wait resolved/outdated但原文未变，retry open/outdated，hard-wrap open/outdated但代码已采纳。后续回复除 exact-text approval 外还必须通过 standalone comprehension 与 visualization gates；已有 fast-wait/retry Mermaid，尚未发布。
 - #7621 / #7662：继续跟踪作者是否按 `RainbowMango` review 收窄 proposal，但不把它作为 #5070 的前置条件。PR 1 review 期间准备 PR 2 的 typed request + Deployment Aggregated/Dynamic preserve 实现；公开 API 前再核对 immutability、availability freshness、policy matrix、request arbitration、升级顺序和 `Fixes #7621` 是否降级。SafeMigration 删除后，既有 target-first thread 自然过期，不再发布 direct-deletion/finalizer 评论。
@@ -183,7 +184,7 @@
 
 ## Stop Conditions
 
-- #5070 的无 API Full cursor reset 已进入 PR #7791 review；若 #5425 或 #5172 出现 current-master、可合并且同范围的新提交，先比较行为和 patch，再协调 ownership，不静默扩大或重复实现。
+- #5070 的无 API Full cursor reset 与 request-scoped Cluster snapshot 已进入 PR #7791 review；若 #5425 或 #5172 出现 current-master、可合并且同范围的新提交，先比较行为和 patch，再协调 ownership，不静默扩大或重复实现。
 - preserve-available 可以在独立 worktree 开发和验证，但 maintainer 未确认 API/default/支持矩阵前，不把第二个 PR 从 draft 推向合并，也不把 `COMMENTED` review 写成最终批准。
 - #7697 持续维护任务只在 PR 已 merge、merge SHA/最终 CI/review 状态已归档、deferred follow-ups 已记录后才标记 `DONE`。如 PR 只是 closed 但未 merge，记录 maintainer 原因并标记 `BLOCKED` 或转入新 PR，不视为完成。
 - 同一个本地环境问题连续失败 3 次，例如 kind 集群创建、Docker 镜像拉取、证书生成或 kubeconfig 上下文混乱，就停止硬调，记录 BLOCKED 并换路径。

@@ -1,6 +1,6 @@
 # 实习任务 TODO
 
-更新时间：2026-07-21
+更新时间：2026-07-22
 
 这个文档用于管理 Karmada 实习期间的后续任务。日报记录每天做了什么，TODO 记录现在还要做什么、优先级是什么、做到哪里、卡在哪里。
 
@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | 9 月前拿到 AgentCube Karmada 项目社区席位 | DOING | 高 | 中 | 7-8 周 | upstream issue/PR/review/CI/会议材料证据链；每周 mentor 可检查总结 | 以 #7621/#7662 为战略 review/实现主线，以 #7697 为持续交付维护线；每周至少沉淀 1 个 upstream-visible 证据 |
 | P0 | 跟进 #7621 / proposal PR #7662 复杂工作负载安全重调度 | DOING | 高 | 高 | 分两个可交付行为 PR 推进 | [Day 15 尽调](day15-issue-7621-safe-rescheduling-feature.md)；[Day 29 #5070 / Full affinity 语义](day29-issue5070-pr7662-fresh-rescheduling-research.md)；[Day 30 maintainer API 方向](day30-pr7662-maintainer-api-direction.md)；[Day 31 API/开发方案](day31-workload-rebalancer-api-development-plan.md)；[target-first review](https://github.com/karmada-io/karmada/pull/7662#discussion_r3576720182) | 不再等 proposal author 先改稿。先推动无 API 变更的 #7791 review；随后以单独端到端 PR 落 typed request + Deployment Aggregated/Dynamic preserve。SafeMigration、自动水位和 #7621 closing claim 继续排除 |
-| P0 | 跟进 #5070 / #5172 multiple affinity Fresh reset | REVIEW | 高 | 中 | 等待 upstream review | [Day 29 调研](day29-issue5070-pr7662-fresh-rescheduling-research.md)；[Day 31 设计、实现与验证](day31-workload-rebalancer-api-development-plan.md)；[Upstream PR #7791](https://github.com/karmada-io/karmada/pull/7791)；head [`1117aa6e20`](https://github.com/ranxi2001/karmada/commit/1117aa6e20a37f3c9b69598ea3732510dd52cc74) 仅 3 文件，与原验证提交 stable patch-id 相同，反向回归、本地 scheduler tests 和 E2E package compile 通过；首轮 upstream v1.34 红灯已定位为 runner shutdown，新增 spec 在三版本均通过 | 对 #7791 执行 `/retest` 后等待真人 review，只处理有源码或测试证据的反馈。不接管 #5172，不混入 #7662 typed/preserve API |
+| P0 | 跟进 #5070 / #5172 multiple affinity Fresh reset | REVIEW | 高 | 中 | 等待 upstream review | [Day 29 调研](day29-issue5070-pr7662-fresh-rescheduling-research.md)；[Day 31 设计、实现、验证与独立 review](day31-workload-rebalancer-api-development-plan.md)；[authoritative snapshot flow](day31-pr7791-authoritative-snapshot-fix.png)；[Upstream PR #7791](https://github.com/karmada-io/karmada/pull/7791)；current head [`8992dabd62`](https://github.com/ranxi2001/karmada/commit/8992dabd62f89cc705f4c1ddae33914d1b3a4fa0) 为单个 signed-off commit、8 个文件；explicit multi-affinity request 使用 Most Recent Cluster snapshot，E4、full/race scheduler、E2E compile、staticcheck 全通过，DCO 通过 | 新 upstream CI 已启动；不默认主动轮询。等待真人 review，只处理有源码或测试证据的反馈。不接管 #5172，不混入 #7662 typed/preserve API |
 | P0 | 建立 Karmada 实习基础仓库结构 | DONE | 低 | 低 | 0.5 天 | `AGENTS.md`、`PROGRESS.md`、`internship-reports/`、`.agents/skills/open-source-onboarding/`、[Day 1 日报](day1-karmada-7598-default-version-pr.md) | 后续按 dayN 文件继续记录 |
 | P0 | 迁移并 Karmada 化本地 skills | DONE | 中 | 低 | 0.5 天 | `.agents/skills/drawio-skill/`、`.agents/skills/karmada-pr-management/`、`.agents/skills/karmada-issue-discussion/`；4 个 skills 均通过 `quick_validate.py`，Karmada GitHub 脚本 smoke test 通过 | 后续画图、issue 分析、PR 准备分别使用这些 skills |
 | P0 | 配置 upstream 远程和分支卫生规则 | DONE | 低 | 低 | 0.5 天 | `upstream=https://github.com/karmada-io/karmada.git`；upstream PR 分支从 `upstream/master` 创建；`intern` 只放学习记录 | 后续 upstream 改动继续使用独立 topic branch |

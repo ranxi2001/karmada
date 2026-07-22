@@ -290,6 +290,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Root-cause comment, competing proposals and tradeoffs, closing comment/PR, merged versus abandoned changes, current caller event order, and the latest linked issue and PR replies.
 - Test or fix cue: Cite prior art with one relevance sentence that states both support and limit, then prove the current caller-specific convergence edge independently.
 
+## Test-Only Cache Barriers Can Hide Lost Production Events
+
+- Pattern: An E2E may force one informer or controller to catch up by mutating an unrelated object and waiting for a downstream status change; that makes the test deterministic but can hide a supported cross-informer order in which a one-shot request is consumed before the relevant cache update arrives.
+- Seen in: `karmada-io/karmada#7791`, where the A -> B -> A E2E updates a random `member2` label after restoring `member1` and waits for another successful group2 schedule before creating WorkloadRebalancer.
+- Miss symptom: The happy-path E2E passes only after a cache synchronization round trip that users cannot request. In production, a fallback result advances the request's completion marker, and the delayed recovery event is filtered against the retained fallback cursor, so no later reconcile repairs the result.
+- Review check: Treat every test-only cache barrier as a prompt to enumerate both event orders. Trace the one-shot trigger, cache snapshot, fallback success, completion marker, delayed source event, event filter, queue transition, and terminal state; prove whether the second order self-heals.
+- Evidence to gather: Independent informer/watch producers, authoritative API update order, cache update handler, scheduling fallback branch, persisted cursor and completion fields, generation/resource-version checks, and queue length or reconcile count after the delayed event.
+- Test or fix cue: Add a deterministic regression that delivers the request before the relevant cache update and asserts final convergence. Do not merely remove the barrier, add a sleep, or lengthen the E2E timeout; change the production ownership or completion protocol so both supported orders reach the same result.
+
 ## Numbered Event Sequences Make Race Reviews Auditable
 
 - Pattern: A race explanation is easier to verify when each numbered step contains one actor and one state transition, followed by a one-sentence invariant and an explicit next action.
