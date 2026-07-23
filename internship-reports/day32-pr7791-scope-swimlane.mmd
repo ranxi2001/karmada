@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant API as Karmada API
+    participant W as WorkloadRebalancer controller
+    participant BI as Binding informer
+    participant S as Scheduler
+    participant CI as Cluster informer cache
+
+    U->>API: Restore affinity A Cluster state
+    U->>API: Create WorkloadRebalancer
+    API-)W: Deliver WorkloadRebalancer event
+    W->>API: Update Binding rescheduleTriggeredAt
+    API-)BI: Binding trigger arrives before the Cluster update
+    BI-)S: Enqueue pending explicit reschedule
+    Note over API,CI: API has recovered A, while the Cluster informer cache may still have old A.
+
+    alt Initial six-line version
+        rect rgb(255, 248, 230)
+        Note over S,CI: Cursor fixed, freshness still assumed
+        S->>S: Reset top-level affinity index to A
+        S->>CI: Read informer-backed Cluster snapshot
+        CI-->>S: Stale state: A still unavailable
+        S->>S: Evaluate A, then B - A fails and B succeeds
+        S->>API: Patch B and consume the one-shot request
+        API-)CI: Deliver A recovery later
+        CI-)S: Process delayed A event
+        S->>S: A does not match current term B, so no Binding requeue
+        end
+    else Current version
+        rect rgb(235, 248, 239)
+        Note over S,CI: Make the explicit multi-affinity cycle self-contained
+        S->>API: List current Cluster objects once
+        API-->>S: Current A state
+        S->>S: Build one request-scoped snapshot and reset index to A
+        S->>S: Evaluate A, then B, with the same snapshot - A succeeds
+        S->>API: Patch A and consume the request
+        Note over S,CI: Only Cluster objects are refreshed.<br/>Binding index data and assumptions stay cache-backed.
+        end
+    end
+
+    Note over S,CI: Scope: pending explicit reschedule<br/>with multiple clusterAffinities only.
+    Note over S,CI: Normal scheduling and single clusterAffinity<br/>keep the existing informer snapshot behavior.

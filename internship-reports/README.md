@@ -44,6 +44,7 @@
 - [Day 30：PR #7779 Cluster 删除保护方案与代码 Review](day30-pr7779-cluster-deletion-protection-review.md)（[已发布评论正文](day30-pr7779-review-comment.md) / [Mermaid](day30-pr7779-deletecollection-bypass.mmd) / [PNG](day30-pr7779-deletecollection-bypass.png)）
 - [Day 30：PR #7662 维护者提出的 API 收敛方向](day30-pr7662-maintainer-api-direction.md)
 - [Day 31：WorkloadRebalancer API 设计、分阶段开发与 #5070 第一阶段实现](day31-workload-rebalancer-api-development-plan.md)（[Mermaid](day31-workload-rebalancer-api-development-plan.mmd) / [PNG](day31-workload-rebalancer-api-development-plan.png)）
+- [Day 32：PR #7791 设计边界与六行初版差异说明](day32-pr7791-scope-response-draft.md)（[泳道 Mermaid](day32-pr7791-scope-swimlane.mmd) / [PNG](day32-pr7791-scope-swimlane.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
