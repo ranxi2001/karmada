@@ -45,6 +45,7 @@
 - [Day 30：PR #7662 维护者提出的 API 收敛方向](day30-pr7662-maintainer-api-direction.md)
 - [Day 31：WorkloadRebalancer API 设计、分阶段开发与 #5070 第一阶段实现](day31-workload-rebalancer-api-development-plan.md)（[Mermaid](day31-workload-rebalancer-api-development-plan.mmd) / [PNG](day31-workload-rebalancer-api-development-plan.png)）
 - [Day 32：PR #7791 设计边界与六行初版差异说明](day32-pr7791-scope-response-draft.md)（[泳道 Mermaid](day32-pr7791-scope-swimlane.mmd) / [PNG](day32-pr7791-scope-swimlane.png)）
+- [Day 33：PR #7791 E2E 红灯分类与 `karmadactl top` Flake 修复](day33-pr7791-e2e-flake-root-cause-analysis.md)（[故障时序 Mermaid](day33-pr7791-v136-karmadactl-top-podmetrics-race.mmd) / [PNG](day33-pr7791-v136-karmadactl-top-podmetrics-race.png)；[E4 对齐 Mermaid](day33-karmadactl-top-flake-e4-alignment.mmd) / [PNG](day33-karmadactl-top-flake-e4-alignment.png)；[upstream draft](day33-karmadactl-top-flake-upstream-draft.md)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

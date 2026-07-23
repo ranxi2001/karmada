@@ -1,0 +1,58 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+---
+sequenceDiagram
+    autonumber
+    participant Test as Karmadactl E2E
+    participant Pod as Member Pod<br/>(nginx + busybox)
+    participant Kubelet as Kubelet / Runtime
+    participant Metrics as Metrics Server Storage
+    participant CLI as karmadactl top
+
+    rect rgb(254, 226, 226)
+        Note over Test,CLI: OBSERVED FAILURE - PR 7791 v1.36
+        Test->>Metrics: WaitPodMetricsReady GET
+        Metrics-->>Test: PodMetrics found once
+        Test->>CLI: Query member1, member2, then member3
+        Pod-xKubelet: busybox attempt exits
+        Kubelet-xMetrics: Collection reports ttrpc closed
+        CLI->>Metrics: GET member3 PodMetrics
+        Metrics-xCLI: Resource-specific PodMetrics NotFound
+        CLI-xTest: Return non-zero
+    end
+
+    rect rgb(255, 247, 214)
+        Note over Test,CLI: CONTROLLED REPRODUCTION - same lifecycle edge
+        Test->>Pod: Create original commandless fixture in kind v1.36.1
+        Pod-->>Test: Phase Running and transient Ready
+        Pod-xKubelet: busybox exits and restarts
+        Kubelet-->>Test: Ready false and restartCount greater than zero
+        Test->>Metrics: Poll after first successful PodMetrics read
+        Metrics-->>Test: Local run stays available with nginx only
+        Note over Test,Metrics: Local run proves lifecycle regression, not the terminal 404.
+        Test->>Metrics: Exercise v0.6.3 storage counterfactual
+        Metrics--xTest: New container absent from prev produces empty PodMetrics
+    end
+
+    rect rgb(220, 252, 231)
+        Note over Test,CLI: FIXED PATH - test-local stable fixture
+        Test->>Pod: Create fixture with busybox sleep 3600
+        Test->>Pod: Wait for PodReady on every member
+        Pod-->>Test: All containers Ready
+        Test->>Metrics: WaitPodMetricsReady GET
+        Metrics-->>Test: PodMetrics found
+        Test->>Pod: Capture UID, containerID and restartCount
+        Pod-->>Test: Running with zero restarts
+        Test->>CLI: Run the original sequential top queries
+        CLI->>Metrics: GET each member PodMetrics
+        Metrics-->>CLI: Return nginx and busybox metrics
+        CLI-->>Test: All commands succeed
+        Test->>Pod: Recheck identity and restart counts
+        Pod-->>Test: Same lifecycle remains stable
+    end
+
+    Note over Test,CLI: Evidence boundary - the local run did not reproduce post-readiness 404 while CI logs plus pinned metrics-server source prove that terminal branch.

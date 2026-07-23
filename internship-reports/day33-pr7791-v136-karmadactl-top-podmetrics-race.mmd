@@ -1,0 +1,38 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+---
+sequenceDiagram
+    autonumber
+    participant E2E as Karmadactl E2E
+    participant Pod as Test Pod<br/>(nginx + busybox)
+    participant Kubelet as Kubelet / Runtime
+    participant Metrics as metrics.k8s.io
+    participant CLI as karmadactl top
+
+    E2E->>Pod: Create the same Pod on each member
+    Pod-->>E2E: Observe Pod phase Running
+
+    loop One readiness check per member
+        E2E->>Metrics: GET PodMetrics
+        Metrics-->>E2E: Found at this instant
+    end
+    Note over E2E,Metrics: A successful one-shot read does not keep later metrics available.
+
+    E2E->>CLI: Query member1, then member2
+    CLI->>Metrics: GET PodMetrics
+    Metrics-->>CLI: Found
+
+    Pod-xKubelet: busybox exits immediately (03:45:32.867Z)
+    Kubelet-xMetrics: Collection fails: ttrpc closed (03:45:33.230Z)
+    Kubelet-->>Pod: Enter CrashLoopBackOff (03:45:33.715Z)
+
+    E2E->>CLI: Query member3
+    CLI->>Metrics: GET PodMetrics
+    Metrics-xCLI: PodMetrics NotFound (03:45:36.237Z)
+    CLI-xE2E: Return non-zero and trigger fail-fast interruption
+
+    Note over E2E,Metrics: E4 target: keep the fixture stable from readiness through final consumption.
