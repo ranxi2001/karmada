@@ -218,6 +218,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Original and current base SHAs, original/current changed-file lists, the overlapping merged PR or commit, file-level patches, and the PR body/test text that may now be stale.
 - Test or fix cue: Ask for a rebase, name the already-merged change, and state the expected residual diff. Afterward, verify the redundant patch disappeared, update the PR body and validation scope, preserve sign-off during history rewriting, and compare patch/tree identity across force-pushes.
 
+## Clean Rebuilds Must Preserve Verifiable Prior Authorship
+
+- Pattern: A stale PR can contain a valid core patch inside merge commits, unrelated files, DCO failures, or compile-breaking edits; rebuilding from current master is sometimes safer than rebasing, but history cleanup must not erase the original contributor.
+- Seen in: `karmada-io/karmada#5425` and replacement PR `#7791`. Bharath's signed historical commit contains the correct six-line scheduler fix, while the current PR head has polluted merge ancestry, unrelated content, bot authorship, and a CRB typo.
+- Miss symptom: A replacement PR reproduces the earlier implementation under only the new contributor's authorship, or blindly cherry-picks the polluted commit to retain credit.
+- Review check: Compare the old PR's current and historical patches, authors, author emails, sign-off trailers, review-guided design changes, and current-base applicability. Separate unchanged prior code from new adaptation and tests.
+- Evidence to gather: The exact signed historical commit, file/hunk identity, original review discussion, current head parents, unrelated ancestry, DCO correspondence, and patch/range diff against the clean rebuild.
+- Test or fix cue: Rebuild only the proven patch on current master, retain its verifiable author and real sign-off, add the current committer's sign-off when appropriate, put new work in a separately authored commit, and credit the original PR in the new PR body. Never invent a sign-off or attribute materially changed code to the prior author.
+
 ## Eligibility And Capacity Must Change Before Selection
 
 - Pattern: A scheduler fix that changes eligibility or allocatable capacity only during final assignment is too late when scoring, spread selection, or overflow tiering has already planned against the old capacity.
@@ -290,14 +299,14 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Root-cause comment, competing proposals and tradeoffs, closing comment/PR, merged versus abandoned changes, current caller event order, and the latest linked issue and PR replies.
 - Test or fix cue: Cite prior art with one relevance sentence that states both support and limit, then prove the current caller-specific convergence edge independently.
 
-## Test-Only Cache Barriers Can Hide Lost Production Events
+## Cache Timing Evidence Does Not Assign Freshness Ownership
 
-- Pattern: An E2E may force one informer or controller to catch up by mutating an unrelated object and waiting for a downstream status change; that makes the test deterministic but can hide a supported cross-informer order in which a one-shot request is consumed before the relevant cache update arrives.
-- Seen in: `karmada-io/karmada#7791`, where the A -> B -> A E2E updates a random `member2` label after restoring `member1` and waits for another successful group2 schedule before creating WorkloadRebalancer.
-- Miss symptom: The happy-path E2E passes only after a cache synchronization round trip that users cannot request. In production, a fallback result advances the request's completion marker, and the delayed recovery event is filtered against the retained fallback cursor, so no later reconcile repairs the result.
-- Review check: Treat every test-only cache barrier as a prompt to enumerate both event orders. Trace the one-shot trigger, cache snapshot, fallback success, completion marker, delayed source event, event filter, queue transition, and terminal state; prove whether the second order self-heals.
-- Evidence to gather: Independent informer/watch producers, authoritative API update order, cache update handler, scheduling fallback branch, persisted cursor and completion fields, generation/resource-version checks, and queue length or reconcile count after the delayed event.
-- Test or fix cue: Add a deterministic regression that delivers the request before the relevant cache update and asserts final convergence. Do not merely remove the barrier, add a sleep, or lengthen the E2E timeout; change the production ownership or completion protocol so both supported orders reach the same result.
+- Pattern: A test can expose a real cross-informer ordering window without proving that the consumer where the symptom appears must bypass its cache or guarantee one-attempt convergence.
+- Seen in: the offline mentor review of `karmada-io/karmada#7791`. The E2E cache barrier established that recovered Cluster state was visible before testing the scheduler's affinity-cursor reset; removing it led the review toward direct Cluster API reads and a request-scoped snapshot that expanded scheduler responsibility.
+- Miss symptom: A reviewer treats a deterministic test barrier as a hidden product defect, then adds direct API reads, cache validation, retries, or snapshots to the consumer without first establishing that freshness belongs to that component's contract.
+- Review check: Separate three questions: whether the ordering is reachable, whether the product promises automatic convergence for that ordering, and which component owns state freshness or retry. A yes to the first does not answer the other two.
+- Evidence to gather: The component's established inputs and outputs, authoritative-state and cache owners, API/user guarantee, existing retrigger path, maintainer direction, and whether an operational or manual retry is acceptable.
+- Test or fix cue: Use a bounded synchronization step to establish the precondition for the narrow behavior under test. Keep the production change at the owned state transition unless the contract explicitly requires automatic convergence; if it does, fix the owner or protocol rather than silently turning a cache consumer into the freshness owner.
 
 ## Numbered Event Sequences Make Race Reviews Auditable
 

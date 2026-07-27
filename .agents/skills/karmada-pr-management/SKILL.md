@@ -26,6 +26,8 @@ Use this skill for Karmada upstream PR work: branch prep, local preflight, upstr
 - Prepare the branch, diff, tests, and exact title/body/comment locally first, then ask for approval.
 - Push the topic branch to `origin` because it is the head of the upstream PR, but do not wait for, report, or cite fork push CI by default. The upstream PR CI is authoritative. Inspect fork workflows only when the user explicitly asks or when diagnosing an already observed fork-specific failure.
 - Treat local tests, branch diff, and code-change explanation as PR preflight. Before opening an upstream PR, inspect deleted/extracted code, scope, compatibility, and reviewer-facing rationale locally.
+- Before adding direct API reads, cache validation, retries, watches, or synchronization, identify the component that owns authoritative state and convergence. A race observed in one component does not by itself transfer that responsibility to it.
+- When completing or replacing a stale contributor PR, inspect signed historical patches before rewriting. Preserve verifiable authorship for unchanged code, split new tests/adaptations into your own commit, credit the source PR, and never invent a sign-off or import polluted ancestry merely to retain credit.
 - Keep internship reports, raw benchmark results, and Chinese-only notes out of upstream PRs unless explicitly intended.
 - For other contributors' PRs, do not draft comments or review suggestions until you have read the PR body, changed files, relevant docs/tests, and existing human review discussion.
 - For a PR that links or fixes an issue, read the linked issue's latest comments and timeline as part of the same review surface. Distinguish substantive issue reasoning from PR process commands such as `/retest`, `/assign`, and bot labels.
@@ -147,6 +149,7 @@ Prepare a local explanation in the internship report or review notes before upst
 
 - Problem and issue link: what user-visible or maintainer-requested problem the branch addresses.
 - Scope and non-goals: what the branch intentionally does not solve.
+- Component responsibility: the existing input/output contract, the owner of freshness/retry, and why every new cross-boundary read or synchronization belongs here.
 - File-by-file changes: why each changed file was touched and how it maps to the design.
 - Deleted code: state whether it was truly removed, extracted into a new abstraction, renamed, or replaced by existing behavior.
 - Behavior compatibility: default path, upgrade impact, feature gate or config impact, and failure modes.
@@ -165,6 +168,7 @@ Before editing code:
 - If the issue is actively assigned to someone else, do not start an overlapping PR; choose review/testing feedback or ask whether help is needed.
 - Check whether the change touches API types, generated clients, CRDs, Helm charts, operator, CLI, scheduler, controllers, docs, or e2e tests.
 - For non-trivial features, run the design-before-code workflow first and keep the planned file scope narrow.
+- Record the component responsibility boundary before coding. Do not expand production behavior solely to remove a test synchronization step; a bounded test precondition or acceptable caller/manual retry can be the correct scope when automatic convergence is not promised.
 - For `/kind flake`, do not edit synchronization or product logic at `E0-E2`. Reach `E3` in the `code-review-growth` gate first; use `E2` only for diagnostic instrumentation. Seek `E4` before posting, or document why it is impractical and obtain maintainer direction.
 - Pick one primary PR kind from the official template:
   - `/kind bug`
@@ -183,13 +187,13 @@ Before editing code:
 
 Use this local table before opening an upstream PR or asking for maintainer review:
 
-| File / area | Why it changed | Evidence | Test coverage | Reviewer explanation |
-| --- | --- | --- | --- | --- |
-| `pkg/apis/...` | API field, validation, or type behavior changed | issue, design, compiler/test failure | `make update`, `make verify`, package tests | Explain generated files and compatibility |
-| `pkg/controllers/...` | Reconcile behavior changed | failing scenario or source evidence | targeted `go test`, e2e if needed | Explain desired vs observed state |
-| `pkg/scheduler/...` | Placement or replica scheduling changed | policy example, test gap | scheduler unit tests, e2e if needed | Explain placement correctness |
-| `pkg/karmadactl/...` | CLI behavior changed | command output or validation gap | `go test ./pkg/karmadactl/...` | Explain user-facing behavior |
-| `charts/...` | Install values or templates changed | render/install issue | chart verification or install workflow | Explain upgrade impact |
+| File / area | Why it changed | Responsibility owner / contract | Evidence | Test coverage | Reviewer explanation |
+| --- | --- | --- | --- | --- | --- |
+| `pkg/apis/...` | API field, validation, or type behavior changed | API compatibility owner | issue, design, compiler/test failure | `make update`, `make verify`, package tests | Explain generated files and compatibility |
+| `pkg/controllers/...` | Reconcile behavior changed | desired-state and retry owner | failing scenario or source evidence | targeted `go test`, e2e if needed | Explain desired vs observed state |
+| `pkg/scheduler/...` | Placement or replica scheduling changed | placement decision over established scheduler inputs | policy example, test gap | scheduler unit tests, e2e if needed | Explain placement correctness without silently taking over cache freshness |
+| `pkg/karmadactl/...` | CLI behavior changed | command and user-interaction owner | command output or validation gap | `go test ./pkg/karmadactl/...` | Explain user-facing behavior |
+| `charts/...` | Install values or templates changed | installation configuration owner | render/install issue | chart verification or install workflow | Explain upgrade impact |
 
 Useful commands:
 
@@ -242,9 +246,10 @@ Use this workflow before analyzing, reviewing, replying to, or building on someo
 5. Check whether later commits already addressed an earlier review comment.
 6. If review was delayed or the base advanced, check whether another merged PR already absorbed any changed file or behavior. Call it `redundant after <PR/commit>` rather than `unrelated` when it was relevant at creation; request a rebase and state the exact diff expected to remain.
 7. After that rebase, verify the redundant patch disappeared and the PR body, test report, and issue-closing claim match the residual diff. Preserve sign-off and use tree/range-diff/patch-id comparison when force-pushes rewrite commit identity.
-8. Compare the proposed comment against the current PR text/code.
-9. For a flake PR, independently verify the code-backed causal timeline, retry/requeue path, recovery event, and patch counterfactual; green CI alone is not a correctness argument.
-10. Record evidence locally before posting: PR number, commit SHA, files/sections read, key observations, unresolved questions, and comment purpose.
+8. If superseding a stale or polluted PR, inspect its historical commits for the last author/sign-off-matching version of each retained hunk. Rebuild only proven code on current master, retain its author, separate your additions, and plan explicit PR-body credit.
+9. Compare the proposed comment against the current PR text/code.
+10. For a flake PR, independently verify the code-backed causal timeline, retry/requeue path, recovery event, and patch counterfactual; green CI alone is not a correctness argument.
+11. Record evidence locally before posting: PR number, commit SHA, files/sections read, key observations, unresolved questions, and comment purpose.
 
 Useful commands:
 
@@ -263,9 +268,10 @@ Use this focused pass when a PR removes or weakens behavior around certificates/
 1. Read both base and head implementations. When an old guard or branch disappears, use `git log -S'<symbol-or-condition>' -- <path>` and `git blame <base> -- <path>` to learn why it existed.
 2. Build a lightweight effect ledger: inputs and trust source; API/cache/status/Secret/file reads; object/status/queue/file/certificate writes; direct callers and asynchronous consumers; preserved invariants; unresolved uncertainty.
 3. Map semantic blast radius as an effect graph: changed function -> callers -> shared state/cache -> watches or predicates -> queue/retry -> affected resources/components -> recovery and rollout path. Do not use caller, file, or line counts as risk thresholds.
-4. Review tests as behavioral claims. Ask whether each regression would fail with the patch reverted and whether recovery, mixed-version, negative, and boundary paths are covered.
-5. Disclose coverage: areas deep-reviewed, surface-scanned, generated or low-risk areas skipped, evidence confidence, and residual unknowns.
-6. Label output as `blocking`, `non-blocking`, `question`, or `evidence gap`. For non-obvious conclusions, use the independent falsification pass from `code-review-growth` before posting.
+4. For each newly introduced API read, cache bypass/validation, retry, watch, or synchronization edge, identify the existing owner and the API or maintainer evidence authorizing responsibility transfer. A test that becomes deterministic is not that evidence.
+5. Review tests as behavioral claims. Ask whether each regression would fail with the patch reverted, whether its preconditions match the component contract, and whether recovery, mixed-version, negative, and boundary paths are covered.
+6. Disclose coverage: areas deep-reviewed, surface-scanned, generated or low-risk areas skipped, evidence confidence, and residual unknowns.
+7. Label output as `blocking`, `non-blocking`, `question`, or `evidence gap`. For non-obvious conclusions, use the independent falsification pass from `code-review-growth` before posting.
 
 ## OWNERS Mapping
 

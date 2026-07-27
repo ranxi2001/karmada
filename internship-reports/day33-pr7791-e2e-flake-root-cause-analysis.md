@@ -155,3 +155,28 @@
 
 - Ginkgo 汇总出现多条 failure 时，先区分第一个真实断言与 `interrupted by other process`；后者不能分别计为独立 flake 或修复候选。
 - Readiness wait 只证明某次 observation 成功。若 fixture 之后还能从 ready 退化，分析必须继续追踪到最后一个真实 consumer，修复也应稳定 fixture 生命周期，而不是给 consumer 追加 retry。
+
+## Maintainer CI Follow-up（2026-07-24）
+
+`@RainbowMango` 在 [PR #7791 评论](https://github.com/karmada-io/karmada/pull/7791#issuecomment-5065668153)中指出三条 E2E 都失败，并请作者检查。重新回读 current head、job logs、component artifacts 和 PR diff 后，原分类不变：三条红灯都不是 #7791 scheduler regression。
+
+- v1.34：新增 `reschedule from the first cluster affinity` 在 `03:49:02Z` 通过；首个硬失败是后续旧用例在 `rescheduling_test.go:66` 创建临时 kind cluster 超时。host Kubernetes、Karmada、member3 三套 etcd 同窗出现 `fdatasync` 和 read stall；能确认共享 runner 资源/I/O stall 机制，不能从 artifact 继续断言磁盘、CPU 或 hypervisor 中哪一个是物理 trigger。
+- v1.35：新增用例在 `03:44:50Z` 通过。Karmada etcd 从 `03:46:15Z` 出现 health read timeout，Karmada 与 host control-plane 组件在 `03:46:34Z` 丢失 lease；第一个业务断言到 `03:47:57Z` 才在无关 `SchedulePriority` 用例中失败。该用例使用 single `ClusterAffinity`，不会进入本 PR 的 pending explicit multi-affinity 路径。
+- v1.36：首个硬失败是既有 `Karmadactl top existing pod` 在 `03:45:36Z` 收到 member3 PodMetrics 404；fail-fast 发生在新增 #7791 用例执行前。该 fixture flake 已由独立 PR #7795 处理。
+- 行为等价的上一 head `8992dabd62` 已通过 v1.34/v1.35；current head `b2cf85aa30` 只比它增加两行 cache-boundary 注释。#7791 正确动作仍是 `/retest`，不修改 scheduler 或测试 timeout。
+
+以下评论为准确发布稿；三条 job 是独立分类，使用 bullet 比 Mermaid 更能避免制造“共同因果”的错觉。用户确认后已发布为 [comment `5065767232`](https://github.com/karmada-io/karmada/pull/7791#issuecomment-5065767232)。
+
+````markdown
+Thanks, I checked all three failed E2E jobs on the current head `b2cf85aa30`.
+
+- [v1.34](https://github.com/karmada-io/karmada/actions/runs/29976790271/job/89111183598): the new `reschedule from the first cluster affinity` spec passed at `03:49:02Z`. The first hard failure happened later in `rescheduling_test.go:66`, where creation of a temporary kind cluster timed out after 805 seconds. The artifacts show simultaneous etcd `fdatasync`/read stalls across the host, Karmada, and member3 control planes.
+- [v1.35](https://github.com/karmada-io/karmada/actions/runs/29976790271/job/89111183584): the new spec passed at `03:44:50Z`. The first assertion failure was the unrelated `SchedulePriority` case at `03:47:57Z`, after Karmada and host control-plane processes had lost their etcd leases. That case uses a single `ClusterAffinity`, so it cannot enter this PR's explicit multi-affinity path.
+- [v1.36](https://github.com/karmada-io/karmada/actions/runs/29976790271/job/89111183581): the first hard failure was the existing `Karmadactl top existing pod` PodMetrics 404 at `03:45:36Z`. Fail-fast stopped the suite before the new spec ran. This fixture flake is addressed separately by #7795.
+
+The previous behavior-equivalent head `8992dabd62` passed v1.34 and v1.35; the current head differs only by two comments. I do not see a #7791 scheduler regression in these failures. Retesting is the appropriate next step.
+
+/retest
+````
+
+GitHub API 回读确认发布作者、正文和 `/retest` 与批准稿一致。`karmada-bot` 随后在 [comment `5065768623`](https://github.com/karmada-io/karmada/pull/7791#issuecomment-5065768623) 明确拒绝触发测试：该外部贡献者 PR 需要 trusted user 先留下 `/ok-to-test`。因此当前没有新 Actions run；下一步等待已在 thread 中的 maintainer 处理，不重复发布 `/retest` 或额外催促。

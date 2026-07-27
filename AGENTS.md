@@ -21,6 +21,8 @@ This repository currently uses Go `1.26.4`, as declared in `go.mod` and `.go-ver
 
 Use standard Go formatting and local Kubernetes controller patterns. API type changes usually require updating generated code and verification artifacts; run `make update` or the narrower script only after confirming the relevant API boundary. Add unit tests near changed packages, especially for scheduler decisions, controller reconcile logic, API validation, CLI behavior, and status aggregation. Use e2e tests for install, propagation, failover, multi-cluster scheduling, operator, and CLI workflows that cannot be proven with unit tests.
 
+Do not expand a component's responsibility merely to close an eventual-consistency timing window or make an e2e test deterministic. Before adding direct API reads, cache validation, retries, watches, or cross-component synchronization, identify which component owns the authoritative state and convergence contract. Prefer a narrow state-transition fix plus caller/test synchronization or an acceptable manual retry unless the API contract or maintainer direction explicitly requires automatic convergence in that component.
+
 ## Internship Report Guidelines
 
 Keep internship records on the `intern` branch unless the user explicitly asks otherwise. Do not mix Chinese learning notes, local-only skills, benchmark logs, or task tracking into upstream-facing topic branches.

@@ -28,6 +28,7 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
    - State the intended behavior in one sentence.
    - Map entry points, call chain, data flow, side effects, and external contracts.
    - Compare the PR description against the actual diff; treat mismatches as review leads.
+   - Run the Component Responsibility Gate before recommending new reads, caches, retries, watches, or synchronization.
 
 4. Classify risk surfaces before looking for findings.
    - Correctness: wrong result, missed state transition, bad default, lost error.
@@ -62,6 +63,7 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews --paginate
    - Keep each pattern short: symptom, review check, evidence to gather, and test/fix cue.
    - Do not edit upstream-facing topic branches only to store learning notes; update local learning branches or internship records.
    - For complex local review reports, use `$explain-technical-content`: write mostly in Chinese in the Karmada workspace, lead with a concrete plain-language example, then retain source-backed technical evidence as a second layer.
+   - When a clean replacement builds on another contributor's stale or polluted PR, audit patch provenance and preserve verifiable authorship instead of treating history cleanup as ownership transfer.
 
 ## Contribution Value Gate
 
@@ -82,6 +84,19 @@ Classify the target before deep review:
 It is valid to return `no worthwhile candidate`. When a target is `SKIP`, stop after a compact reason instead of fetching full JSON, reading every file, running fault injection, or inventing more edge cases. Explicit user requests for that exact PR override the stop, but not the evidence labels or proportionality requirement.
 
 The classification governs our attention, not whether another contributor's patch may merge. A correct low-complexity hygiene fix does not warrant a discouraging review comment merely because we would not choose it. Lack of a company production incident is not a technical blocker. Comment only when there is a specific defect or cost: disproportionate defensive complexity, wrong behavior/contract, regression risk, missing material evidence for a strong impact claim, or conflict with maintainer direction.
+
+## Component Responsibility Gate
+
+A reachable race or stale observation proves a timing window; it does not by itself assign cache freshness, retry, or convergence ownership to the component where the symptom appears. Before proposing or approving a fix:
+
+1. State the narrow violated invariant and the smallest state transition that repairs it.
+2. Write the component's existing contract: inputs it consumes, outputs it owns, and freshness or retry guarantees it already advertises.
+3. For every new direct API read, cache validation, snapshot override, retry loop, watch, or cross-component handshake, name the authoritative-state owner and explain why this component must now own that behavior.
+4. Compare lower-scope alternatives at the existing owner boundary: informer convergence, caller/controller retrigger, a bounded test precondition, or an operational/manual retry. A manual retry is acceptable when the user-facing or API contract does not promise one-attempt automatic convergence.
+5. Require explicit API, design, or maintainer evidence before expanding component ownership. Production reachability, an E2E race, or a deterministic test failure alone is insufficient.
+6. Keep regression tests focused on the accepted invariant. Do not strengthen production semantics merely because a test assumed fresher state than the component contract provides.
+
+Treat unexplained ownership expansion as a scope finding even when the added code makes the reported scenario pass. Prefer repairing the component that owns the state or protocol; if no automatic-convergence guarantee exists, preserve the narrow fix and document the retry/precondition boundary.
 
 ## Review Comment Comprehension Gate
 
