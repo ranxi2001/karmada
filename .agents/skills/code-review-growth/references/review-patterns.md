@@ -325,3 +325,21 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Name the downside first, then evaluate trigger frequency, objects affected per trigger, work per reconcile, queue coalescing/rate limiting, loop termination, and the correctness or convergence benefit gained.
 - Evidence to gather: Event producers, expected mutation rate, fan-out cardinality, reconcile reads/writes, idempotence and no-op behavior, self-trigger potential, and any production scale or benchmark evidence needed for the risk level.
 - Test or fix cue: State `cost -> frequency/unit-cost bounds -> decision`. Add filtering, batching, metrics, or a scale test only when the trigger is frequent, fan-out is broad, work is heavy, or termination is uncertain.
+
+## A Renamed Behavior Must Still Observe The User Story's State
+
+- Pattern: Replacing an ambiguous runtime signal with a cleaner desired-state term can make an API sound more precise while removing the only data that distinguishes the reported problem; the new mode may then duplicate existing reconciliation rather than add behavior.
+- Seen in: `karmada-io/karmada#7662`, where `PreserveScheduled` avoids treating every unavailable replica as movable but cannot identify replicas already assigned in `Binding.spec.clusters` that remain Pending inside a member cluster.
+- Miss symptom: The proposal says it will reschedule a deficit caused by long-running Pending replicas, but computes the deficit only as `desired - assigned`; `assigned == desired` makes the operation a no-op, while `assigned < desired` already triggers the existing Steady scale-up and retry path.
+- Review check: Map `user story -> real producer state -> persisted field -> existing trigger/retry -> proposed branch`. Give one example where desired, assigned, ready, and available counts differ, then verify the proposed field changes in that example.
+- Evidence to gather: Field ownership and semantics, member/reflected status, scheduler assignment inputs, existing change predicates, retry classification, partial-result persistence, and a full-path case that distinguishes the new mode from current behavior.
+- Test or fix cue: Require a regression where all desired replicas are assigned but the intended movable subset is not running. If the proposed signal cannot identify that subset, either define a source-backed signal and ownership contract or narrow the user story; do not add a public mode that only replays an existing reconcile path.
+
+## A Fixture Counterfactual Is Not The Terminal Flake Counterfactual
+
+- Pattern: Making a fixture violate a new readiness or lifecycle assertion proves that the fixture was unstable, but it does not prove that the instability caused the original later API error.
+- Seen in: `karmada-io/karmada#7795`, where removing the BusyBox command made the focused E2E fail an `IsPodReady` lifecycle assertion after metrics readiness, while the retained CI symptom was a later `PodMetrics NotFound`. Maintainer reproduction and same-manifest polling found no post-success 404.
+- Miss symptom: A `fixed pass -> reverse fail -> restored pass` sequence is labeled terminal E4 even though the reverse variant stops before the original consumer and returns a different error.
+- Review check: Compare object, state layer, transition, consumer, terminal error, and recovery point between the CI failure and reverse test. Treat every mismatch as an explicit evidence boundary, not as a harmless earlier assertion.
+- Evidence to gather: Exact terminal stderr and timestamp, the reverse test's first failing line and error, component-internal samples for the proposed edge, same-manifest falsification, and any controlled mechanism reproduction with its differences from production timing.
+- Test or fix cue: Label the earlier result `fixture invariant proven` and keep the terminal cause at its prior level. Upgrade only after reproducing the original terminal symptom or capturing the missing internal state; otherwise narrow the PR claim or reclassify it as fixture cleanup.

@@ -104,3 +104,65 @@ Validation:
 - The exact Mermaid block rendered successfully with `@mermaid-js/mermaid-cli@11.16.0`; the red and green regions, timestamps, labels, and arrow directions were visually checked.
 - PR #7795 remained open at head `14b24b90db739a3091f6d1877c598a9f7f696e3d` with no human review comment when this draft was finalized.
 - GitHub API readback confirmed an exact body match, author `ranxi2001`, the `@zhzhuang-zju` mention, and a Mermaid rendered-output container in `body_html`.
+
+## Maintainer Follow-up（2026-07-28，已发布）
+
+Target: reply to [`comment 5099297834`](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5099297834) on `karmada-io/karmada#7795` at head `14b24b90db739a3091f6d1877c598a9f7f696e3d`.
+
+Published: [`comment 5099607301`](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5099607301). GitHub API readback matched the approved text exactly.
+
+````markdown
+Thanks for checking this. Your result is valid: the BusyBox restart by itself is not sufficient to produce a post-success 404. I repeated the same-manifest polling on Kubernetes v1.36.1 with metrics-server v0.6.3 and also observed 230 successful queries after the first success, with no later 404. A no-component-restart control went from `200/nginx-only` at `03:12:03`, through a natural BusyBox restart at `03:12:20`, directly to `200/nginx+busybox` at `03:12:33`. I agree the quoted sentence is too strong as written.
+
+I could reliably reproduce the narrower metrics-server condition without restarting any component:
+
+1. Start with stable nginx-only PodMetrics and wait for its sample timestamp to advance.
+2. Seven seconds later, add a fresh container with `kubectl debug pod/pr7795-ephemeral --image=busybox:1.36.0 --container=busybox -- sleep 120`.
+3. Poll the raw PodMetrics GET every 500 ms.
+
+The result was `200/nginx` before the addition, 404 at `03:16:32.827`, then `200/nginx+busybox` at `03:16:48.668`. In v0.6.3, a container point younger than the [10-second threshold](https://github.com/kubernetes-sigs/metrics-server/blob/a938798c8acf4a27215e780fd98aa57fe16d46a5/pkg/storage/pod.go#L29-L31) does not get a [synthetic previous point](https://github.com/kubernetes-sigs/metrics-server/blob/a938798c8acf4a27215e780fd98aa57fe16d46a5/pkg/storage/pod.go#L121-L125); `GetMetrics` omits the whole Pod when a container in the latest batch has no previous point ([code](https://github.com/kubernetes-sigs/metrics-server/blob/a938798c8acf4a27215e780fd98aa57fe16d46a5/pkg/storage/pod.go#L65-L97)); and the API maps that empty result to 404 ([code](https://github.com/kubernetes-sigs/metrics-server/blob/a938798c8acf4a27215e780fd98aa57fe16d46a5/pkg/api/pod.go#L124-L132)).
+
+This controlled case proves that ready -> 404 is possible when a fresh container point aligns with the next scrape. It does not prove that the retained CI run took this branch, because that artifact does not contain the metrics-server scrape batches. I will revise the PR description to state that boundary and frame the change as fixing the invalid fixture, independent of the unproven terminal 404 cause.
+````
+
+Comment review gate:
+
+- Current claim named: BusyBox restart can make previously ready PodMetrics return 404.
+- Concrete counterexample: same-manifest polling and the natural-restart control stayed successful.
+- Missing/provided evidence: controlled fresh-container alignment proves the metrics-server mechanism; retained CI still lacks scrape batches.
+- Requested action: author will narrow the PR claim and keep the patch scoped to fixture correctness.
+- Prose is clearer than Mermaid here because the reviewer requested a runnable reproduction and the exact command/timestamps are the decision-relevant content.
+
+## PR Body Revision（2026-07-28，已发布）
+
+````markdown
+**What type of PR is this?**
+
+/kind cleanup
+
+**What this PR does / why we need it**:
+
+The `Karmadactl top existing pod` E2E expects stable metrics from an nginx and busybox Pod on each member cluster. The busybox container has no long-running command, so it exits and restarts while the test is still querying that Pod. This is not an appropriate fixture for a multi-container metrics test.
+
+This change keeps busybox running only in this test context. It also verifies that the Pod UID and container IDs remain unchanged, with every container Ready, Running, and at zero restarts, from metrics readiness through all existing `top` queries. Shared fixtures and `karmadactl` behavior are unchanged.
+
+The retained CI run recorded a successful metrics readiness check, a later BusyBox restart, and then `PodMetrics NotFound`. That ordering does not prove that the restart caused the 404, and same-manifest local polling did not reproduce a post-success 404. This PR therefore fixes the invalid fixture without claiming a proven root cause for that terminal error.
+
+**Which issue(s) this PR fixes**:
+
+Refs #6841
+
+**Special notes for your reviewer**:
+
+- Focused two-member Kubernetes v1.36.1 E2E: fixed and restored variants passed; removing only the busybox command failed the lifecycle assertion after PodMetrics readiness, but did not reproduce the terminal 404.
+- `go test ./test/e2e/suites/base -run '^$' -count=0`
+- AI assistance: Codex helped analyze the CI failure, implement the test fix, and prepare validation; I reviewed the code and results.
+
+**Does this PR introduce a user-facing change?**:
+
+```release-note
+NONE
+```
+````
+
+The published revision changes `/kind flake` to `/kind cleanup`, changes `Part of #6841` to `Refs #6841`, and removes the unproven causal claim. GitHub API readback matched the approved body exactly; PR #7795 remained open at head `14b24b90db739a3091f6d1877c598a9f7f696e3d`. It did not change the title, branch, commit, or code. Immediately after the update, the asynchronous label state still showed `kind/flake`; this is dynamic GitHub state rather than part of the approved body.

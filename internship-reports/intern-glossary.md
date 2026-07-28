@@ -1,6 +1,6 @@
 # 实习生术语扫盲
 
-日期：2026-06-26
+首次创建：2026-06-26；最近更新：2026-07-28
 
 这份文件用于沉淀 Karmada 实习过程中反复遇到的工程术语。目标不是写百科，而是让以后读 PR、issue、设计文档和源码时，能快速知道一个词在系统里承担什么角色。
 
@@ -71,6 +71,13 @@
 | karmada-scheduler | 多集群调度器 | 把资源放到合适的成员集群，并可分配跨集群副本；决策层级是资源到集群 |
 | member kube-scheduler | 成员集群的 Kubernetes 调度器 | 把待调度 Pod 绑定到该成员集群的 Node；决策层级是 Pod 到 Node |
 | scheduler estimator | 调度估算器 | 帮助 scheduler 估算 member cluster 是否能承载资源 |
+| workload / 工作负载 | 运行应用或任务的对象统称；本文主要指管理一组 Pod 的上层资源，例如 Deployment、StatefulSet、DaemonSet 和 Job，不是一个固定名为 Workload 的 Kubernetes Kind | 读状态前要先确认它属于哪个具体对象；Deployment 的 unavailable 是一组 Pod 的汇总，Pod 的 Pending 则是单个运行单元的 phase |
+| replica / 副本 | workload 期望维持或完成的逻辑执行单元；Deployment 中通常是可替换实例，StatefulSet 中可能是带 ordinal/PVC 的实例，Job 中可能是 completion index | 不能默认把“1 个副本”永久等同于“1 个固定 Pod”；跨集群移动前要明确副本单位和身份 |
+| Pod phase `Pending` | Pod 已被集群接受，但至少一个容器还没有完成设置并准备运行；既包含尚未调度，也包含已调度后的镜像下载等准备阶段 | 只看 `Pending` 不能断言 member cluster 资源不足，更不能直接决定跨集群移动 |
+| Ready / Available | Ready 表示 Pod 当前可服务；workload 的 Available 通常要求 Ready 连续保持至少 `minReadySeconds` | Available 比 Ready 更稳定，但二者都是容量信号，不解释缺口原因 |
+| unavailable replica | workload 达到期望可用容量还缺少的副本；Deployment 和 DaemonSet API 有直接字段，其他 workload 可能需要推导 | 它不是 Pod phase，也不等于可迁移数量；镜像、readiness、rollout 和应用失败都可能造成 unavailable |
+| Unschedulable | Pod 的 `PodScheduled=False` 且 `reason=Unschedulable`，表示 member kube-scheduler 当前找不到满足资源和约束的 Node | 比 Pending 更窄；Karmada Descheduler 还要求持续超过 threshold，才把 Deployment Pod 计入释放候选 |
+| movable replica | 能通过改变 member cluster placement 改善结果、且 workload 语义允许替代的逻辑单元；不是 Kubernetes 原生字段 | 需要结合失败原因、目标集群容量、状态 freshness、数据/身份和 writer ownership 才能得出 |
 | failover | 故障转移 | member cluster 异常时迁移或重建工作负载 |
 | graceful eviction | 优雅驱逐 | 在迁移或重平衡时尽量降低业务中断 |
 | work propagation | 工作负载传播 | 把 control plane 中的期望资源下发到 member clusters |
@@ -104,6 +111,7 @@
 | OverridePolicy vs PropagationPolicy | propagation 决定放到哪里；override 决定在某个集群里怎么改 |
 | controller vs scheduler | controller 负责状态推进和对象创建；scheduler 负责放置和副本分配决策 |
 | karmada-scheduler vs member kube-scheduler | 前者决定资源去哪些集群、各集群多少副本；后者决定一个 Pod 去该集群中的哪个 Node |
+| unavailable vs Pending vs Unschedulable vs movable | unavailable 是 workload 容量缺口；Pending 是宽泛 Pod phase；Unschedulable 是 member kube-scheduler 的明确放置失败；movable 是 Karmada 结合跨集群环境和 workload 语义得到的策略结论 |
 | ResourceDetector vs Binding Controller vs Execution Controller | ResourceDetector 做资源与策略匹配并建 Binding；Binding Controller 把调度结果变成 Work；Execution Controller 把 Work 应用到成员集群 |
 | status aggregation vs propagation | propagation 是把期望下发出去；status aggregation 是把实际状态收回来 |
 | 组件身份证书 vs CA/root 证书 | 组件身份证书是被轮转的对象；CA/root 证书是签发者和信任根，第一版不轮转、不更新 caBundle |

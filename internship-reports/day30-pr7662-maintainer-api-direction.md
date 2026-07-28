@@ -43,7 +43,7 @@ WorkloadRebalancer controller 只写一条“重调度请求”
 
 另外，`SafeMigration` 不是被解决，而是被移出 #7662。以后如果单独设计安全迁移，目标副本先就绪、源副本后删除、finalizer、持久化状态和并发 ownership 仍然需要重新回答。
 
-## 证据快照
+## 2026-07-21 证据快照
 
 - PR：[karmada-io/karmada#7662](https://github.com/karmada-io/karmada/pull/7662)
 - 最新维护者 review：[RainbowMango review 4742653446](https://github.com/karmada-io/karmada/pull/7662#pullrequestreview-4742653446)
@@ -51,7 +51,46 @@ WorkloadRebalancer controller 只写一条“重调度请求”
 - PR head：`586f6fc3508eb0a504223898c0329a4bb8b4c57c`
 - 当前 upstream 基线：`4926be09bc3546162a56faf92e7e3e96158d4bcd`
 - 维护者权重：`RainbowMango` 是 PR assignee、Karmada member、根 OWNERS approver 和 `pkg/apis` approver。
-- 当前状态：这是 `COMMENTED` 的建议方案，不是已批准 API。作者尚未回复或推送新 commit；PR 仍只有 2026-06-23 的一个 proposal commit，11 个 review threads 全部未解决。
+- 当时状态：这是 `COMMENTED` 的建议方案，不是已批准 API。作者尚未回复或推送新 commit；PR 仍只有 2026-06-23 的一个 proposal commit，11 个 review threads 全部未解决。
+
+## 2026-07-27 作者回复：范围已收窄，行为合同仍未闭合
+
+[作者最新回复](https://github.com/karmada-io/karmada/pull/7662#issuecomment-5092574880) 接受了 maintainer 的大方向：
+
+- `SafeMigration` 和 source-preserving migration 移出本 proposal；
+- `WorkloadRebalancer` 只声明 typed reschedule behavior；
+- legacy `rescheduleTriggeredAt` 继续表示 `Full`；
+- 不增加 `phase`、`progress`、`canceling` 或 timeout 字段。
+
+但作者没有直接接受 `PreserveAvailableReplicas`，而是提出显式枚举 `Full | PreserveScheduled`。他的理由成立一半：`unavailable` 可能来自 image pull、启动、readiness probe 或应用故障，重新选集群不一定能修复；API 不应暗示所有 unavailable 副本都适合迁移。
+
+问题在于，`PreserveScheduled` 又无法完成回复开头所说的“资源不足或长期 Pending 副本重新调度”。用一个 10 副本 Deployment 说明：
+
+```text
+Binding.spec.clusters: member1=6, member2=4
+member status:          member1 available=4, member2 available=4
+```
+
+- `PreserveAvailableReplicas` 把 `4+4` 当作不可降低的基线，剩余 2 个重新分配；
+- `PreserveScheduled` 把已经写入 Binding 的 `6+4` 全部视为已调度，计算出的未调度缺口是 0，因此原地不动。
+
+这不是命名争论，而是数据源不同。当前 scheduler 的事实是：
+
+- `pkg/util/binding.go:IsBindingReplicasChanged` 已在 `sum(spec.clusters) != spec.replicas` 时自动触发调度；
+- `pkg/scheduler/core/assignment.go:buildScheduledClusters` 从 `spec.clusters` 计算 `assignedReplicas`；两者相等时 Steady 路径直接返回原结果；
+- 只有 `assignedReplicas < spec.replicas` 才进入 `dynamicScaleUp`；
+- `UnschedulableError` 会进入 scheduler 的 unschedulable/backoff queue，不需要额外的 WorkloadRebalancer 才能持续重试；
+- Deployment reflected status 确实提供 `availableReplicas` / `unavailableReplicas`，但仅凭这些计数无法区分 Pod scheduling failure、image failure 和 application failure。
+
+因此按当前源码，`PreserveScheduled` 大体等价于已有 Steady scale-up：存在 assigned deficit 时系统本来就会补；所有副本已经 assigned、只是在 member 内 Pending 时，它又看不见需要移动的部分。作者需要进一步定义一个能识别“可由换集群修复的 Pending deficit”的权威信号，或者明确把长期 Pending 场景移出本功能。
+
+回复中的 status 语义也需要实现合同。作者说 `Successful` 应表示请求已被 scheduler 处理，而不是 workload 已 ready；但 current WorkloadRebalancer controller 在成功写入 Binding 的 timestamp 后立即标记 `RebalanceSuccessful`，只 watch WorkloadRebalancer spec，不 watch Binding status。若要等待 scheduler，精简 proposal 至少要说明：
+
+1. controller 如何因 Binding `lastScheduledTime` / `Scheduled` 更新重新入队；
+2. 如何证明完成的是当前 typed request 和对应 `Mode`；
+3. scheduler 失败时 WorkloadRebalancer 何时结束、何时继续等待。
+
+截至 2026-07-28，PR head 仍是旧的 `586f6fc3508e`，720 行 proposal 尚未按回复改写，maintainer 也尚未回应这份反提案。结论应保持为“作者已接受 scope 收窄，但 API/行为尚未达成共识”，不能把 `PreserveScheduled` 当作批准方向。
 
 ## 维护者明确提出的方向
 
@@ -174,10 +213,11 @@ type Reschedule struct {
 
 ## 下一步
 
-不要基于当前 720 行旧 proposal 开始实现。先等作者接受维护者方向并推送精简版，然后只检查：
+不要基于当前 720 行旧 proposal 开始实现。先等 maintainer 回应作者的 `PreserveScheduled` 反提案，并等作者推送精简版，然后只检查：
 
 1. 完整重调度是否明确忽略或重置所有历史调度“书签”；
-2. preserve-available 是否有权威、能证明 freshness 的状态来源；
-3. scheduler strategy 和 affinity 支持矩阵是否明确；
-4. 新旧请求仲裁和执行回执是否确定；
-5. PR 是否停止把未交付的 SafeMigration 当作已经 `Fixes #7621`。
+2. 目标到底是移动 unavailable、assigned deficit，还是能够证明为 Pod scheduling failure 的副本；
+3. 所选信号是否在原 user story 中真实变化，并且不会只重复现有 Steady scale-up；
+4. scheduler strategy 和 affinity 支持矩阵是否明确；
+5. 新旧请求仲裁，以及 WorkloadRebalancer 等待 scheduler completion 的回执是否确定；
+6. PR 是否停止把未交付的 SafeMigration 当作已经 `Fixes #7621`。

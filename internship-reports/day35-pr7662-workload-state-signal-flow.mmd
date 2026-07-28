@@ -1,0 +1,73 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    primaryTextColor: "#17212b"
+    lineColor: "#5b6773"
+    fontFamily: "Arial, sans-serif"
+---
+flowchart TB
+  distinction["Unavailable is not Pending | Pending is not Unschedulable | Unschedulable is not automatically Movable"]
+
+  subgraph gate["1. Control-plane status gate"]
+    direction LR
+    workload["Member Deployment status<br/>Ready / Available / Unavailable"]
+    binding["ResourceBinding AggregatedStatus<br/>per-cluster Ready plus raw status"]
+    support{"Supported and current?<br/>Deployment + Dynamic Divided<br/>fresh status"}
+    candidate{"Ready replicas<br/>less than assigned replicas?"}
+    rejectStatus["Insufficient status evidence"]
+
+    workload -. "asynchronous reflection" .-> binding
+    binding --> support
+    support -- "Yes" --> candidate
+    support -- "No" --> rejectStatus
+    candidate -- "No" --> rejectStatus
+  end
+
+  subgraph member["2. Member-cluster scheduler-estimator"]
+    direction LR
+    rpc["Estimator RPC"]
+    pods["Pods owned by the<br/>newest ReplicaSet"]
+    scheduled{"PodScheduled=False?<br/>Reason=Unschedulable?"}
+    threshold{"Older than the<br/>configured threshold?"}
+    count["Proven unschedulable<br/>replica count"]
+    other["Excluded causes<br/>image, readiness, rollout, storage"]
+
+    rpc --> pods
+    pods --> scheduled
+    scheduled -- "Yes" --> threshold
+    scheduled -- "No" --> other
+    threshold -- "Yes" --> count
+    threshold -- "No" --> other
+  end
+
+  subgraph action["3. Cross-cluster action"]
+    direction LR
+    positive{"Count greater<br/>than zero?"}
+    release["Reduce source assignment<br/>by proven count only<br/>never below Ready baseline"]
+    scheduler["karmada-scheduler<br/>places the released delta"]
+    hold["Release zero<br/>fail closed"]
+
+    positive -- "Yes" --> release
+    release --> scheduler
+    positive -- "No or unknown" --> hold
+  end
+
+  distinction -.-> support
+  candidate -- "Yes" --> rpc
+  count --> positive
+  rejectStatus -.-> hold
+  other -. "not proof of movability" .-> hold
+
+  classDef source fill:#eaf3ff,stroke:#3973a8,color:#17212b,stroke-width:1.5px;
+  classDef decision fill:#fff3cf,stroke:#aa7b16,color:#17212b,stroke-width:1.5px;
+  classDef success fill:#e7f6ec,stroke:#2d7d46,color:#17212b,stroke-width:1.5px;
+  classDef stop fill:#fbe9e7,stroke:#b44b3e,color:#17212b,stroke-width:1.5px;
+  classDef note fill:#f4f5f7,stroke:#737b84,color:#17212b,stroke-dasharray:4 3;
+
+  class workload,pods,binding,rpc,count source;
+  class scheduled,threshold,support,candidate,positive decision;
+  class release,scheduler success;
+  class rejectStatus,other,hold stop;
+  class distinction note;

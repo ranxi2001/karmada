@@ -2,9 +2,11 @@
 
 日期：2026-07-21
 
+> 2026-07-28 状态更新：本报告的 PR 1 已收敛为 #7791 的 Full cursor reset，仍然有效；PR 2 的 `PreserveAvailableReplicas` 实现计划暂停，不再作为当前代码基线。#7662 作者在 2026-07-27 提出 `PreserveScheduled` 反提案，但它按 current Binding 数据模型无法移动“已经 assigned、只是在 member cluster 内 Pending”的副本。详见 [Day 30 作者回复更新](day30-pr7662-maintainer-api-direction.md#2026-07-27-作者回复范围已收窄行为合同仍未闭合)。在 maintainer 明确目标语义、权威数据源和 scheduler-completion 回执前，不启动第二个 API PR。
+
 ## 先说人话
 
-今天不再等 PR #7662 的作者先重写 proposal。我们采用 maintainer 已经给出的收敛方向，但不把 API、controller、scheduler 和二十余个生成文件塞进第一个 PR。
+本报告在 2026-07-21 的原计划是不再等 PR #7662 作者先重写 proposal，先按 maintainer 当时给出的收敛方向拆分交付。上面的 2026-07-28 更新已经暂停其中第二个 API PR；下面保留原设计作为证据，不代表当前批准合同。
 
 先用一个 10 副本的例子说明最终目标：
 
@@ -20,12 +22,12 @@ PreserveAvailableReplicas=true：
 
 不能先把 Binding 临时改成 `4/4` 再调度。那会真的把 10 副本中间缩成 8 个；如果第二步失败，系统会停在错误的半成品状态。正确做法是在 scheduler 内存中计算基线和缺口，成功后一次性写最终 `spec.clusters`。
 
-开发按两个可独立审阅的行为 PR 推进：
+2026-07-21 原计划按两个可独立审阅的行为 PR 推进：
 
 1. 第一个 PR 只完成 #5070：显式完整重调度不仅重算副本，还从第一个顶层 `clusterAffinities` term 重新搜索，并为这次一次性请求读取 current Cluster snapshot。它没有 API 变更，边界仍只在 scheduler 内部，而且历史 maintainer 已认可 scheduler-owned 的实现位置。
-2. 第二个 PR 才端到端加入 typed `Reschedule` API 和 `PreserveAvailableReplicas`。API、controller、scheduler、CRD/OpenAPI、单元测试和 E2E 必须一起交付，不能拆成会被用户调用却没有效果的半成品。
+2. 第二个 PR 曾计划端到端加入 typed `Reschedule` API 和 `PreserveAvailableReplicas`；该项现已暂停。若后续合同恢复，API、controller、scheduler、CRD/OpenAPI、单元测试和 E2E 仍必须一起交付，不能拆成会被用户调用却没有效果的半成品。
 
-这不是继续纠结原 issue 的边界，而是把 maintainer 的设计按可验证行为落地。#7621 的 SafeMigration、自动水位和无中断迁移继续保持开放，本系列不声称修复它们。
+当时的判断是把 maintainer 的设计按可验证行为落地；作者反提案出现后，这个判断只对第一阶段 Full 行为继续成立。#7621 的 SafeMigration、自动水位和无中断迁移继续保持开放，本系列不声称修复它们。
 
 ## 当前依据与决策强度
 
