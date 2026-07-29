@@ -21,7 +21,7 @@
 
 | 优先级 | 对象 | 当前信号 | 决策 |
 | --- | --- | --- | --- |
-| P0 | [PR #7800](https://github.com/karmada-io/karmada/pull/7800) `Optimize GetMatching for waiting objects in ResourceDetector` | 4 文件 `+877/-49`，CI 全绿，只有 Copilot summary、没有 human review | 现在做完整 code review |
+| P0 | [PR #7800](https://github.com/karmada-io/karmada/pull/7800) `Optimize GetMatching for waiting objects in ResourceDetector` | 4 文件 `+877/-49`，验证 checks 全绿、`tide` 等待 review labels；只有 Copilot summary、没有 human review | 现在做完整 code review |
 | P0 | [Issue #7802](https://github.com/karmada-io/karmada/issues/7802) `Respecting binding priority under resource/quota contention` | 新议题，0 comment、0 assignee；生产场景和源码链路具体 | 先做最小队列复现，再准备讨论回复 |
 | P1 | [PR #7794](https://github.com/karmada-io/karmada/pull/7794) shell completion timeout | 1 文件 `+46/-24`；实现存在未取消底层请求的问题，但 Copilot 已指出 | 等作者更新后做 patch-equivalent 复查 |
 | WATCH | [PR #7663](https://github.com/karmada-io/karmada/pull/7663) rotated bearer token | push-mode informer 失明是高价值生产问题；已有 2 assignee、5 requested reviewer 和较长 review thread | 不抢占，只在新 patch 出现且现有 review 留出空白时补证据 |
