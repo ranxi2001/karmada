@@ -2,7 +2,7 @@ Target: https://github.com/karmada-io/karmada/pull/7800
 
 Line: `pkg/detector/waiting_store.go:106` at head `dc1b9c4a8aa55100e6b35dfda4cefff82725e469`
 
-Status: draft only; not posted
+Status: posted on 2026-07-29 as [discussion_r3671589022](https://github.com/karmada-io/karmada/pull/7800#discussion_r3671589022)
 
 The indexed-store approach looks good to me. It preserves the existing selector semantics while removing informer lookups and deep copies from the hot path, and the benchmark shows a substantial query improvement.
 

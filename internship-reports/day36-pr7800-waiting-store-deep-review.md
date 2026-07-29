@@ -100,7 +100,7 @@ review-only 测试在构建输入之后采样 HeapAlloc，并用 `runtime.KeepAl
 1. 记录和接受有 workload 分布依据的容量上界。
 2. 将高基数 name bucket 改为更紧凑表示，或只在确实需要无 namespace name selector 时承担该索引成本。
 
-英文 line-comment 草稿单独保存在 [day36-pr7800-review-comment.md](day36-pr7800-review-comment.md)。该 finding 定为 non-blocking evidence gap，不表述成已发生 OOM，也不要求未经证明的具体数据结构。
+英文 line-comment 原文保存在 [day36-pr7800-review-comment.md](day36-pr7800-review-comment.md)，并已发布为 [discussion_r3671589022](https://github.com/karmada-io/karmada/pull/7800#discussion_r3671589022)。该 finding 定为 non-blocking evidence gap，不表述成已发生 OOM，也不要求未经证明的具体数据结构。
 
 ## 独立反证与未决边界
 
@@ -114,6 +114,6 @@ review-only 测试在构建输入之后采样 HeapAlloc，并用 `runtime.KeepAl
 
 ## 下一步
 
-1. 用户确认 exact target 和英文正文后，才在 PR #7800 `waiting_store.go` 的 `byGVKName` 插入行发布 non-blocking comment。
+1. 已在 PR #7800 `waiting_store.go` 的 `byGVKName` 插入行发布 non-blocking comment；等待作者回应 retained-memory 边界或索引取舍。
 2. 作者若补 retained-memory 数据或改索引形态，复测同一 24,564-object workload，并核对跨 namespace exact-name selector 不回退为全表扫描。
 3. 如果作者解释了 production name/namespace 分布和容量预算，按实际边界重新判断是否还需代码调整；不把本地微基准当成线上 OOM 证明。
