@@ -326,6 +326,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Event producers, expected mutation rate, fan-out cardinality, reconcile reads/writes, idempotence and no-op behavior, self-trigger potential, and any production scale or benchmark evidence needed for the risk level.
 - Test or fix cue: State `cost -> frequency/unit-cost bounds -> decision`. Add filtering, batching, metrics, or a scale test only when the trigger is frequent, fan-out is broad, work is heavy, or termination is uncertain.
 
+## Positive Overall Verdict Must Precede A Non-Blocking Tradeoff
+
+- Pattern: When the implementation direction is sound and the only remaining concern is non-blocking, the upstream comment must state that overall verdict before presenting the cost or evidence gap.
+- Seen in: The initial review draft for `karmada-io/karmada#7800`, which agreed with the indexed waiting store but opened directly with retained-memory growth.
+- Miss symptom: The author sees criticism first and reasonably reads the reviewer as opposing the approach, even though the private review conclusion is that the behavior and performance improvement are correct.
+- Review check: Before drafting, classify the overall stance and finding severity separately. If the stance is positive, name the verified benefit; if the concern is non-blocking, say so explicitly before its evidence.
+- Evidence to gather: Proven behavior preserved, measured benefit, bounded downside, finding severity, and the smallest follow-up needed to evaluate the tradeoff.
+- Test or fix cue: Write `verified benefit -> explicit non-blocking boundary -> concrete cost evidence -> smallest question`. Keep findings-first ordering for internal reports when useful, but do not let it misstate the upstream verdict.
+
 ## A Renamed Behavior Must Still Observe The User Story's State
 
 - Pattern: Replacing an ambiguous runtime signal with a cleaner desired-state term can make an API sound more precise while removing the only data that distinguishes the reported problem; the new mode may then duplicate existing reconciliation rather than add behavior.

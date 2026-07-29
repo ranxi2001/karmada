@@ -4,4 +4,8 @@ Line: `pkg/detector/waiting_store.go:106` at head `dc1b9c4a8aa55100e6b35dfda4cef
 
 Status: draft only; not posted
 
-Could we also quantify the retained-heap side of this trade-off at the PR's scale? In a review-only test with 24,564 objects (same GVK/namespace, unique names, one label), the old key map retained about 3.15 MB while this store retained about 40.56 MB. With nil labels it still retained about 32.30 MB; clearing only `byGVKName` before GC reduced that to about 9.64 MB, so its per-name singleton sets dominate this distribution. The exact namespace+name benchmark reads `objects` directly and does not use this index. Cross-namespace name selectors still need efficient lookup, so the trade-off may be worthwhile, but the current query `alloc_space` profiles do not show this persistent peak. Could we add same-scale `inuse_space`/retained-heap evidence and either document the expected bound or use a denser/lazier name index?
+The indexed-store approach looks good to me. It preserves the existing selector semantics while removing informer lookups and deep copies from the hot path, and the benchmark shows a substantial query improvement.
+
+One non-blocking question is the retained-memory side of this trade-off. At the PR's 24,564-object scale, my review-only test measured about 3.15 MB for the old key map versus 40.56 MB for this store. With nil labels it still used 32.30 MB, and clearing only `byGVKName` reduced that to 9.64 MB, so the per-name singleton sets dominate this distribution. The exact namespace+name path reads `objects` directly, although cross-namespace name selectors still need efficient lookup.
+
+This may still be the right trade-off. Could we add same-scale `inuse_space`/retained-heap evidence and either document the expected bound or consider a denser/lazier name index?
