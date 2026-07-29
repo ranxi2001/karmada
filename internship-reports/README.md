@@ -48,6 +48,7 @@
 - [Day 33：PR #7791 E2E 红灯分类与 `karmadactl top` Flake 修复](day33-pr7791-e2e-flake-root-cause-analysis.md)（[故障时序 Mermaid](day33-pr7791-v136-karmadactl-top-podmetrics-race.mmd) / [PNG](day33-pr7791-v136-karmadactl-top-podmetrics-race.png)；[E4 对齐 Mermaid](day33-karmadactl-top-flake-e4-alignment.mmd) / [PNG](day33-karmadactl-top-flake-e4-alignment.png)；[upstream draft](day33-karmadactl-top-flake-upstream-draft.md)）
 - [Day 35：PR #7662 衍生的 workload unavailable、Pending 与可重调度副本调研](day35-pr7662-workload-unavailable-pending-research.md)（[Mermaid](day35-pr7662-workload-state-signal-flow.mmd) / [PNG](day35-pr7662-workload-state-signal-flow.png)）
 - [Day 36：2026-07-23 至 2026-07-29 Karmada Issue / PR Review 候选](day36-karmada-weekly-review-candidates-2026-07-29.md)
+- [Day 36：PR #7800 ResourceDetector waiting store 深度 Review](day36-pr7800-waiting-store-deep-review.md)（[英文 review 草稿](day36-pr7800-review-comment.md)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
