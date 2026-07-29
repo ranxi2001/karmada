@@ -104,6 +104,15 @@ Adjust subsystem choices to the project. For Kubernetes projects, common tracks 
 - Preserve upstream contribution language in English unless the project explicitly accepts another language.
 - Ask for explicit user confirmation before upstream-facing PRs, issues, comments, reviewer requests, maintainer mentions, or proposal publication.
 
+## PROGRESS Rolling Retention
+
+Apply this maintenance pass at the end of every work loop:
+
+1. Classify each changed item as active next-loop state, durable evidence, task inventory, or obsolete state.
+2. Move durable detail to the relevant report and task inventory to `todo.md`; leave only one concise conclusion, evidence link, and next trigger in `PROGRESS.md`.
+3. Prune `Last Run` to the newest 5 entries within 14 calendar days; prune snapshot, blockers, and next actions to 4 active items each. Remove completed or superseded entries immediately, and move wait-only items with no change for 2 loops back to TODO unless they are current top priorities.
+4. Run `wc -l -c PROGRESS.md`. Keep the file at or below 80 lines and 8 KiB, and use Git history instead of creating a duplicate progress archive.
+
 ## Validation
 
 After creating or updating a skill, run the skill validator if available. For repository docs, run `git status --short` and inspect the diff to confirm only learning/report files changed unless the user requested code edits.

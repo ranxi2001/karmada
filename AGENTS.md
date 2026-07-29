@@ -78,6 +78,18 @@ At the end of each task, classify useful outcomes before stopping:
 
 Do not store raw chat history. Keep conclusions concise, cite file paths or command evidence when useful, and replace outdated rules instead of letting contradictory notes accumulate.
 
+### PROGRESS Rolling Retention
+
+Treat `PROGRESS.md` as a bounded cache for the next few work loops, not as an archive:
+
+- Keep `Last Run` to at most 5 entries, and keep only entries from the latest 14 calendar days. A new entry that exceeds either limit evicts the oldest entry after its durable evidence is linked from a report or TODO.
+- Keep `Current Snapshot`, `Current Blockers`, and `Next` to at most 4 active items each. A wait-only item with no state change for 2 consecutive work loops moves back to `internship-reports/todo.md` unless it is explicitly one of the current top priorities.
+- Remove completed, merged, canceled, superseded, or no-longer-actionable items in the same loop after their final evidence is recorded in `internship-reports/` or `todo.md`.
+- Keep each item to one concise conclusion plus an evidence link and next trigger. Raw logs, full RCA, chronological debugging, environment history, and completed milestones do not belong in `PROGRESS.md`.
+- Keep the whole file at or below 80 lines and 8 KiB. Before ending a loop, run `wc -l -c PROGRESS.md`; prune before adding if either budget would be exceeded.
+
+Git history is the fallback for deleted short-term state. Do not create a second rolling archive that duplicates the reports.
+
 ## Fork and Upstream Workflow
 
 This workspace currently has `origin` configured as the personal fork: `https://github.com/ranxi2001/karmada`. Add an `upstream` remote for `https://github.com/karmada-io/karmada.git` before doing upstream sync or official PR work.
