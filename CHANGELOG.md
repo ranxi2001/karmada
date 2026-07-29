@@ -1,3 +1,0 @@
-# CHANGELOGs
-
-[CHANGELOG](./docs/CHANGELOG/)

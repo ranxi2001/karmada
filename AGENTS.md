@@ -2,9 +2,13 @@
 
 ## Project Structure
 
-Karmada is a Go-first Kubernetes multi-cluster orchestration project. Main binaries live under `cmd/`, including `karmada-controller-manager`, `karmada-scheduler`, `karmada-agent`, `karmada-aggregated-apiserver`, `karmada-webhook`, `karmada-descheduler`, `karmada-search`, `karmada-metrics-adapter`, `karmadactl`, and `kubectl-karmada`. Shared implementation packages live under `pkg/`; API types are under `pkg/apis/`; generated clients and informers are under `pkg/generated/`. The operator lives in `operator/`. Helm charts are under `charts/`. Local deployment, generation, and verification scripts are in `hack/`. End-to-end tests are under `test/e2e/`, with helper code in `test/helper/`.
+The `intern` branch is intentionally a record-only branch. Its tracked root is restricted to `.agents/`, `internship-reports/`, `AGENTS.md`, and `PROGRESS.md`; do not add the upstream source tree, generated artifacts, or build metadata back to this branch.
+
+Karmada is a Go-first Kubernetes multi-cluster orchestration project. On branches created from `upstream/master`, main binaries live under `cmd/`, including `karmada-controller-manager`, `karmada-scheduler`, `karmada-agent`, `karmada-aggregated-apiserver`, `karmada-webhook`, `karmada-descheduler`, `karmada-search`, `karmada-metrics-adapter`, `karmadactl`, and `kubectl-karmada`. Shared implementation packages live under `pkg/`; API types are under `pkg/apis/`; generated clients and informers are under `pkg/generated/`. The operator lives in `operator/`. Helm charts are under `charts/`. Local deployment, generation, and verification scripts are in `hack/`. End-to-end tests are under `test/e2e/`, with helper code in `test/helper/`.
 
 ## Build, Test, and Development Commands
+
+The following commands are unavailable directly on the record-only `intern` branch. Run them in a separate worktree or topic branch created from the latest `upstream/master`.
 
 - `make all`: builds all Karmada binaries listed in the root `Makefile`.
 - `make karmadactl` / `make kubectl-karmada`: builds the CLI binaries.
@@ -79,6 +83,8 @@ Do not store raw chat history. Keep conclusions concise, cite file paths or comm
 This workspace currently has `origin` configured as the personal fork: `https://github.com/ranxi2001/karmada`. Add an `upstream` remote for `https://github.com/karmada-io/karmada.git` before doing upstream sync or official PR work.
 
 Keep `intern` for internship notes and learning assets. For upstream-facing changes, create a clean topic branch from the latest upstream `master`, include one focused change, run the relevant verification commands, and keep internship records out of the PR branch. Before opening an upstream PR, issue, review comment, maintainer mention, or community-facing proposal, get explicit user confirmation on the exact target and English text.
+
+Treat the `intern` root allowlist as a branch invariant: `.agents/`, `internship-reports/`, `AGENTS.md`, and `PROGRESS.md` only. Use a separate Git worktree for upstream code work so switching contexts does not repopulate or accidentally stage the Karmada source tree on `intern`.
 
 Do not create PRs against the personal fork just to run CI. Push the topic branch to `origin` because it is the upstream PR head, but do not wait for, report, or cite fork push CI by default; the official upstream PR CI is the authoritative validation surface and runs when the PR is opened. Inspect fork workflows only when the user explicitly asks or when diagnosing an already observed fork-specific failure.
 
