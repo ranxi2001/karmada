@@ -49,6 +49,7 @@
 - [Day 35：PR #7662 衍生的 workload unavailable、Pending 与可重调度副本调研](day35-pr7662-workload-unavailable-pending-research.md)（[Mermaid](day35-pr7662-workload-state-signal-flow.mmd) / [PNG](day35-pr7662-workload-state-signal-flow.png)）
 - [Day 36：2026-07-23 至 2026-07-29 Karmada Issue / PR Review 候选](day36-karmada-weekly-review-candidates-2026-07-29.md)
 - [Day 36：PR #7800 ResourceDetector waiting store 深度 Review](day36-pr7800-waiting-store-deep-review.md)（[英文 review 草稿](day36-pr7800-review-comment.md)）
+- [Day 36：Issue #7802 调度优先级队列确定性实验](day36-issue7802-priority-queue-experiment.md)（[英文评论草稿](day36-issue7802-comment.md) / [Mermaid](day36-issue7802-queue-reentry.mmd) / [PNG](day36-issue7802-queue-reentry.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

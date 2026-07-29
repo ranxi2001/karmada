@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    participant F as Flush goroutine
+    participant B as Blocked store
+    participant A as activeQ
+    participant W as Scheduler worker
+
+    Note over F,W: Controlled legal interleaving<br/>Production frequency is not measured
+    F->>B: Build eligible admission order<br/>(expiry heap or collected map slice)
+    F->>A: Push first item low and Signal
+
+    alt Worker reacquires the activeQ lock first
+        W->>A: Pop low<br/>(high is not resident yet)
+        F->>A: Push next eligible high
+        Note over F,W: A second Pop cannot begin before this flush releases its outer lock
+    else Flusher admits the full eligible batch first
+        F->>A: Push next eligible high
+        W->>A: Pop high<br/>(priority compares both residents)
+    end
+
+    Note over F,A: Equal backoff completion already selects high first
