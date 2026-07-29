@@ -22,7 +22,7 @@
 | --- | --- | --- | --- | --- |
 | `/tmp/karmada-issue7802-review/pkg/scheduler/internal/queue/issue7802_review_test.go` | 临时 review-only test | 注入受控 `ActiveQueue`，固定 `Push -> Pop -> remaining Push` 时序 | 只验证队列机制，不能代表线上频率 | focused test、race、重复运行 |
 | `internship-reports/day36-issue7802-priority-queue-experiment.md` | 本地证据记录 | 保存设计、失败实验、源码和结论 | 无产品行为变化 | Markdown/link/diff check |
-| `internship-reports/day36-issue7802-comment.md` | 英文草稿 | 给 issue 作者可独立理解的证据边界 | 未授权不得发布 | concise metrics、人工复核 |
+| `internship-reports/day36-issue7802-comment.md` | 已发布英文评论原文 | 给 issue 作者可独立理解的证据边界 | 后续编辑或回复仍需重新授权 | concise metrics、远端逐字回读 |
 | `internship-reports/day36-issue7802-queue-reentry.mmd/.png` | canonical Mermaid + render | 展示 flush、activeQ、worker 的真实时序 | 图不能把可能 interleaving 画成固定线上频率 | `mmdc` render + 图片检查 |
 
 ## 明确不改
@@ -142,8 +142,9 @@ PASS；review worktree clean
 | 首次 Mermaid render | `Parse error` 指向第一条 Note 之后 | Note 文本中的 `;` 被 Mermaid 当作语句分隔符 | 改为 `<br/>`，使用 pinned npx backend 重渲并人工检查 PNG |
 | 首次 map 观测统计 | `awk: backslash not last character on line` | 嵌套 shell 中的 `$0` 被提前展开 | 改用不含 shell 变量的 `rg -o -> sort -> uniq -c` 管道 |
 | 初版 unschedulable test | 100 次内未遇到 low-first 就 fail | pass/fail 依赖未定义的 map 顺序，属于概率测试 | 改为确定性断言 `firstPopped == firstPushed`，priority 只写日志 |
+| 首次远端正文 `cmp` | 评论内容相同但 `cmp` 返回 1 | `gh api --jq .body` 在正文自带结尾换行后又输出一个换行 | 改用 `gh api | jq -j .body` 保留原始 body bytes，哈希和 `cmp` 均一致 |
 
-这些失败没有改变产品结论，但暴露了两个测试纪律：解析器保留符号必须以真实 render 验证；未定义顺序可以作为观测，不能成为回归测试的通过条件。
+这些失败没有改变产品结论。前三项暴露了两个测试纪律：解析器保留符号必须以真实 render 验证；未定义顺序可以作为观测，不能成为回归测试的通过条件。远端回读还说明 CLI 展示格式与 stored body bytes 要分开验证，精确比较应使用不追加换行的 raw 输出。
 
 ## 反证：Issue 哪些话成立，哪些需要收窄
 
@@ -208,7 +209,7 @@ PASS；review worktree clean
 | per-tenant `queueingStrategy` | tenant isolation / HOL policy | API 面大；与 readmission priority 不是同一维度 | 不作为首个修复 |
 | preemption | high 可腾出运行容量 | Issue 已说明 Spark batch 不适合直接丢弃运行工作；功能也尚不可用 | 非本 Issue 首选 |
 
-最小社区动作是先发布 [英文评论草稿](day36-issue7802-comment.md)，请求 maintainer 定义合同。若答案要求“同一轮已经 eligible 的 blocked bindings 严格比较 priority”，再以 batch admission 为最小实验，不先扩展 API。
+已发布 [英文评论原文](day36-issue7802-comment.md)，请求 maintainer 定义合同。若答案要求“同一轮已经 eligible 的 blocked bindings 严格比较 priority”，再以 batch admission 为最小实验，不先扩展 API。
 
 ## 技术证据索引
 
@@ -218,9 +219,18 @@ PASS；review worktree clean
 - binding delete / cluster update event：[event_handler.go](https://github.com/karmada-io/karmada/blob/ce2a7b869477272202095282251afe490c38d525/pkg/scheduler/event_handler.go#L248-L353)
 - API priority 注释：[propagation_types.go](https://github.com/karmada-io/karmada/blob/ce2a7b869477272202095282251afe490c38d525/pkg/apis/policy/v1alpha1/propagation_types.go#L204-L216)
 
+## Upstream 发布记录
+
+- 目标：[karmada-io/karmada#7802](https://github.com/karmada-io/karmada/issues/7802)
+- 已发布评论：[issuecomment-5114587741](https://github.com/karmada-io/karmada/issues/7802#issuecomment-5114587741)
+- 发布者与时间：`@ranxi2001`，2026-07-29 15:37:57（Asia/Shanghai）
+- 发布规模：179 visible words；Issue 发布后仍为 Open、无 assignee，评论数从 0 变为 1。
+- 原文校验：本地文件与 GitHub remote body 的 SHA-256 均为 `af24238b28472b6be7b0f65deac0638a4f650f62ade42eba091e5e02d20ade74`；`jq -j .body` 后 `cmp` 通过。
+- 边界：这条评论请求 maintainer 明确合同，没有承诺实现、认领 Issue、提出 API 或请求特定 reviewer。
+
 ## 未决边界与下一步
 
-1. 等 maintainer 明确 strict priority 的候选范围；未确认前不改 scheduler queue/API。
+1. 等 Issue 作者或 maintainer 回复并明确 strict priority 的候选范围；未确认前不改 scheduler queue/API。
 2. 若需要实现保证，先写一个 tracked regression test，固定 `eligible batch -> admission barrier -> Pop`，同时保留 #6986 的 completion eligibility。
 3. 将 capacity/quota event-driven wake-up 作为独立 ownership 调研，不用一个锁或 retry patch 同时承担两项合同。
-4. 如要向 #7802 发布评论，必须先由用户确认 `day36-issue7802-comment.md` 的 exact English text；本轮只准备和推送 intern 记录。
+4. 后续任何 follow-up、maintainer mention 或实现承诺，仍需用户确认新的 exact target/text。

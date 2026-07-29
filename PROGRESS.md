@@ -6,7 +6,7 @@
 
 阶段目标：在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。
 
-当前优先级：战略主线继续等待 #7621/#7662 合同收敛；PR #7800 non-blocking review 已发布并等待作者回应，Issue #7802 队列验证完成并等待英文评论确认；同时维护 #7791、#7697、#7795 三条已发布交付线。
+当前优先级：战略主线继续等待 #7621/#7662 合同收敛；PR #7800 non-blocking review 与 Issue #7802 queue-contract 评论均已发布并等待回应；同时维护 #7791、#7697、#7795 三条已发布交付线。
 
 ## Current Snapshot
 
@@ -18,11 +18,11 @@
 | [PR #7791](https://github.com/karmada-io/karmada/pull/7791) | Open，head `41ed652725fc`；Full affinity cursor reset 已收敛，等待 review | 新 CI、真人 review 或同范围 upstream 提交 |
 | [PR #7697](https://github.com/karmada-io/karmada/pull/7697) | Open，head `bf24e47ce3bd`；证书轮换实现和定向验证已完成 | 新 review、CI 变化或 maintainer scope 决策 |
 | [PR #7795](https://github.com/karmada-io/karmada/pull/7795) | Open，head `14b24b90db73`；`FIXTURE_LOCAL_E4 / TERMINAL_E2`，PR claim 已收紧 | maintainer review 或能够连接原 CI 404 的新证据 |
-| [Issue #7802](https://github.com/karmada-io/karmada/issues/7802) | Open、无回复；确定性实验确认 readmission interleaving 可达，但一次 flush 最多提前一个 binding；官网与原 proposal 合同有张力 | 用户确认 exact English comment 后发布，或 maintainer/作者先回复 |
+| [Issue #7802](https://github.com/karmada-io/karmada/issues/7802) | Open；[queue-contract comment](https://github.com/karmada-io/karmada/issues/7802#issuecomment-5114587741) 已发布并逐字回读；无 assignee，等待首次回复 | 作者或 maintainer 明确 priority 候选范围，或提供生产 trace/方案方向 |
 
 ## Last Run
 
-- 2026-07-29：完成 [Issue #7802 priority queue 确定性实验](internship-reports/day36-issue7802-priority-queue-experiment.md)：确认不完整候选集合可产生一次 low-first，反证“持续 drain 整批”，并拆开 readmission ordering 与 capacity/quota wake-up；英文草稿待 exact-text 授权。
+- 2026-07-29：完成 [Issue #7802 priority queue 确定性实验](internship-reports/day36-issue7802-priority-queue-experiment.md)：确认不完整候选集合可产生一次 low-first，反证“持续 drain 整批”，并拆开 readmission ordering 与 capacity/quota wake-up；[179-word queue-contract comment](https://github.com/karmada-io/karmada/issues/7802#issuecomment-5114587741) 已发布并逐字回读。
 - 2026-07-29：完成 [PR #7800 waiting store 深度 review](internship-reports/day36-pr7800-waiting-store-deep-review.md)：未发现 correctness blocker；查询性能显著改善，但 24,564 对象下 retained heap 从约 3.15 MB 增至 40.56 MB，[non-blocking line review](https://github.com/karmada-io/karmada/pull/7800#discussion_r3671589022) 已发布。
 - 2026-07-29：扫描过去一周 5 个 Open Issue 和 33 个 Open PR，形成 [Day 36 review 候选](internship-reports/day36-karmada-weekly-review-candidates-2026-07-29.md)：优先 PR #7800，Issue #7802 先补队列顺序证据，PR #7794 等作者修复已被 bot 指出的 timeout gap。
 - 2026-07-29：将 `intern` 收敛为 record-only 分支，只保留 `.agents/`、`internship-reports/`、`AGENTS.md`、`PROGRESS.md`；upstream 代码工作改用独立 topic branch/worktree。
@@ -46,7 +46,7 @@
 - #7662 出现新回复时，用 Day 35 的 10 副本反例核对 `assigned`、`PodScheduled`、Ready、Available 和长期 Unschedulable 的数据源，再决定是否更新 proposal review。
 - #7791、#7697 或 #7795 出现 review/CI 时，先回读 current head 和完整 thread，只处理与当前 diff 有因果关系的反馈。
 - #7800 等待作者回应 [retained-memory line review](https://github.com/karmada-io/karmada/pull/7800#discussion_r3671589022)；若更新证据或索引实现则复测，不先把本地数据写成 OOM 结论。
-- #7802 等用户确认 [exact English comment](internship-reports/day36-issue7802-comment.md) 后发布；maintainer 明确 strict priority 的候选范围前，不提交 queue/API 改动。
+- #7802 等待作者或 maintainer 回复 [queue-contract comment](https://github.com/karmada-io/karmada/issues/7802#issuecomment-5114587741)；maintainer 明确 strict priority 的候选范围前，不提交 queue/API 改动，也不重复催促。
 
 ## Stop Conditions
 
