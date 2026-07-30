@@ -96,6 +96,8 @@ This workspace currently has `origin` configured as the personal fork: `https://
 
 Keep `intern` for internship notes and learning assets. For upstream-facing changes, create a clean topic branch from the latest upstream `master`, include one focused change, run the relevant verification commands, and keep internship records out of the PR branch. Before opening an upstream PR, issue, review comment, maintainer mention, or community-facing proposal, get explicit user confirmation on the exact target and English text.
 
+After completing record-only work on `intern`, inspect the diff, run the relevant document/asset checks, commit the finished records, and push `origin/intern` without waiting for a separate user reminder or confirmation. This standing permission applies only to the record branch and does not authorize pushes to upstream-facing topic branches or any PR, issue, review, comment, mention, or other community-visible action.
+
 Treat the `intern` root allowlist as a branch invariant: `.agents/`, `internship-reports/`, `AGENTS.md`, and `PROGRESS.md` only. Use a separate Git worktree for upstream code work so switching contexts does not repopulate or accidentally stage the Karmada source tree on `intern`.
 
 Do not create PRs against the personal fork just to run CI. Push the topic branch to `origin` because it is the upstream PR head, but do not wait for, report, or cite fork push CI by default; the official upstream PR CI is the authoritative validation surface and runs when the PR is opened. Inspect fork workflows only when the user explicitly asks or when diagnosing an already observed fork-specific failure.

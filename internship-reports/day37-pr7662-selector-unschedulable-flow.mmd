@@ -1,0 +1,48 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+  flowchart:
+    curve: basis
+    htmlLabels: true
+---
+flowchart LR
+    subgraph CONTROL["Karmada control plane"]
+        WORKLOAD["Workload spec"]:::current
+        INTERPRETER["GetComponents<br/>component requirements"]:::current
+        BINDING[("ResourceBinding<br/>components + reschedule request")]:::state
+        WR["WorkloadRebalancer<br/>PreserveAvailableReplicas"]:::proposed
+        SCHEDULER["karmada-scheduler<br/>rescheduling cycle"]:::current
+        SCALEUP["dynamicScaleUp<br/>reassign deficit"]:::proposed
+    end
+
+    subgraph MEMBER["Member cluster"]
+        ESTIMATOR["scheduler-estimator<br/>count long-unschedulable Pods"]:::proposed
+        PODS[("Pod informer cache<br/>PodScheduled conditions")]:::current
+    end
+
+    WORKLOAD -->|current interpreter input| INTERPRETER
+    INTERPRETER -->|proposed component selector| BINDING
+    WR -->|proposed typed request| BINDING
+    BINDING -->|trigger + selector| SCHEDULER
+    SCHEDULER -.->|proposed RPC per cluster| ESTIMATOR
+    PODS -->|member runtime state| ESTIMATOR
+    ESTIMATOR -.->|unschedulable count| SCHEDULER
+    SCHEDULER -->|proposed scalar deficit| SCALEUP
+
+    GAP1["Open contract<br/>Available is not Unschedulable"]:::open
+    GAP2["Open contract<br/>Selector is not ownership proof"]:::open
+    GAP3["Open contract<br/>Components do not map to one scalar deficit"]:::open
+    GAP4["Open ownership<br/>Descheduler already consumes this signal"]:::open
+
+    WR -.-> GAP1
+    ESTIMATOR -.-> GAP2
+    SCALEUP -.-> GAP3
+    SCHEDULER -.-> GAP4
+
+    classDef current fill:#f3f4f6,stroke:#6b7280,color:#111827;
+    classDef state fill:#dbeafe,stroke:#3b82f6,color:#172554;
+    classDef proposed fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px;
+    classDef open fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-dasharray:6 4;

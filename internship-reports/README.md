@@ -50,6 +50,7 @@
 - [Day 36：2026-07-23 至 2026-07-29 Karmada Issue / PR Review 候选](day36-karmada-weekly-review-candidates-2026-07-29.md)
 - [Day 36：PR #7800 ResourceDetector waiting store 深度 Review](day36-pr7800-waiting-store-deep-review.md)（[英文 review 草稿](day36-pr7800-review-comment.md)）
 - [Day 36：Issue #7802 调度优先级队列确定性实验](day36-issue7802-priority-queue-experiment.md)（[已发布英文评论](day36-issue7802-comment.md) / [Upstream comment](https://github.com/karmada-io/karmada/issues/7802#issuecomment-5114587741) / [Mermaid](day36-issue7802-queue-reentry.mmd) / [PNG](day36-issue7802-queue-reentry.png)）
+- [Day 37：PR #7662 selector / unschedulable 方案更新 Review](day37-pr7662-selector-unschedulable-review.md)（[Mermaid](day37-pr7662-selector-unschedulable-flow.mmd) / [PNG](day37-pr7662-selector-unschedulable-flow.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

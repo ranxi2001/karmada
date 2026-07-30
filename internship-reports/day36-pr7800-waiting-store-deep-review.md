@@ -1,5 +1,7 @@
 # Day 36：PR #7800 ResourceDetector waiting store 深度 Review
 
+> 2026-07-30 更新：作者在新 head `038e34d0d134` 中采用稳定候选指针和紧凑 name-index slice，并补充 forced-GC retained-heap 数据。本地同规模复测与作者结果一致，原 non-blocking finding 已得到实质处理；详见文末更新复核。
+
 ## 先说人话
 
 结论：对 [PR #7800](https://github.com/karmada-io/karmada/pull/7800) current head `dc1b9c4a8aa5` 完成源码、并发、语义和性能复核后，**没有找到可以证明会造成永久漏匹配或错误绑定的 correctness blocker**。新 store 把一次 exact-name 查询从约 70 ms 降到约 1.4 us，方向和收益都成立。
@@ -114,6 +116,40 @@ review-only 测试在构建输入之后采样 HeapAlloc，并用 `runtime.KeepAl
 
 ## 下一步
 
-1. 已在 PR #7800 `waiting_store.go` 的 `byGVKName` 插入行发布 non-blocking comment；等待作者回应 retained-memory 边界或索引取舍。
-2. 作者若补 retained-memory 数据或改索引形态，复测同一 24,564-object workload，并核对跨 namespace exact-name selector 不回退为全表扫描。
-3. 如果作者解释了 production name/namespace 分布和容量预算，按实际边界重新判断是否还需代码调整；不把本地微基准当成线上 OOM 证明。
+1. 已在 PR #7800 `waiting_store.go` 的 `byGVKName` 插入行发布 non-blocking comment；作者回应和新实现已于 2026-07-30 复核。
+2. 当前不追加 correctness 或 memory review finding；closure reply 已发布，等待作者或 maintainer resolve thread，并等待 current-head CI 和 maintainer review。
+3. 不把本地微基准写成线上 OOM 证明；实际 heap 仍取决于 GVK、namespace、name、label 基数和等待时长。
+
+## 2026-07-30 作者回应与新 Head 复核
+
+### 结论
+
+作者先在 [line thread](https://github.com/karmada-io/karmada/pull/7800#discussion_r3679458690) 明确认可这个问题：原 profile 是累计 `alloc_space`，没有覆盖 retained heap；同时确认 `byGVKName` 的高基数 singleton set 是当前结构的主要来源。随后将 PR force-update 到 `038e34d0d13443f3471ddf152a82fcaca34f7375`，并在 [follow-up comment](https://github.com/karmada-io/karmada/pull/7800#issuecomment-5128747070) 发布同规模 forced-GC 数据。
+
+这次回应满足原评论提出的两项请求：既量化了常驻内存，也改掉了主导内存的索引表示。原 finding 仍然说明了真实 trade-off，但不再是 current head 的未处理缺口。
+
+本地复核后已发布 [closure reply](https://github.com/karmada-io/karmada/pull/7800#discussion_r3681520974)，说明复测数字一致且没有剩余 concern。尝试调用 GitHub `resolveReviewThread` 时返回 `ranxi2001 does not have the correct permissions`；回复本身已成功，thread 需要由 PR 作者或有权限的 maintainer resolve。
+
+### 实现变化
+
+- primary `objects` 保存稳定 `*waitingCandidate`；`byGVK`、`byScope` 共享候选指针，不再重复完整 `ClusterWideKey`。
+- label 更新只替换 candidate 中的 immutable `*waitingObject`，在读锁下抓到的旧快照仍可安全完成匹配。
+- `byGVKName` 从每个 `(GVK,name)` 一个 `Set[ClusterWideKey]` 改为紧凑 `[]*waitingCandidate`；删除通过同名小 bucket 线性扫描并清空尾部指针。
+- cluster-scoped 对象不进入 namespace/name index；name-only selector 先用 namespace 为空的完整 key 解析 cluster-scoped 对象，再回退到 namespaced name index。
+- 新 match plan 按 GVK/namespace/name 分组、去重等价 selector，并让同组 match-all selector 覆盖其他 selector，避免对重叠 selector 重复 snapshot/scan。
+
+### 独立验证
+
+- `go test -race ./pkg/detector`：通过，`ok ... 10.774s`。
+- 24,564 objects、100 namespaces、一个 label、forced GC、独立进程重复 5 次：full store retained delta 为 `18,854,672-18,860,696 bytes`，约 `17.98 MiB`。
+- 清除 `byGVKName` 前后 forced-GC 差值重复 5 次为 `3,343,536-3,343,568 bytes`，约 `3.19 MiB`，与作者报告的 `3.19 MiB` 一致。
+- 本机 5 轮 benchmark 中，1 个 match-all selector 为 `30.4-37.4 ms/op`，100 个重复 selector 为 `29.5-38.9 ms/op`；两者均约 `10.42 MB/op`、`153 allocs/op`。绝对时间受机器影响，但 selector 数量不再放大 snapshot/scan 成本。
+- 跨 namespace name slice 的插入、重复 Upsert、label replacement、中间/首/末删除和 cluster-scoped exact-name 都有 current-head 回归测试覆盖。
+
+### 仍需保留的证据边界
+
+新 full store 仍明显高于旧 key-only map 的约 `3.15 MB`，因为它有 label snapshot、GVK index 和 scope index；作者也明确披露了这一点。当前结论是 CPU/临时分配与常驻内存的 trade-off 已被量化并显著改善，不是“没有内存成本”。
+
+作者新增的 selector-scaling 表使用的是 1/10/100 个完全相同的 match-all selector，因此它准确证明去重与 match-all subsumption，不证明 100 个彼此不同的 label selector 都能保持常数时间。评论已明确工作负载，没有过度外推；这不构成新的 review finding。
+
+PR body 在 `Mixed-selector evidence attachments` 后意外重复了一段已出现的 mixed-selector 文案，并带有格式损坏。这不影响实现判断，属于合并前可直接清理的 reviewer-facing 文案问题，本轮不占用内存 review thread 追加评论。

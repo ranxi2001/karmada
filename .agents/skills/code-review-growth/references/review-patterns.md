@@ -335,6 +335,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Proven behavior preserved, measured benefit, bounded downside, finding severity, and the smallest follow-up needed to evaluate the tradeoff.
 - Test or fix cue: Write `verified benefit -> explicit non-blocking boundary -> concrete cost evidence -> smallest question`. Keep findings-first ordering for internal reports when useful, but do not let it misstate the upstream verdict.
 
+## Cumulative Allocation Does Not Bound Retained Heap
+
+- Pattern: A hot-path optimization can sharply reduce `alloc_space` while secondary indexes retain substantially more heap for the lifetime of queued or cached objects; cumulative allocation and post-GC live memory answer different capacity questions.
+- Seen in: `karmada-io/karmada#7800`, where query CPU/allocation improved substantially, but a high-cardinality `(GVK,name) -> Set[ClusterWideKey]` index initially retained about 40.56 MB for 24,564 waiting objects versus about 3.15 MB for the old key-only map. The author confirmed the attribution and changed shared indexes to stable candidate pointers plus compact name slices, reducing locally measured full-store retained delta to about 17.98 MiB and the name index to about 3.19 MiB.
+- Miss symptom: A review treats lower per-operation B/op or an `alloc_space` profile as proof that the new cache/index has a small steady-state footprint, especially when every unique key creates its own map/set bucket.
+- Review check: Separate transient query allocation from post-GC retained heap. Estimate or measure outer-map entries, per-bucket allocations, duplicated keys, pointers, label snapshots, and cardinality distribution at the PR's claimed scale.
+- Evidence to gather: Same-scale forced-GC `HeapAlloc`/`inuse_space`, independent-process repeats, fixture liveness via `runtime.KeepAlive`, nil-payload controls, selectively removed-index attribution, and production-relevant name/namespace/GVK cardinalities.
+- Test or fix cue: Compare `old retained -> new retained -> component attribution`, then ask for the smallest bound or representation change. After an update, rerun the identical workload and verify lookup, update, deletion, and concurrency semantics before closing the finding.
+
 ## A Renamed Behavior Must Still Observe The User Story's State
 
 - Pattern: Replacing an ambiguous runtime signal with a cleaner desired-state term can make an API sound more precise while removing the only data that distinguishes the reported problem; the new mode may then duplicate existing reconciliation rather than add behavior.
@@ -343,6 +352,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Map `user story -> real producer state -> persisted field -> existing trigger/retry -> proposed branch`. Give one example where desired, assigned, ready, and available counts differ, then verify the proposed field changes in that example.
 - Evidence to gather: Field ownership and semantics, member/reflected status, scheduler assignment inputs, existing change predicates, retry classification, partial-result persistence, and a full-path case that distinguishes the new mode from current behavior.
 - Test or fix cue: Require a regression where all desired replicas are assigned but the intended movable subset is not running. If the proposed signal cannot identify that subset, either define a source-backed signal and ownership contract or narrow the user story; do not add a public mode that only replays an existing reconcile path.
+
+## A Selector Does Not Define Ownership Or A Scheduling Unit
+
+- Pattern: A label selector narrows a candidate set, but it does not prove that each matched Pod belongs to the current workload lifecycle or define how a component-level count maps to the scheduler's placement unit.
+- Seen in: `karmada-io/karmada#7662`, where a maintainer proposed adding selectors to `GetComponents` and `UnschedulableReplicasRequest` so scheduler-estimator could support workloads beyond Deployment. The existing Deployment path additionally selects the current ReplicaSet and filters Pod `ControllerRef` by UID, while current multi-component workloads bypass replica division and scalar `dynamicScaleUp`.
+- Miss symptom: A proposal concludes that any workload exposing a selector is generically supported, but old rollout Pods, another controller's same-label Pods, or heterogeneous component replicas can enter the count without a defined owner/lifecycle check or placement/revision mapping.
+- Review check: Trace `workload -> selector producer -> matched objects -> owner/lifecycle verifier -> counted component -> placement unit -> revision writer`. Require an explicit contract at every arrow; do not treat label equality as ownership or a component replica as a top-level workload replica.
+- Evidence to gather: Selector source and mutation rules, member-side owner references and UIDs, rollout/current-generation discriminator, component identity, Binding placement representation, supported workload/strategy matrix, and the controller that can revise the selected unit.
+- Test or fix cue: Cover overlapping labels, old/new rollout objects, and a multi-component workload with only one component unschedulable. Either verify ownership and map the component to an executable placement unit, or narrow the first version to workload kinds whose existing replica contract already provides both.
 
 ## A Fixture Counterfactual Is Not The Terminal Flake Counterfactual
 
