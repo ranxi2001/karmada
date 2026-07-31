@@ -20,7 +20,7 @@
 
 ## Last Run
 
-- 2026-07-31：[PR #7791](https://github.com/karmada-io/karmada/pull/7791) 以 merge commit `35ee6092e499` 合并；PR checks 全绿，post-merge [Chart v1.36.1](https://github.com/karmada-io/karmada/actions/runs/30617396767/job/91113656882) 红灯是拉取 Docker Hub `common:2.41.0` 时的单 runner TCP timeout，与 test-only diff 无因果关系，归档 `NO_FIX`。
+- 2026-07-31：[PR #7791](https://github.com/karmada-io/karmada/pull/7791) 以 merge commit `35ee6092e499` 合并；PR checks 全绿，post-merge [Chart v1.36.1](https://github.com/karmada-io/karmada/actions/runs/30617396767/job/91113656882) 红灯是拉取 Docker Hub `common:2.41.0` 时的单 runner TCP timeout；[历史 run](https://github.com/karmada-io/karmada/actions/runs/30233127739) 有相同签名，归为 E2 external-registry flake / `NO_FIX`，与 test-only diff 无因果关系。
 - 2026-07-31：完成 [Karmada Descheduler 专项调研](internship-reports/day38-karmada-descheduler-special-study.md)及 13 页 HTML 稿：证明 Deployment-only 是窄 Story 1 MVP，对比 Kubernetes `v0.36.0`；交叉复核区分书面证据与 Spot GPU 录像 ASR，纠正 Binding consumer 顺序、缺失 Ready、count-only mutation、Fresh 范围和 owner 未决边界，并同步两张英文图。
 - 2026-07-30：复核 [PR #7800 作者回应与新 head](internship-reports/day36-pr7800-waiting-store-deep-review.md#2026-07-30-作者回应与新-head-复核)：本地 full-store retained delta 约 17.98 MiB、`byGVKName` 约 3.19 MiB，race/scaling 通过；[closure reply](https://github.com/karmada-io/karmada/pull/7800#discussion_r3681520974) 已发布，GitHub 因账号权限拒绝 resolve，等待作者/maintainer 关闭 thread。
 - 2026-07-30：完成 [PR #7662 selector / unschedulable 更新 review](internship-reports/day37-pr7662-selector-unschedulable-review.md)：新方案解决 assigned-but-unschedulable 信号缺失，但 `Available != Unschedulable`、selector 不等于 ownership、多组件不能直接映射标量 `dynamicScaleUp`，且 scheduler/Descheduler ownership 与 completion 仍未收敛；未发布 upstream 评论。

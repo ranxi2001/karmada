@@ -199,7 +199,9 @@ GitHub 回读确认：
 3. v1.36.1 于 `08:46:27Z` 发起 `HEAD https://registry-1.docker.io/v2/bitnamicharts/common/manifests/2.41.0`；`08:46:57Z` 报 `failed to do request ... dial tcp 18.232.232.248:443: i/o timeout`，随后 Helm 报 `could not download oci://registry-1.docker.io/bitnamicharts/common`。
 4. 同一 merge commit 的 v1.34 在 `08:45:35Z`、v1.35 在 `08:45:55Z` 对同一 tag 收到 `200 OK`，解析到相同 digest `sha256:669301594ad66a7401a47d26c6f0b763b95e44af667c57228e552920eb8feb66` 并输出 `Pulled: registry-1.docker.io/bitnamicharts/common:2.41.0`。
 5. #7791 residual diff 只有 `pkg/scheduler/scheduler_test.go` 和 `test/e2e/suites/base/clusteraffinities_test.go`；没有修改 `charts/` 或 `.github/workflows/installation-chart.yaml`。workflow 第 83-90 行本来就会在 template 阶段用 `--dependency-update` 访问外部 registry。
+6. 历史检索确认这不是首次出现：[Chart run `30233127739`](https://github.com/karmada-io/karmada/actions/runs/30233127739) 在 2026-07-27 的 v1.34 job 上也对 `bitnamicharts/common:2.41.0` 发起相同 `HEAD` 请求，并在 30 秒后以 `dial tcp ...:443: i/o timeout` 失败；同一 commit 的 v1.35 和 v1.36 matrix jobs 均通过。最近 100 次 Chart workflow 中共有 4 次失败，除本次外只有该 run 命中这一精确签名。
+7. 本地 [Day 1 记录](day1-karmada-7598-default-version-pr.md) 还保存过拉取同一 OCI dependency 时的 `EOF`，属于相同的外部依赖下载故障类别，但不是相同终止错误。GitHub issue/PR 搜索没有发现专门追踪该 `bitnamicharts/common` timeout 的 upstream issue。
 
 ### 边界与下一步
 
-这次日志直接证明 transport timeout，但不证明 Docker Hub 全局故障，也不证明 workflow 长期不稳定；当前只有单 runner 单次失败。无需为它增加 scheduler/test retry，也不应把一次外网超时包装成 #7791 产品回归。PR 已合并，不存在 merge gate 动作；等待 maintainer rerun 或下一次 `master` push 即可。只有同类 registry timeout 持续跨 runner、跨 commit 重复时，才值得单独评估 chart dependency cache、镜像源或 workflow-level retry。
+这次日志直接证明 transport timeout，但不证明 Docker Hub 全局故障。历史 run 已提供跨 commit 的相同失败签名，因此可以归为“历史重复的外部 registry flake 模式”（E2）；不过两个失败 run 都没有同一 SHA rerun 成功的证据，不能提升为 rerun 已验证的 E1。无需为它增加 scheduler/test retry，也不应把外网超时包装成 #7791 产品回归。PR 已合并，不存在 merge gate 动作；等待 maintainer rerun 或下一次 `master` push 即可。若该错误继续提高频率或扩散到多个 matrix runner，再单独评估 chart dependency cache、镜像源或 workflow-level retry。
