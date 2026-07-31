@@ -1,0 +1,1794 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Day 38 | Karmada Descheduler 专项汇报</title>
+  <style>
+    :root {
+      --paper: #f7f8f5;
+      --surface: #ffffff;
+      --ink: #172026;
+      --muted: #667078;
+      --line: #d5dad7;
+      --line-strong: #aeb7b2;
+      --green: #17745a;
+      --green-soft: #e5f1ec;
+      --blue: #2f648f;
+      --blue-soft: #e8f0f6;
+      --amber: #ad651e;
+      --amber-soft: #f6ecdf;
+      --red: #a4473d;
+      --red-soft: #f5e8e6;
+      --plum: #6f5275;
+      --topbar-height: 52px;
+      --footer-height: 50px;
+      font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      letter-spacing: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    body {
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    button,
+    a {
+      font: inherit;
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid rgba(47, 100, 143, 0.35);
+      outline-offset: 2px;
+    }
+
+    .topbar {
+      position: fixed;
+      z-index: 20;
+      inset: 0 0 auto 0;
+      height: var(--topbar-height);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(247, 248, 245, 0.96);
+    }
+
+    .topbar-mark {
+      flex: 0 0 auto;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .topbar-title {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .topbar-actions {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .icon-button {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .icon-button:hover {
+      border-color: var(--line-strong);
+      background: #eef1ee;
+    }
+
+    .icon-button:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
+
+    .deck {
+      position: fixed;
+      inset: var(--topbar-height) 0 var(--footer-height) 0;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      overflow: auto;
+      background: var(--paper);
+    }
+
+    .slide.active {
+      display: block;
+      animation: reveal 180ms ease-out;
+    }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-inner {
+      position: relative;
+      width: min(1220px, 100%);
+      min-height: 100%;
+      margin: 0 auto;
+      padding: 34px 50px 42px;
+    }
+
+    .slide-index {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 960px;
+      margin-bottom: 18px;
+      font-size: 58px;
+      line-height: 1.08;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      max-width: 1030px;
+      margin-bottom: 24px;
+      font-size: 40px;
+      line-height: 1.16;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 19px;
+      line-height: 1.3;
+      font-weight: 740;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 900px;
+      color: #445058;
+      font-size: 24px;
+      line-height: 1.45;
+    }
+
+    .eyebrow {
+      margin-bottom: 14px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .accent-rule {
+      width: 72px;
+      height: 5px;
+      margin: 26px 0;
+      background: var(--green);
+    }
+
+    .source {
+      position: absolute;
+      right: 50px;
+      bottom: 14px;
+      margin: 0;
+      color: #7b8489;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    .source a {
+      color: inherit;
+      text-decoration-color: #aab1ad;
+    }
+
+    .statement {
+      max-width: 1080px;
+      margin: 18px 0 34px;
+      font-size: 42px;
+      line-height: 1.28;
+      font-weight: 720;
+    }
+
+    .statement em {
+      color: var(--green);
+      font-style: normal;
+    }
+
+    .takeaway {
+      margin: 24px 0 0;
+      padding: 14px 0 14px 18px;
+      border-left: 5px solid var(--green);
+      color: #2e3b42;
+      font-size: 20px;
+      font-weight: 670;
+    }
+
+    .title-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 24px;
+      margin-top: 30px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .title-meta strong {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .three-step {
+      display: grid;
+      grid-template-columns: 1fr 42px 1fr 42px 1fr;
+      align-items: stretch;
+      margin-top: 38px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .step {
+      min-height: 112px;
+      padding: 20px 8px;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 21px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .step-arrow {
+      align-self: center;
+      color: var(--amber);
+      font-size: 28px;
+      text-align: center;
+    }
+
+    .formula {
+      display: grid;
+      grid-template-columns: 1fr 58px 1fr 58px 1fr;
+      align-items: center;
+      margin-top: 46px;
+    }
+
+    .formula-term {
+      min-height: 150px;
+      padding: 24px 22px;
+      border-top: 5px solid var(--blue);
+      background: var(--surface);
+    }
+
+    .formula-term.release {
+      border-color: var(--amber);
+    }
+
+    .formula-term.place {
+      border-color: var(--green);
+    }
+
+    .formula-term b {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+
+    .formula-term span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .formula-op {
+      color: var(--line-strong);
+      font-size: 30px;
+      text-align: center;
+    }
+
+    .responsibility-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 38px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .responsibility {
+      min-height: 310px;
+      padding: 28px 28px 22px;
+      border-right: 1px solid var(--line);
+    }
+
+    .responsibility:last-child {
+      border-right: 0;
+    }
+
+    .responsibility .verb {
+      display: block;
+      margin: 22px 0 10px;
+      color: var(--green);
+      font-size: 31px;
+      font-weight: 770;
+    }
+
+    .responsibility:nth-child(2) .verb {
+      color: var(--blue);
+    }
+
+    .responsibility:nth-child(3) .verb {
+      color: var(--plum);
+    }
+
+    .responsibility p {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .responsibility code {
+      color: var(--ink);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 14px;
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 76px;
+    }
+
+    .timeline::before {
+      position: absolute;
+      top: 14px;
+      right: 0;
+      left: 0;
+      height: 2px;
+      background: var(--line-strong);
+      content: "";
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-top: 42px;
+    }
+
+    .timeline-item::before {
+      position: absolute;
+      top: 7px;
+      left: 0;
+      width: 16px;
+      height: 16px;
+      border: 3px solid var(--paper);
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 1px var(--green);
+      content: "";
+    }
+
+    .timeline-item time {
+      display: block;
+      margin-bottom: 9px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .timeline-item strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 19px;
+      line-height: 1.3;
+    }
+
+    .timeline-item p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .why-grid {
+      display: grid;
+      grid-template-columns: 0.95fr 1.35fr;
+      gap: 52px;
+      margin-top: 28px;
+    }
+
+    .deployment-case {
+      padding: 28px;
+      border-top: 5px solid var(--green);
+      background: var(--surface);
+    }
+
+    .deployment-case .kind {
+      display: block;
+      margin-bottom: 22px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .semantic-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .semantic-list li {
+      display: grid;
+      grid-template-columns: 118px 1fr;
+      gap: 18px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .semantic-list code {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .semantic-list span {
+      color: #465159;
+      font-size: 15px;
+    }
+
+    .workload-boundaries {
+      border-top: 1px solid var(--line);
+    }
+
+    .boundary-row {
+      display: grid;
+      grid-template-columns: 145px 1fr;
+      gap: 18px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .boundary-row strong {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 14px;
+    }
+
+    .boundary-row span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .replica-demo {
+      margin-top: 8px;
+      padding: 22px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .replica-stage {
+      display: grid;
+      grid-template-columns: 150px 1fr 120px;
+      align-items: center;
+      gap: 20px;
+      min-height: 86px;
+    }
+
+    .replica-stage + .replica-stage {
+      border-top: 1px dashed var(--line);
+    }
+
+    .cluster-label strong,
+    .cluster-label span {
+      display: block;
+    }
+
+    .cluster-label strong {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 15px;
+    }
+
+    .cluster-label span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .replicas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .replica {
+      display: inline-flex;
+      width: 36px;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--green);
+      border-radius: 3px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .replica.unschedulable {
+      border-color: var(--red);
+      background: repeating-linear-gradient(135deg, var(--red-soft), var(--red-soft) 5px, #ffffff 5px, #ffffff 9px);
+      color: var(--red);
+    }
+
+    .replica.deficit {
+      border-style: dashed;
+      border-color: var(--amber);
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .stage-total {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .stage-total b {
+      display: block;
+      color: var(--ink);
+      font-size: 22px;
+    }
+
+    .repair-arrow {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 10px 0 10px 150px;
+      color: var(--amber);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .repair-arrow::before {
+      width: 38px;
+      height: 2px;
+      background: var(--amber);
+      content: "";
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend span::before {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 6px;
+      border-radius: 2px;
+      background: var(--green);
+      content: "";
+    }
+
+    .legend .unsched::before {
+      background: var(--red);
+    }
+
+    .legend .gap::before {
+      background: var(--amber);
+    }
+
+    .figure-stage {
+      display: flex;
+      min-height: 0;
+      align-items: center;
+      justify-content: center;
+      margin: 2px auto 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .figure-stage img {
+      display: block;
+      width: 100%;
+      max-height: 570px;
+      object-fit: contain;
+    }
+
+    .control-slide .slide-inner {
+      padding-top: 22px;
+      padding-bottom: 30px;
+    }
+
+    .control-slide h2 {
+      margin-bottom: 12px;
+    }
+
+    .control-slide .figure-stage {
+      padding: 8px;
+    }
+
+    .control-slide .takeaway {
+      margin-top: 12px;
+      padding-top: 9px;
+      padding-bottom: 9px;
+    }
+
+    .control-slide .source {
+      bottom: 4px;
+    }
+
+    .comparison-table {
+      display: grid;
+      grid-template-columns: 150px 1fr 1fr;
+      margin-top: 22px;
+      border-top: 1px solid var(--line-strong);
+    }
+
+    .comparison-table > div {
+      min-height: 64px;
+      padding: 13px 18px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .comparison-table > div:nth-child(3n) {
+      border-right: 0;
+    }
+
+    .comparison-table .head {
+      min-height: 58px;
+      color: var(--green);
+      font-size: 17px;
+      font-weight: 780;
+    }
+
+    .comparison-table .head:last-child {
+      color: var(--plum);
+    }
+
+    .comparison-table .row-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .comparison-table .value {
+      color: #364149;
+      font-size: 15px;
+    }
+
+    .scope-note {
+      margin: -8px 0 24px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .fit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 44px;
+      margin-top: 12px;
+    }
+
+    .fit-column {
+      border-top: 5px solid var(--green);
+    }
+
+    .fit-column.out {
+      border-color: var(--red);
+    }
+
+    .fit-column h3 {
+      margin: 18px 0 12px;
+      color: var(--green);
+      font-size: 23px;
+    }
+
+    .fit-column.out h3 {
+      color: var(--red);
+    }
+
+    .fit-item {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 8px;
+      align-items: center;
+      min-height: 50px;
+      border-top: 1px solid var(--line);
+    }
+
+    .fit-item b {
+      color: var(--green);
+      font-size: 17px;
+    }
+
+    .fit-column.out .fit-item b {
+      color: var(--red);
+    }
+
+    .fit-item span {
+      color: #445058;
+      font-size: 16px;
+    }
+
+    .limits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin-top: 24px;
+      border-top: 1px solid var(--line-strong);
+      border-left: 1px solid var(--line-strong);
+    }
+
+    .limit-group {
+      min-height: 180px;
+      padding: 22px 26px;
+      border-right: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .limit-group .number {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--amber);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .limit-group p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .layer-layout {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 50px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .layer-layout figure {
+      height: 560px;
+      margin: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      text-align: center;
+    }
+
+    .layer-layout img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .layer-points {
+      border-top: 1px solid var(--line);
+    }
+
+    .layer-point {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .layer-point strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 23px;
+    }
+
+    .layer-point p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .plugin-layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 46px;
+      margin-top: 20px;
+    }
+
+    .plugin-group {
+      margin-bottom: 22px;
+    }
+
+    .plugin-group h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--blue);
+    }
+
+    .plugin-group h3::before {
+      width: 22px;
+      height: 4px;
+      background: var(--blue);
+      content: "";
+    }
+
+    .plugin-names {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px 14px;
+      padding: 12px 0 2px;
+      border-top: 1px solid var(--line);
+    }
+
+    .plugin-names code {
+      color: #3e4950;
+      font-size: 12px;
+    }
+
+    .safety-stack {
+      border-top: 5px solid var(--green);
+      background: var(--surface);
+    }
+
+    .safety-item {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .safety-item strong {
+      display: block;
+      color: var(--green);
+      font-size: 17px;
+    }
+
+    .safety-item span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin-top: 34px;
+      border-top: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .roadmap-step {
+      min-height: 280px;
+      padding: 25px 26px;
+      border-right: 1px solid var(--line);
+    }
+
+    .roadmap-step:last-child {
+      border-right: 0;
+    }
+
+    .roadmap-step .phase {
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .roadmap-step h3 {
+      margin-top: 13px;
+      font-size: 24px;
+    }
+
+    .roadmap-step p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .final-line {
+      margin-top: 28px;
+      color: var(--ink);
+      font-size: 23px;
+      font-weight: 730;
+    }
+
+    .report-link {
+      display: inline-block;
+      margin-top: 14px;
+      color: var(--blue);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .footer {
+      position: fixed;
+      z-index: 20;
+      inset: auto 0 0 0;
+      height: var(--footer-height);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 24px;
+      border-top: 1px solid var(--line);
+      background: rgba(247, 248, 245, 0.97);
+    }
+
+    .progress-track {
+      width: min(240px, 100%);
+      height: 3px;
+      background: #dfe3e0;
+    }
+
+    .progress-bar {
+      width: 7.69%;
+      height: 100%;
+      background: var(--green);
+      transition: width 180ms ease-out;
+    }
+
+    .footer-nav {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .counter {
+      min-width: 74px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .footer-context {
+      justify-self: end;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-height: 760px) and (min-width: 701px) {
+      .slide-inner { padding-top: 24px; }
+      h1 { font-size: 49px; }
+      h2 { margin-bottom: 18px; font-size: 34px; }
+      .lead { font-size: 20px; }
+      .statement { margin-bottom: 22px; font-size: 34px; }
+      .three-step { margin-top: 24px; }
+      .responsibility { min-height: 255px; padding-top: 20px; }
+      .timeline { margin-top: 48px; }
+      .figure-stage img { max-height: 465px; }
+      .layer-layout figure { height: 460px; }
+      .roadmap-step { min-height: 225px; }
+
+      .control-slide .slide-inner {
+        padding-top: 15px;
+        padding-bottom: 18px;
+      }
+
+      .control-slide h2 {
+        margin-bottom: 8px;
+        font-size: 31px;
+      }
+
+      .control-slide .figure-stage img {
+        height: 390px;
+        max-height: 390px;
+      }
+
+      .control-slide .takeaway {
+        margin-top: 7px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        font-size: 17px;
+      }
+
+      .control-slide .source {
+        display: none;
+      }
+
+      .plugin-slide .slide-inner {
+        padding-top: 17px;
+        padding-bottom: 24px;
+      }
+
+      .plugin-slide h2 {
+        margin-bottom: 8px;
+      }
+
+      .plugin-slide .plugin-layout {
+        gap: 34px;
+        margin-top: 8px;
+      }
+
+      .plugin-slide .plugin-group {
+        margin-bottom: 12px;
+      }
+
+      .plugin-slide .plugin-names {
+        padding-top: 7px;
+      }
+
+      .plugin-slide .safety-item {
+        padding-top: 9px;
+        padding-bottom: 9px;
+      }
+
+      .plugin-slide .takeaway {
+        margin-top: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        font-size: 17px;
+      }
+
+      .plugin-slide .source {
+        bottom: 2px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      :root {
+        --topbar-height: 48px;
+        --footer-height: 52px;
+      }
+
+      .topbar {
+        gap: 10px;
+        padding: 0 12px;
+      }
+
+      .topbar-title {
+        display: none;
+      }
+
+      .topbar-actions {
+        margin-left: auto;
+      }
+
+      .slide-inner {
+        width: 100%;
+        min-height: 100%;
+        padding: 24px 18px 46px;
+      }
+
+      h1 {
+        font-size: 38px;
+      }
+
+      h2 {
+        margin-bottom: 18px;
+        font-size: 30px;
+      }
+
+      .lead {
+        font-size: 19px;
+      }
+
+      .statement {
+        margin: 14px 0 24px;
+        font-size: 29px;
+      }
+
+      .source {
+        position: static;
+        margin-top: 22px;
+        text-align: right;
+      }
+
+      .three-step,
+      .formula,
+      .responsibility-grid,
+      .why-grid,
+      .fit-grid,
+      .plugin-layout,
+      .roadmap,
+      .layer-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .step-arrow,
+      .formula-op {
+        transform: rotate(90deg);
+      }
+
+      .step {
+        min-height: 0;
+      }
+
+      .formula {
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .formula-term {
+        min-height: 0;
+      }
+
+      .responsibility {
+        min-height: 0;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .responsibility:last-child {
+        border-bottom: 0;
+      }
+
+      .timeline {
+        grid-template-columns: 1fr;
+        gap: 18px;
+        margin-top: 28px;
+        padding-left: 22px;
+      }
+
+      .timeline::before {
+        top: 0;
+        bottom: 0;
+        left: 7px;
+        width: 2px;
+        height: auto;
+      }
+
+      .timeline-item {
+        padding-top: 0;
+      }
+
+      .timeline-item::before {
+        top: 4px;
+        left: -22px;
+      }
+
+      .semantic-list li,
+      .boundary-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+
+      .replica-stage {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 14px 0;
+      }
+
+      .stage-total {
+        text-align: left;
+      }
+
+      .repair-arrow {
+        margin-left: 0;
+      }
+
+      .comparison-table {
+        grid-template-columns: 90px 1fr 1fr;
+        overflow-wrap: anywhere;
+      }
+
+      .comparison-table > div {
+        min-height: 0;
+        padding: 10px 8px;
+      }
+
+      .comparison-table .head,
+      .comparison-table .value {
+        font-size: 12px;
+      }
+
+      .comparison-table .row-label {
+        font-size: 10px;
+      }
+
+      .limits-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .limit-group {
+        min-height: 0;
+      }
+
+      .layer-layout {
+        gap: 28px;
+      }
+
+      .layer-layout figure {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 616 / 1518;
+      }
+
+      .roadmap-step {
+        min-height: 0;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .roadmap-step:last-child {
+        border-bottom: 0;
+      }
+
+      .footer {
+        grid-template-columns: 54px 1fr 54px;
+        padding: 0 10px;
+      }
+
+      .progress-track {
+        width: 54px;
+      }
+
+      .footer-context {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide.active {
+        animation: none;
+      }
+
+      .progress-bar {
+        transition: none;
+      }
+    }
+
+    @media print {
+      @page {
+        size: 16in 9in;
+        margin: 0;
+      }
+
+      html,
+      body {
+        height: auto;
+        overflow: visible;
+        background: #ffffff;
+      }
+
+      .topbar,
+      .footer {
+        display: none;
+      }
+
+      .deck {
+        position: static;
+        overflow: visible;
+      }
+
+      .slide,
+      .slide.active {
+        position: relative;
+        display: block !important;
+        width: 16in;
+        height: 9in;
+        min-height: 9in;
+        overflow: hidden;
+        break-after: page;
+        page-break-after: always;
+        animation: none;
+      }
+
+      .slide:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      .slide-inner {
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        padding: 28px 42px 34px;
+      }
+
+      .source {
+        right: 42px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <span class="topbar-mark">Day 38</span>
+    <span class="topbar-title" id="current-title">Karmada Descheduler 专项汇报</span>
+    <div class="topbar-actions">
+      <button class="icon-button" id="fullscreen" type="button" title="全屏" aria-label="全屏">⛶</button>
+    </div>
+  </header>
+
+  <main class="deck" id="deck">
+    <section class="slide active" data-title="Karmada Descheduler" aria-label="第 1 页：标题">
+      <div class="slide-inner">
+        <p class="eyebrow">Karmada Scheduling Research</p>
+        <h1>Karmada Descheduler</h1>
+        <p class="lead">为什么首版只支持 Deployment，为什么千问子场景更适合它，以及它与 Kubernetes Descheduler 的真正差距。</p>
+        <div class="accent-rule"></div>
+        <div class="three-step" aria-label="核心职责链">
+          <div class="step"><strong>Observe</strong><span>识别长期失效的旧分配</span></div>
+          <div class="step-arrow" aria-hidden="true">→</div>
+          <div class="step"><strong>Release</strong><span>按异常数量下调源副本目标</span></div>
+          <div class="step-arrow" aria-hidden="true">→</div>
+          <div class="step"><strong>Place</strong><span>仍由 scheduler 选择新位置</span></div>
+        </div>
+        <div class="title-meta">
+          <span><strong>基线</strong> Karmada ce2a7b8</span>
+          <span><strong>对比</strong> Kubernetes Descheduler v0.36.0</span>
+          <span><strong>日期</strong> 2026-07-31</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="一句话结论" aria-label="第 2 页：一句话结论">
+      <div class="slide-inner">
+        <span class="slide-index">01 / CORE IDEA</span>
+        <h2>它不是第二个 scheduler</h2>
+        <p class="statement">Descheduler 只把<em>失效旧分配</em>变成一个普通副本缺口；新位置仍由 scheduler 决定。</p>
+        <div class="formula" aria-label="从失效分配到新分配的过程">
+          <div class="formula-term">
+            <b>运行态事实</b>
+            <span>某集群的部分 Pod 长期 Unschedulable</span>
+          </div>
+          <div class="formula-op" aria-hidden="true">→</div>
+          <div class="formula-term release">
+            <b>减少源分配</b>
+            <span>Binding 6 → 4；状态可信时不低于 Ready</span>
+          </div>
+          <div class="formula-op" aria-hidden="true">→</div>
+          <div class="formula-term place">
+            <b>Steady scale-up</b>
+            <span>scheduler 补齐缺少的 2 个副本</span>
+          </div>
+        </div>
+        <p class="takeaway">检测旧分配失效，与决定新分配位置，是两种不同职责。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="三个组件，三种职责" aria-label="第 3 页：三个组件职责">
+      <div class="slide-inner">
+        <span class="slide-index">02 / OWNERSHIP</span>
+        <h2>三个组件当前做的事并不相同</h2>
+        <div class="responsibility-grid">
+          <article class="responsibility">
+            <h3>Karmada Descheduler</h3>
+            <span class="verb">检测 + 撤销</span>
+            <p>周期观察运行态，按已验证异常数量降低 member 副本目标；不选择具体 Pod。</p>
+            <code>Binding.spec.clusters[].replicas</code>
+          </article>
+          <article class="responsibility">
+            <h3>karmada-scheduler</h3>
+            <span class="verb">重新放置</span>
+            <p>过滤、打分、估算容量，决定缺口应该补到哪个集群。</p>
+            <code>Steady / dynamicScaleUp</code>
+          </article>
+          <article class="responsibility">
+            <h3>WorkloadRebalancer</h3>
+            <span class="verb">显式触发</span>
+            <p>用户点名 workload，写入时间戳触发一次调度；Dynamic Divided assignment 使用 Fresh。</p>
+            <code>rescheduleTriggeredAt</code>
+          </article>
+        </div>
+        <p class="source">Evidence: current Karmada controller and scheduler paths</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="为什么只支持 Deployment" aria-label="第 4 页：历史范围">
+      <div class="slide-inner">
+        <span class="slide-index">03 / HISTORY</span>
+        <h2>Deployment-only 是窄 MVP 的结果，不是通用结论</h2>
+        <div class="timeline">
+          <article class="timeline-item">
+            <time>2021-09</time>
+            <strong>Issue #697 很宽</strong>
+            <p>既谈资源不足，也谈新集群加入后的利用率均衡。</p>
+          </article>
+          <article class="timeline-item">
+            <time>2021-11</time>
+            <strong>KEP 只保留 Story 1</strong>
+            <p>只处理资源不足造成的长期 Unschedulable Pod。</p>
+          </article>
+          <article class="timeline-item">
+            <time>2022-02</time>
+            <strong>按 Deployment 闭环</strong>
+            <p>首版实现围绕 replicas、Ready 和 owner chain 落地。</p>
+          </article>
+          <article class="timeline-item">
+            <time>至今</time>
+            <strong>通用抽象仍未完成</strong>
+            <p>GVK、abstract workload、custom Ready interpreter 仍留有边界。</p>
+          </article>
+        </div>
+        <p class="takeaway">准确说法：当时只实现了一个 Deployment 长期放不下的最小故事。</p>
+        <p class="source">Evidence: Issue #697, KEP-697, PR #726, PR #1392</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Deployment 为什么最容易闭环" aria-label="第 5 页：工作负载语义">
+      <div class="slide-inner">
+        <span class="slide-index">04 / WORKLOAD SEMANTICS</span>
+        <h2>不是多加一个 GVK，而是要先定义“一个副本”</h2>
+        <div class="why-grid">
+          <section class="deployment-case">
+            <span class="kind">Deployment</span>
+            <ul class="semantic-list">
+              <li><code>replicas</code><span>单一期望副本数</span></li>
+              <li><code>readyReplicas</code><span>成功反射时可作为运行下界</span></li>
+              <li><code>owner UID</code><span>能定位本轮 rollout 的 Pod</span></li>
+              <li><code>replaceable</code><span>副本通常彼此可替换</span></li>
+            </ul>
+          </section>
+          <section class="workload-boundaries">
+            <div class="boundary-row"><strong>StatefulSet</strong><span>ordinal、PVC、稳定身份，换集群不等于迁移数据</span></div>
+            <div class="boundary-row"><strong>Job</strong><span>completion、index、重试与幂等，减副本可能重复执行</span></div>
+            <div class="boundary-row"><strong>FlinkDeployment</strong><span>多组件与 checkpoint，一个 Binding 标量不够表达</span></div>
+            <div class="boundary-row"><strong>AI workload</strong><span>leader、worker、gang、shard 与拓扑关系不能拆成任意 Pod</span></div>
+          </section>
+        </div>
+        <p class="takeaway">扩 Kind 之前，必须先有 replica、Ready、ownership、source shrink 四个合同。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="10 副本修复例子" aria-label="第 6 页：10 副本例子">
+      <div class="slide-inner">
+        <span class="slide-index">05 / EXAMPLE</span>
+        <h2>2 个异常 Pod，只转成 2 个副本缺口</h2>
+        <div class="replica-demo">
+          <div class="replica-stage">
+            <div class="cluster-label"><strong>member1</strong><span>Assigned 6 / Ready 4</span></div>
+            <div class="replicas" aria-label="4 个 Ready 和 2 个 Unschedulable 副本">
+              <span class="replica">R</span><span class="replica">R</span><span class="replica">R</span><span class="replica">R</span>
+              <span class="replica unschedulable">U</span><span class="replica unschedulable">U</span>
+            </div>
+            <div class="stage-total"><b>6 → 4</b>Descheduler</div>
+          </div>
+          <div class="replica-stage">
+            <div class="cluster-label"><strong>member2</strong><span>Assigned 4 / Ready 4</span></div>
+            <div class="replicas" aria-label="4 个 Ready 副本">
+              <span class="replica">R</span><span class="replica">R</span><span class="replica">R</span><span class="replica">R</span>
+            </div>
+            <div class="stage-total"><b>4 → 4</b>保持不动</div>
+          </div>
+          <div class="repair-arrow">按 U 的数量下调 target，不携带 Pod identity</div>
+          <div class="replica-stage">
+            <div class="cluster-label"><strong>candidate</strong><span>由 scheduler 决定</span></div>
+            <div class="replicas" aria-label="2 个待放置副本">
+              <span class="replica deficit">+1</span><span class="replica deficit">+1</span>
+            </div>
+            <div class="stage-total"><b>+2</b>Steady scale-up</div>
+          </div>
+        </div>
+        <div class="legend"><span>Ready</span><span class="unsched">Long Unschedulable</span><span class="gap">Deficit</span></div>
+        <p class="takeaway">Descheduler 决定 target“少 2”；member controller 决定删谁，scheduler 决定补去哪。</p>
+      </div>
+    </section>
+
+    <section class="slide control-slide" data-title="控制闭环" aria-label="第 7 页：控制闭环">
+      <div class="slide-inner">
+        <span class="slide-index">06 / CONTROL LOOP</span>
+        <h2>统计异常、下调目标、补位，各有边界</h2>
+        <figure class="figure-stage">
+          <img src="day38-karmada-descheduler-control-loop.png" alt="Karmada Descheduler 从运行态观测到源集群缩减，再由 scheduler 补齐副本的控制闭环">
+        </figure>
+        <p class="takeaway">scheduler 不需要理解 Pod condition、Deployment owner chain 或异常持续时间。</p>
+        <p class="source">Canonical source: day38-karmada-descheduler-control-loop.mmd</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Descheduler 与 WorkloadRebalancer" aria-label="第 8 页：组件对比">
+      <div class="slide-inner">
+        <span class="slide-index">07 / DESCHEDULER VS REBALANCER</span>
+        <h2>本次建议：周期自愈更贴近 Descheduler</h2>
+        <div class="comparison-table" role="table" aria-label="Descheduler 与 WorkloadRebalancer 对比">
+          <div class="head"></div><div class="head">Karmada Descheduler</div><div class="head">WorkloadRebalancer</div>
+          <div class="row-label">Trigger</div><div class="value">周期观察运行态异常</div><div class="value">用户显式提交 workload 列表</div>
+          <div class="row-label">Scope</div><div class="value">按异常数量降低 member target</div><div class="value">触发一次 scheduler 调度</div>
+          <div class="row-label">Signal</div><div class="value">Pod 长期 Unschedulable</div><div class="value"><code>rescheduleTriggeredAt</code></div>
+          <div class="row-label">Scheduler</div><div class="value">Steady：补普通副本缺口</div><div class="value">Fresh：当前 affinity/candidate 内重算 replica assignment</div>
+          <div class="row-label">Best fit</div><div class="value">本次建议：周期自愈</div><div class="value">当前合同：显式批次触发</div>
+        </div>
+        <p class="takeaway">这是本次调研的 owner 建议；#7662 尚未收敛最终 owner/API。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="千问场景的适用边界" aria-label="第 9 页：千问场景边界">
+      <div class="slide-inner">
+        <span class="slide-index">08 / QWEN SCOPE</span>
+        <h2>先确认四个前提，再决定是不是 Descheduler</h2>
+        <p class="scope-note">Issue/PR 与官方书面纪要未确认 Qwen/GPU；公开会议录像的本地 ASR 提到 Spot GPU，但不能绑定具体产品。</p>
+        <div class="fit-grid">
+          <section class="fit-column">
+            <h3>适用前提（待内部确认）</h3>
+            <div class="fit-item"><b>01</b><span>离线且允许中断</span></div>
+            <div class="fit-item"><b>02</b><span>部分 Pod 长期 Unschedulable</span></div>
+            <div class="fit-item"><b>03</b><span>replica 可被同类实例替换</span></div>
+            <div class="fit-item"><b>04</b><span>接受只恢复 assignment，不要求 target Ready</span></div>
+          </section>
+          <section class="fit-column out">
+            <h3>当前方案不够</h3>
+            <div class="fit-item"><b>01</b><span>在线流量、服务不能中断</span></div>
+            <div class="fit-item"><b>02</b><span>warm-up、checkpoint、数据搬迁</span></div>
+            <div class="fit-item"><b>03</b><span>leader、worker、shard、gang</span></div>
+            <div class="fit-item"><b>04</b><span>必须 target Ready 后才能删 source</span></div>
+          </section>
+        </div>
+        <p class="takeaway">右侧任一条件成立，就需要 workload-aware migration 合同，不能只靠当前 Descheduler。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="当前限制与挑战" aria-label="第 10 页：当前限制">
+      <div class="slide-inner">
+        <span class="slide-index">09 / LIMITS</span>
+        <h2>真正限制扩展的，不是策略数量</h2>
+        <div class="limits-grid">
+          <article class="limit-group">
+            <span class="number">01 / WORKLOAD</span>
+            <h3>工作负载语义</h3>
+            <p>当前固定 Deployment；多组件、身份、完成进度和数据状态无法映射为一个标量副本缺口。</p>
+          </article>
+          <article class="limit-group">
+            <span class="number">02 / SIGNAL</span>
+            <h3>信号与归属</h3>
+            <p>必须准确定位本轮 workload 的 Pod，并区分真实长期不可调度、发布中和暂态抖动。</p>
+          </article>
+          <article class="limit-group">
+            <span class="number">03 / SAFETY</span>
+            <h3>安全与策略</h3>
+            <p>缺少 release budget、dry-run 和统一安全层；readyReplicas 缺失时记为 -1，不会自动停止缩减。</p>
+          </article>
+          <article class="limit-group">
+            <span class="number">04 / OWNERSHIP</span>
+            <h3>一致性与 single writer</h3>
+            <p>Descheduler、scheduler、Rebalancer 不能同时独立修改同一 Binding，完成条件也必须唯一。</p>
+          </article>
+        </div>
+        <p class="takeaway">先建立安全骨架和 ownership，再谈多 Kind、多策略。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Karmada 与 Kubernetes 的抽象层" aria-label="第 11 页：抽象层对比">
+      <div class="slide-inner">
+        <span class="slide-index">10 / DIFFERENT LAYERS</span>
+        <h2>名字相同，处理的调度单元不同</h2>
+        <div class="layer-layout">
+          <figure>
+            <img src="day38-karmada-vs-kubernetes-descheduler.png" alt="Karmada 与 Kubernetes Descheduler 在调度单元、撤销动作和目标选择上的分层对比">
+          </figure>
+          <div class="layer-points">
+            <div class="layer-point">
+              <strong>Kubernetes：Pod → Node</strong>
+              <p>统一对象、标准 Eviction API、PDB 和 owner controller。</p>
+            </div>
+            <div class="layer-point">
+              <strong>Karmada 平台：Binding(GVK) → Cluster</strong>
+              <p>当前只修正 per-member Deployment target/count，不携带具体 Pod identity。</p>
+            </div>
+            <div class="layer-point">
+              <strong>因此不能按插件数一比一复制</strong>
+              <p>值得借鉴的是框架与安全机制，不是直接照搬 Node 级策略。</p>
+            </div>
+          </div>
+        </div>
+        <p class="source">Canonical source: day38-karmada-vs-kubernetes-descheduler.mmd</p>
+      </div>
+    </section>
+
+    <section class="slide plugin-slide" data-title="Kubernetes Descheduler 为什么更丰富" aria-label="第 12 页：Kubernetes Descheduler 能力">
+      <div class="slide-inner">
+        <span class="slide-index">11 / KUBERNETES</span>
+        <h2>Kubernetes 已经是 Pod 驱逐平台</h2>
+        <div class="plugin-layout">
+          <div>
+            <section class="plugin-group">
+              <h3>4 Balance plugins</h3>
+              <div class="plugin-names">
+                <code>RemoveDuplicates</code><code>LowNodeUtilization</code><code>HighNodeUtilization</code><code>RemovePodsViolatingTopologySpreadConstraint</code>
+              </div>
+            </section>
+            <section class="plugin-group">
+              <h3>6 Deschedule plugins</h3>
+              <div class="plugin-names">
+                <code>RemovePodsViolatingInterPodAntiAffinity</code><code>RemovePodsViolatingNodeAffinity</code><code>RemovePodsViolatingNodeTaints</code><code>RemovePodsHavingTooManyRestarts</code><code>PodLifeTime</code><code>RemoveFailedPods</code>
+              </div>
+            </section>
+          </div>
+          <aside class="safety-stack">
+            <div class="safety-item"><strong>DefaultEvictor</strong><span>内置策略复用 Filter / PreEvictionFilter hooks</span></div>
+            <div class="safety-item"><strong>Eviction budgets</strong><span>total / per-node / per-namespace</span></div>
+            <div class="safety-item"><strong>Dry-run</strong><span>先观察候选，再决定是否驱逐</span></div>
+            <div class="safety-item"><strong>Observability</strong><span>Events / metrics / tracing</span></div>
+            <div class="safety-item"><strong>Profiles</strong><span>启停、顺序、参数与校验</span></div>
+          </aside>
+        </div>
+        <p class="takeaway">成熟来自统一 Pod 边界、标准撤销动作和 2017 年以来的持续演进。</p>
+        <p class="source">Baseline: kubernetes-sigs/descheduler v0.36.0</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="建议路线" aria-label="第 13 页：建议路线">
+      <div class="slide-inner">
+        <span class="slide-index">12 / RECOMMENDATION</span>
+        <h2>借框架，不抢 scheduler 的目标选择权</h2>
+        <div class="roadmap">
+          <article class="roadmap-step">
+            <span class="phase">PHASE 0</span>
+            <h3>把窄场景做稳</h3>
+            <p>明确 opt-in、长期 Unschedulable、replaceable replica、已知 Ready 下界和唯一完成条件。</p>
+          </article>
+          <article class="roadmap-step">
+            <span class="phase">PHASE 1</span>
+            <h3>先抽安全骨架</h3>
+            <p>增加 dry-run、release budget、strategy/reason metrics，以及统一 Binding mutation executor。</p>
+          </article>
+          <article class="roadmap-step">
+            <span class="phase">PHASE 2</span>
+            <h3>再扩 workload</h3>
+            <p>定义 resolver 合同和 support matrix；多组件先解决 per-component placement，不宣称 any workload。</p>
+          </article>
+        </div>
+        <p class="final-line">最终原则：Descheduler 把旧 target 异常转成数量缺口，scheduler 始终决定新位置。</p>
+        <a class="report-link" href="day38-karmada-descheduler-special-study.md">打开完整证据报告</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progress"></div></div>
+    <nav class="footer-nav" aria-label="幻灯片导航">
+      <button class="icon-button" id="previous" type="button" title="上一页" aria-label="上一页">←</button>
+      <span class="counter" id="counter" aria-live="polite">01 / 13</span>
+      <button class="icon-button" id="next" type="button" title="下一页" aria-label="下一页">→</button>
+    </nav>
+    <span class="footer-context">Karmada Descheduler 专项调研</span>
+  </footer>
+
+  <script>
+    (() => {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const previous = document.getElementById('previous');
+      const next = document.getElementById('next');
+      const counter = document.getElementById('counter');
+      const progress = document.getElementById('progress');
+      const currentTitle = document.getElementById('current-title');
+      const fullscreen = document.getElementById('fullscreen');
+      const requested = Number.parseInt(window.location.hash.slice(1), 10);
+      let current = Number.isFinite(requested) ? requested - 1 : 0;
+      let touchStartX = null;
+
+      const clamp = (value) => Math.max(0, Math.min(value, slides.length - 1));
+      const pad = (value) => String(value).padStart(2, '0');
+
+      function show(index, updateHash = true) {
+        current = clamp(index);
+        slides.forEach((slide, slideIndex) => {
+          const active = slideIndex === current;
+          slide.classList.toggle('active', active);
+          slide.setAttribute('aria-hidden', String(!active));
+          if (active) {
+            slide.scrollTop = 0;
+          }
+        });
+
+        const number = current + 1;
+        counter.textContent = `${pad(number)} / ${pad(slides.length)}`;
+        progress.style.width = `${(number / slides.length) * 100}%`;
+        currentTitle.textContent = slides[current].dataset.title;
+        previous.disabled = current === 0;
+        next.disabled = current === slides.length - 1;
+
+        if (updateHash) {
+          history.replaceState(null, '', `#${number}`);
+        }
+      }
+
+      previous.addEventListener('click', () => show(current - 1));
+      next.addEventListener('click', () => show(current + 1));
+
+      document.addEventListener('keydown', (event) => {
+        if (['ArrowRight', 'PageDown', ' '].includes(event.key)) {
+          event.preventDefault();
+          show(current + 1);
+        } else if (['ArrowLeft', 'PageUp'].includes(event.key)) {
+          event.preventDefault();
+          show(current - 1);
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          show(0);
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          show(slides.length - 1);
+        }
+      });
+
+      window.addEventListener('hashchange', () => {
+        const hashIndex = Number.parseInt(window.location.hash.slice(1), 10);
+        if (Number.isFinite(hashIndex)) {
+          show(hashIndex - 1, false);
+        }
+      });
+
+      document.addEventListener('touchstart', (event) => {
+        touchStartX = event.changedTouches[0].clientX;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (event) => {
+        if (touchStartX === null) return;
+        const delta = event.changedTouches[0].clientX - touchStartX;
+        touchStartX = null;
+        if (Math.abs(delta) < 60) return;
+        show(current + (delta < 0 ? 1 : -1));
+      }, { passive: true });
+
+      fullscreen.addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen();
+          } else {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (error) {
+          console.warn('Fullscreen is unavailable in this browser.', error);
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        const active = Boolean(document.fullscreenElement);
+        fullscreen.textContent = active ? '×' : '⛶';
+        fullscreen.title = active ? '退出全屏' : '全屏';
+        fullscreen.setAttribute('aria-label', fullscreen.title);
+      });
+
+      show(current);
+    })();
+  </script>
+</body>
+</html>

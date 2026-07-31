@@ -51,6 +51,7 @@
 - [Day 36：PR #7800 ResourceDetector waiting store 深度 Review](day36-pr7800-waiting-store-deep-review.md)（[英文 review 草稿](day36-pr7800-review-comment.md)）
 - [Day 36：Issue #7802 调度优先级队列确定性实验](day36-issue7802-priority-queue-experiment.md)（[已发布英文评论](day36-issue7802-comment.md) / [Upstream comment](https://github.com/karmada-io/karmada/issues/7802#issuecomment-5114587741) / [Mermaid](day36-issue7802-queue-reentry.mmd) / [PNG](day36-issue7802-queue-reentry.png)）
 - [Day 37：PR #7662 selector / unschedulable 方案更新 Review](day37-pr7662-selector-unschedulable-review.md)（[Mermaid](day37-pr7662-selector-unschedulable-flow.mmd) / [PNG](day37-pr7662-selector-unschedulable-flow.png)）
+- [Day 38：Karmada Descheduler 专项调研与 Kubernetes 对比](day38-karmada-descheduler-special-study.md)（[HTML 汇报稿](day38-karmada-descheduler-presentation.html)；[控制闭环 Mermaid](day38-karmada-descheduler-control-loop.mmd) / [PNG](day38-karmada-descheduler-control-loop.png)；[分层对比 Mermaid](day38-karmada-vs-kubernetes-descheduler.mmd) / [PNG](day38-karmada-vs-kubernetes-descheduler.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

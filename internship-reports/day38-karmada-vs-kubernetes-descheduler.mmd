@@ -1,0 +1,48 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+  flowchart:
+    curve: basis
+    htmlLabels: true
+---
+flowchart TB
+    KHEAD["Kubernetes Descheduler<br/>Pod to Node"]:::header
+    MHEAD["Karmada Descheduler<br/>per-member replica target correction"]:::header
+
+    KUNIT["Scheduling unit<br/><b>Pod</b><br/>Pod and Node informers"]:::source
+    MUNIT["Platform can bind arbitrary GVK<br/><b>current correction unit: Deployment target count</b><br/>no selected Pod identity"]:::source
+
+    KFRAME["Decision framework<br/>v1alpha2 profiles<br/>10 strategy plugins<br/>Deschedule and Balance"]:::policy
+    MFRAME["Fixed decision path<br/>Deployment + Dynamic Divided<br/>long-unschedulable estimator"]:::policy
+
+    KSAFE["Reusable hooks and central action<br/>built-ins call DefaultEvictor filters<br/>PodEvictor budgets, dry-run, Eviction API"]:::safety
+    MSAFE["Fixed inline guard and scalar action<br/>reduce source replica target count<br/>Ready floor applies only when Ready is known"]:::safety
+
+    KOWNER["Destination owner<br/><b>kube-scheduler</b><br/>places replacement Pods"]:::owner
+    MOWNER["Destination owner<br/><b>karmada-scheduler</b><br/>places only the replica deficit"]:::owner
+
+    BOUNDARY["Why the breadth differs<br/>Kubernetes already standardizes Pod identity, ownership and eviction.<br/>Karmada must define replica, component, Ready and safe source reduction per workload."]:::insight
+    BORROW["What Karmada should borrow<br/>pluggable detection, shared safety, budgets, dry-run and metrics<br/><b>Keep destination placement in karmada-scheduler</b>"]:::recommendation
+
+    KHEAD --> KUNIT --> KFRAME --> KSAFE --> KOWNER
+    MHEAD --> MUNIT --> MFRAME --> MSAFE --> MOWNER
+    KOWNER --> BOUNDARY
+    MOWNER --> BOUNDARY
+    BOUNDARY --> BORROW
+
+    KHEAD ~~~ MHEAD
+    KUNIT ~~~ MUNIT
+    KFRAME ~~~ MFRAME
+    KSAFE ~~~ MSAFE
+    KOWNER ~~~ MOWNER
+
+    classDef header fill:#ffffff,stroke:#4b5563,color:#111827,stroke-width:2px;
+    classDef source fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef policy fill:#e1d5e7,stroke:#9673a6,color:#4c1d95;
+    classDef safety fill:#fff2cc,stroke:#d6b656,color:#713f12;
+    classDef owner fill:#d5e8d4,stroke:#2f855a,color:#14532d,stroke-width:2px;
+    classDef insight fill:#f5f5f5,stroke:#666666,color:#262626;
+    classDef recommendation fill:#e6f4ea,stroke:#3c8c5a,color:#14532d,stroke-width:2px;

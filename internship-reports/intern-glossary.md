@@ -71,12 +71,17 @@
 | karmada-scheduler | 多集群调度器 | 把资源放到合适的成员集群，并可分配跨集群副本；决策层级是资源到集群 |
 | member kube-scheduler | 成员集群的 Kubernetes 调度器 | 把待调度 Pod 绑定到该成员集群的 Node；决策层级是 Pod 到 Node |
 | scheduler estimator | 调度估算器 | 帮助 scheduler 估算 member cluster 是否能承载资源 |
+| Karmada Descheduler | 跨集群旧分配纠偏组件；当前只处理 Deployment，并按长期 `Unschedulable` Pod 数修正 per-member target | 它减少源集群的 `ResourceBinding.spec.clusters[].replicas`，不携带被删除 Pod identity，也不选择目标集群；member controller 决定实际 scale-down 对象，缺口由 karmada-scheduler 放置 |
+| Kubernetes Descheduler | 单集群 Pod 到 Node 层的周期性、best-effort 驱逐框架 | 按策略找到可移动 Pod，通过 Eviction API 撤销旧位置，再由 workload controller 和 kube-scheduler 重建、放置 |
+| WorkloadRebalancer | 用户显式提交的一次性 workload 重调度任务对象 | 当前给目标 Binding 写 `rescheduleTriggeredAt`；它不是 member Pod 运行态检测器，也不等待 target replica Ready |
+| ScaleSchedule | Binding 总 assigned replicas 与 workload desired replicas 不一致时的增量副本调度 | Descheduler 通过减少源集群 assigned 数制造普通 deficit，scheduler 再复用该路径补齐 |
+| Steady / Fresh | 两种副本分配方式；Steady 尽量保留旧分布，Fresh 在当前 affinity/candidate context 内不保留原 replica distribution | 当前 Descheduler 产生普通 scale deficit，使用 Steady；显式 `rescheduleTriggeredAt` 使 Dynamic Divided replica assignment 使用 Fresh，但不会自动重置顶层 `clusterAffinities` cursor |
 | workload / 工作负载 | 运行应用或任务的对象统称；本文主要指管理一组 Pod 的上层资源，例如 Deployment、StatefulSet、DaemonSet 和 Job，不是一个固定名为 Workload 的 Kubernetes Kind | 读状态前要先确认它属于哪个具体对象；Deployment 的 unavailable 是一组 Pod 的汇总，Pod 的 Pending 则是单个运行单元的 phase |
 | replica / 副本 | workload 期望维持或完成的逻辑执行单元；Deployment 中通常是可替换实例，StatefulSet 中可能是带 ordinal/PVC 的实例，Job 中可能是 completion index | 不能默认把“1 个副本”永久等同于“1 个固定 Pod”；跨集群移动前要明确副本单位和身份 |
 | Pod phase `Pending` | Pod 已被集群接受，但至少一个容器还没有完成设置并准备运行；既包含尚未调度，也包含已调度后的镜像下载等准备阶段 | 只看 `Pending` 不能断言 member cluster 资源不足，更不能直接决定跨集群移动 |
 | Ready / Available | Ready 表示 Pod 当前可服务；workload 的 Available 通常要求 Ready 连续保持至少 `minReadySeconds` | Available 比 Ready 更稳定，但二者都是容量信号，不解释缺口原因 |
 | unavailable replica | workload 达到期望可用容量还缺少的副本；Deployment 和 DaemonSet API 有直接字段，其他 workload 可能需要推导 | 它不是 Pod phase，也不等于可迁移数量；镜像、readiness、rollout 和应用失败都可能造成 unavailable |
-| Unschedulable | Pod 的 `PodScheduled=False` 且 `reason=Unschedulable`，表示 member kube-scheduler 当前找不到满足资源和约束的 Node | 比 Pending 更窄；Karmada Descheduler 还要求持续超过 threshold，才把 Deployment Pod 计入释放候选 |
+| Unschedulable | Pod 的 `PodScheduled=False` 且 `reason=Unschedulable`，表示 member kube-scheduler 当前找不到满足资源和约束的 Node | 比 Pending 更窄；Karmada Descheduler 还要求持续超过 threshold，才把该 Pod 计入 target reduction 数量，但不会点名驱逐它 |
 | movable replica | 能通过改变 member cluster placement 改善结果、且 workload 语义允许替代的逻辑单元；不是 Kubernetes 原生字段 | 需要结合失败原因、目标集群容量、状态 freshness、数据/身份和 writer ownership 才能得出 |
 | failover | 故障转移 | member cluster 异常时迁移或重建工作负载 |
 | graceful eviction | 优雅驱逐 | 在迁移或重平衡时尽量降低业务中断 |

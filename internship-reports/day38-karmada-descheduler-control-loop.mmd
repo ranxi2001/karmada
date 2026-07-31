@@ -1,0 +1,63 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+  flowchart:
+    curve: basis
+    htmlLabels: true
+---
+flowchart LR
+    subgraph INPUTS["Observed state"]
+        direction TB
+        RB[("ResourceBinding<br/>desired and assigned replicas")]:::state
+        STATUS["Aggregated status<br/>Ready per cluster, or -1 if missing"]:::state
+        PODS["Member Deployment Pods<br/>some stay Unschedulable"]:::signal
+    end
+
+    subgraph DESCHEDULER["Karmada Descheduler - source-side correction"]
+        direction TB
+        SCAN["Periodic scan and eligibility filter<br/>Deployment + Dynamic Divided only"]:::process
+        GAP{"Assigned greater than reflected Ready?<br/>Missing Ready is -1"}:::decision
+        EST["scheduler-estimator<br/>verify current ReplicaSet ownership<br/>count long-unschedulable Pods"]:::process
+        CAP["Subtract verified count<br/>apply the Ready floor only<br/>when reflected Ready is known"]:::safety
+        UPDATE[("Update source target count in<br/>ResourceBinding.spec.clusters<br/>no selected Pod identity")]:::state
+        NOOP["No binding mutation<br/>no gap, estimator error<br/>or unauthentic result"]:::safety
+
+        SCAN --> GAP
+        GAP -->|yes| EST
+        GAP -->|no| NOOP
+        EST -->|verified count greater than zero| CAP
+        EST -->|no reliable count| NOOP
+        CAP --> UPDATE
+    end
+
+    subgraph SCHEDULING["Existing Karmada scheduling and propagation path"]
+        direction TB
+        EVENT["Binding update event<br/>independent consumers, no ordering guarantee"]:::decision
+        SCALE["karmada-scheduler<br/>Steady dynamicScaleUp"]:::process
+        TARGET["Existing filters, scores and capacity estimates<br/>choose destination cluster"]:::process
+        WORK["Binding and execution controllers<br/>independently propagate each Binding update"]:::process
+        WINDOW["Possible intermediate state<br/>source shrink reaches members before refill<br/>deficit remains if scale-up cannot succeed"]:::warning
+        FEEDBACK["Later cycles observe<br/>new runtime and aggregated status"]:::signal
+
+        EVENT -.->|scheduler watch<br/>sees a normal deficit| SCALE
+        EVENT -.->|controller watch| WORK
+        SCALE -->|desired total - assigned total| TARGET
+        TARGET -->|later assignment update| WORK
+        WORK -.->|eventual feedback| FEEDBACK
+        WORK -.->|if source shrink reaches members first| WINDOW
+    end
+
+    RB --> SCAN
+    STATUS -.->|reflected Ready count, if available| GAP
+    PODS -->|PodScheduled=False<br/>Reason=Unschedulable| EST
+    UPDATE -.-> EVENT
+
+    classDef signal fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef process fill:#d5e8d4,stroke:#82b366,color:#14532d;
+    classDef state fill:#fff2cc,stroke:#d6b656,color:#713f12;
+    classDef decision fill:#e1d5e7,stroke:#9673a6,color:#4c1d95;
+    classDef safety fill:#f5f5f5,stroke:#666666,color:#262626,stroke-dasharray:5 3;
+    classDef warning fill:#f8e8e6,stroke:#a4473d,color:#7f1d1d,stroke-dasharray:5 3;
