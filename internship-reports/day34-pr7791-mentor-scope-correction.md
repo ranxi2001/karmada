@@ -157,3 +157,29 @@ To move this forward on the current master with regression coverage, #7791 has b
 - `code-review-growth`：新增 Component Responsibility Gate，并把原先“test cache barrier 应推动生产组件保证所有事件顺序收敛”的错误 pattern 改为“时序证据不等于职责归属”。
 - `karmada-pr-management`：在设计、文件说明和高风险差分审阅中，要求逐项说明 direct API read、cache validation、retry、watch 和 synchronization 的现有 owner；测试变得稳定不能作为职责转移证据。
 - 两项 skill 同时增加 prior-authorship 规则：clean rebuild 必须从 signed historical patch 验证来源，保留原作者和真实 sign-off，把新适配/测试拆到自己的提交，并在 PR body 明确 credit；不能为了保留 credit 而继承污染 ancestry，也不能伪造 sign-off。
+
+## 2026-07-31：#5425 合并后的 rebase
+
+### 先说人话
+
+#5425 已经把 Bharath 的 6 行生产实现合入 `master`，因此 #7791 不应继续重复提交同一份实现。按 `@RainbowMango` 的 [maintainer 要求](https://github.com/karmada-io/karmada/pull/7791#issuecomment-5140455051)，本次把 #7791 rebase 到包含 #5425 的最新 `upstream/master`；Git 自动识别并丢弃重复实现，只重放我们补充的单元测试和 E2E。这样 #5425 记录 Bharath 的实现贡献，#7791 只记录 ranxi 的测试贡献。
+
+### Rebase 与差分证据
+
+- #5425 于 `2026-07-31T07:32:49Z` 合并，merge commit 为 `6de180f72ac0f740401ce4bf4114824f00d1dc90`，并自动关闭 #5070。
+- 本地在 `/tmp/karmada-5070-six-line` 执行 `git fetch upstream master` 和 `git rebase upstream/master`。Git 明确报告 `b41507b1f` 的 patch contents already upstream，rebase 无冲突。
+- 新 head 为 `11030fbe1816f8ba8aca13a31f2011ac17ff26b0`，只包含 `pkg/scheduler/scheduler_test.go` 和 `test/e2e/suites/base/clusteraffinities_test.go`，合计 `+288/-13`；`pkg/scheduler/scheduler.go` 不再属于 #7791 diff。
+- `git range-diff eb2e7c75f..41ed65272 upstream/master..11030fbe1` 显示旧测试提交与新测试提交为 `=`，只有重复实现提交被移除；`git diff --check upstream/master...HEAD` 通过，提交仍含 ranxi 的 DCO sign-off。
+- 用户明确要求不继续测试。已启动的 post-rebase race 定向命令在收到中断前打印 `PASS`，但进程最终为 `signal: interrupt` / `FAIL`，因此不把它记为一次 post-rebase pass；PR body 只保留 pre-rebase 已通过验证，并明确披露本轮未重跑。
+
+### Upstream 更新结果
+
+用户确认精确 target、branch、标题和正文后，使用锁定旧 SHA `41ed652725fc9169cab111cb0793ff135a037ba7` 的 `--force-with-lease`，把 `origin/feature/reset-affinity-on-reschedule` 更新到 `11030fbe1816f8ba8aca13a31f2011ac17ff26b0`。`gh pr edit` 因 token 缺少与本操作无关的 `read:org` scope 被 GraphQL 拒绝；随后改用 PR REST `PATCH` 提交同一份已批准文本，未扩大 token 权限。
+
+GitHub 回读确认：
+
+- 标题为 `test(scheduler): cover affinity reset on reschedule`，正文改为 test-only follow-up，关系从 `Fixes #5070` 改为 `Follow-up to #5425` / `Refs #5070`，release note 为 `NONE`。
+- PR head、fork branch 和本地 head 都是 `11030fbe1`；只有一个 ranxi author/sign-off 的测试提交和两个测试文件。
+- PR 为 open、non-draft、`mergeable=true`，但当前 `mergeable_state=blocked`。force-push 后旧 `lgtm` 已清除，等待新 CI 和 maintainer re-LGTM/approve；不主动发布 `/retest`、催审或标签评论。
+- PR body 已写 `/kind cleanup`，GitHub 当前标签仍为旧的 `kind/feature` 与 `size/L`；把它记录为异步/maintainer gate 状态，不为标签同步单独制造 upstream 评论。
+- 用户逐字确认后，已在 #7791 发布[礼貌性 rebase 回执](https://github.com/karmada-io/karmada/pull/7791#issuecomment-5140604657)：感谢 maintainer 推动 #5425 合并，并说明 rebase 已去除上游已有实现、当前只保留 unit/E2E regression tests。REST 回读确认作者、正文与批准稿一致；没有附带 `/retest`、mention 或新的 review 请求。
