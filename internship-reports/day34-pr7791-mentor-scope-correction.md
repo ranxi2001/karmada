@@ -183,3 +183,23 @@ GitHub 回读确认：
 - PR 为 open、non-draft、`mergeable=true`，但当前 `mergeable_state=blocked`。force-push 后旧 `lgtm` 已清除，等待新 CI 和 maintainer re-LGTM/approve；不主动发布 `/retest`、催审或标签评论。
 - PR body 已写 `/kind cleanup`，GitHub 当前标签仍为旧的 `kind/feature` 与 `size/L`；把它记录为异步/maintainer gate 状态，不为标签同步单独制造 upstream 评论。
 - 用户逐字确认后，已在 #7791 发布[礼貌性 rebase 回执](https://github.com/karmada-io/karmada/pull/7791#issuecomment-5140604657)：感谢 maintainer 推动 #5425 合并，并说明 rebase 已去除上游已有实现、当前只保留 unit/E2E regression tests。REST 回读确认作者、正文与批准稿一致；没有附带 `/retest`、mention 或新的 review 请求。
+
+## 2026-07-31：合并与 post-merge Chart 红灯分类
+
+### 先说人话
+
+#7791 已经成功合并，PR 本身的 DCO、compile、unit、三版本 E2E、Chart、CLI 和 Operator checks 全部通过。合并后 `master` 又自动跑了一轮 push workflow，其中 Chart 的 Kubernetes v1.36.1 matrix 显示红灯；它不是 scheduler 或 E2E 回归，而是该 runner 连接 Docker Hub 下载 Helm 依赖时 30 秒 TCP 超时。当前不需要改 #7791、scheduler、tests 或 chart，分类为 `CI external registry / NO_FIX`。
+
+具体例子：三个 runner 同时执行相同的 `helm template --dependency-update ./charts/karmada`。v1.34 和 v1.35 都在几百毫秒内成功拉到 `bitnamicharts/common:2.41.0`；只有 v1.36.1 runner 对同一 manifest 的 `HEAD` 请求一直没有响应，30 秒后报 `dial tcp ...:443: i/o timeout`。这说明依赖和模板能工作，失败的是该 runner 到 registry 的一次网络连接。
+
+### 运行过程与技术证据
+
+1. [PR #7791](https://github.com/karmada-io/karmada/pull/7791) 于 `2026-07-31T08:44:49Z` 合并，merge commit 为 `35ee6092e49918d8d9c1d0642ce1474e774608cc`；PR head `11030fbe1` 的 18 项 checks 全部通过。
+2. merge commit 的 push 触发 [Chart run `30617396767`](https://github.com/karmada-io/karmada/actions/runs/30617396767)。v1.34 和 v1.35 jobs 完整通过 template、lint、install 与 operator chart install；[v1.36.1 job `91113656882`](https://github.com/karmada-io/karmada/actions/runs/30617396767/job/91113656882) 在 step `Run chart-testing (template)` 终止，后续步骤全部 skipped。
+3. v1.36.1 于 `08:46:27Z` 发起 `HEAD https://registry-1.docker.io/v2/bitnamicharts/common/manifests/2.41.0`；`08:46:57Z` 报 `failed to do request ... dial tcp 18.232.232.248:443: i/o timeout`，随后 Helm 报 `could not download oci://registry-1.docker.io/bitnamicharts/common`。
+4. 同一 merge commit 的 v1.34 在 `08:45:35Z`、v1.35 在 `08:45:55Z` 对同一 tag 收到 `200 OK`，解析到相同 digest `sha256:669301594ad66a7401a47d26c6f0b763b95e44af667c57228e552920eb8feb66` 并输出 `Pulled: registry-1.docker.io/bitnamicharts/common:2.41.0`。
+5. #7791 residual diff 只有 `pkg/scheduler/scheduler_test.go` 和 `test/e2e/suites/base/clusteraffinities_test.go`；没有修改 `charts/` 或 `.github/workflows/installation-chart.yaml`。workflow 第 83-90 行本来就会在 template 阶段用 `--dependency-update` 访问外部 registry。
+
+### 边界与下一步
+
+这次日志直接证明 transport timeout，但不证明 Docker Hub 全局故障，也不证明 workflow 长期不稳定；当前只有单 runner 单次失败。无需为它增加 scheduler/test retry，也不应把一次外网超时包装成 #7791 产品回归。PR 已合并，不存在 merge gate 动作；等待 maintainer rerun 或下一次 `master` push 即可。只有同类 registry timeout 持续跨 runner、跨 commit 重复时，才值得单独评估 chart dependency cache、镜像源或 workflow-level retry。
