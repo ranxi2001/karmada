@@ -10,6 +10,15 @@
 
 这不是单纯的学习目标，而是社区贡献目标。后续日报和 TODO 优先围绕 upstream 可见证据组织：issue/PR 推进、CI 结果、review 响应、测试补强、会议提案和 mentor-facing 复盘。
 
+## 周总结
+
+Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCube，对应总结保留在 AgentCube 仓库 `intern` 分支，不在这里重复维护。
+
+- [Week 3：进入 Karmada 并完成第一项 Upstream 贡献](week3-summary.md)
+- [Week 4：从证书布局提案转向可验证的轮换路径](week4-summary.md)
+- [Week 5：稳定 CI 环境并建立 Flake 证据链](week5-summary.md)
+- [Week 6：从架构 Review 与证书收敛走向可验证的 Flake 修复](week6-summary.md)
+
 ## 日报列表
 
 - [Day 1：Karmada #7598 依赖升级 follow-up 和 upstream PR](day1-karmada-7598-default-version-pr.md)
