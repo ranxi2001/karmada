@@ -61,6 +61,7 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - [Day 36：Issue #7802 调度优先级队列确定性实验](day36-issue7802-priority-queue-experiment.md)（[已发布英文评论](day36-issue7802-comment.md) / [Upstream comment](https://github.com/karmada-io/karmada/issues/7802#issuecomment-5114587741) / [Mermaid](day36-issue7802-queue-reentry.mmd) / [PNG](day36-issue7802-queue-reentry.png)）
 - [Day 37：PR #7662 selector / unschedulable 方案更新 Review](day37-pr7662-selector-unschedulable-review.md)（[Mermaid](day37-pr7662-selector-unschedulable-flow.mmd) / [PNG](day37-pr7662-selector-unschedulable-flow.png)）
 - [Day 38：Karmada Descheduler 专项调研与 Kubernetes 对比](day38-karmada-descheduler-special-study.md)（[Style A 无表格汇报稿](day38-karmada-descheduler-presentation-style-a.html)；[控制闭环 Mermaid](day38-karmada-descheduler-control-loop.mmd) / [PNG](day38-karmada-descheduler-control-loop.png)；[分层对比 Mermaid](day38-karmada-vs-kubernetes-descheduler.mmd) / [PNG](day38-karmada-vs-kubernetes-descheduler.png)）
+- [Day 39：Karmada Descheduler 通用工作负载的五层代码合同与方案对比](day39-karmada-descheduler-code-contracts-and-options.md)（[16 页 Style A 汇报稿](day39-karmada-descheduler-code-research-presentation.html)；[代码链与五层断点 Mermaid](day39-karmada-descheduler-code-contract-breaks.mmd) / [PNG](day39-karmada-descheduler-code-contract-breaks.png)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 

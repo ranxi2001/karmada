@@ -1,0 +1,69 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+  flowchart:
+    curve: linear
+    htmlLabels: true
+---
+flowchart TB
+    subgraph CONTROL["CONTROL PLANE · SCALAR OBSERVATION"]
+      direction LR
+    RB[("ResourceBinding<br/>TargetCluster = name + replicas")]:::state
+    FILTER["FilterBindings<br/>Deployment + Dynamic Divided"]:::control
+    HELPER["SchedulingResultHelper<br/>Spec / Ready / Unschedulable"]:::control
+    REQUEST["gRPC request<br/>ObjectReference + threshold"]:::wire
+    RB -->|periodic scan| FILTER
+    FILTER -->|eligible binding| HELPER
+    HELPER -->|undesired cluster| REQUEST
+    end
+
+    subgraph MEMBER["MEMBER CLUSTER · DEPLOYMENT-SPECIFIC EVIDENCE"]
+      direction LR
+    OBJECT["Fetch member workload<br/>apps/v1 Deployment"]:::member
+    RESOLVER["Resolve owned Pods<br/>Deployment -> current ReplicaSet -> Pods"]:::member
+    SIGNAL["Detect long-running Pending<br/>PodScheduled=False / Unschedulable"]:::member
+    COUNT["gRPC response<br/>one int32 count"]:::wire
+    OBJECT --> RESOLVER
+    RESOLVER -->|owned non-terminal Pods| SIGNAL
+    SIGNAL -->|count only| COUNT
+    end
+
+    subgraph CLOSURE["CONTROL PLANE · DEFICIT REPAIR"]
+      direction LR
+    MUTATE["Subtract source count<br/>clusters[i].replicas -= count"]:::control
+    UPDATED[("Updated ResourceBinding<br/>scalar deficit")]:::state
+    SCHED["karmada-scheduler<br/>ScaleSchedule fills the deficit"]:::scheduler
+    REVISE["Binding controller<br/>ReviseReplica(int64)"]:::scheduler
+    MUTATE -->|Update| UPDATED
+    UPDATED -->|generation event| SCHED
+    SCHED -->|new cluster counts| REVISE
+    end
+
+    REQUEST -->|member RPC| OBJECT
+    COUNT --> MUTATE
+
+    subgraph CONTRACTS["FIVE CONTRACTS THAT BREAK BEYOND REPLACEABLE SCALAR REPLICAS"]
+      direction LR
+    L1["L1 Type capability<br/>No generic workload contract"]:::break
+    L2["L2 Pod ownership<br/>No generic owner / component resolver"]:::break
+    L3["L3 Runtime semantics<br/>readyReplicas is not universal"]:::break
+    L4["L4 Placement model<br/>No per-component or task identity"]:::break
+    L5["L5 Execution and completion<br/>No generic migrate / rollback contract"]:::break
+    L1 ~~~ L2 ~~~ L3 ~~~ L4 ~~~ L5
+    end
+
+    FILTER -. "L1" .-> L1
+    RESOLVER -. "L2" .-> L2
+    HELPER -. "L3" .-> L3
+    COUNT -. "L4" .-> L4
+    REVISE -. "L5" .-> L5
+
+    classDef state fill:#f5f5f1,stroke:#111111,color:#111111,stroke-width:2px;
+    classDef control fill:#fce1df,stroke:#e63b2e,color:#641b15,stroke-width:2px;
+    classDef member fill:#e6f3eb,stroke:#27845b,color:#123d2d,stroke-width:2px;
+    classDef wire fill:#f7eadf,stroke:#d96724,color:#643015,stroke-width:2px;
+    classDef scheduler fill:#e2ebf5,stroke:#2563a6,color:#173b61,stroke-width:2px;
+    classDef break fill:#fff7f6,stroke:#e63b2e,color:#7f1d1d,stroke-width:2px,stroke-dasharray:7 5;
