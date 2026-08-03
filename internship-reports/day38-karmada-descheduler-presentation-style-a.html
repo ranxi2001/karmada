@@ -1716,13 +1716,13 @@
             <code>ResourceBinding.spec.clusters[].replicas</code>
           </article>
           <article class="actor-lane reveal" style="--lane-color: var(--blue); --delay: 90ms">
-            <span class="ordinal">02</span><h3>karmada-scheduler</h3><span class="verb">重新放置副本缺口</span>
+            <span class="ordinal">02</span><h3>karmada-scheduler</h3><span class="verb">重新放置副本（replica）缺口</span>
             <p>在这条补位路径中继续过滤、打分和估算容量，决定缺少的副本应该放到哪个候选集群。</p>
             <code>Steady / dynamicScaleUp</code>
           </article>
           <article class="actor-lane reveal" style="--lane-color: var(--green); --delay: 180ms">
             <span class="ordinal">03</span><h3>WorkloadRebalancer</h3><span class="verb">表达一次重调度意图</span>
-            <p>用户指定工作负载并写入时间戳，触发一次调度；当前不周期观察成员 Pod 的运行异常。</p>
+            <p>用户指定工作负载（workload）并写入时间戳，触发一次调度；当前不周期观察成员 Pod 的运行异常。</p>
             <code>rescheduleTriggeredAt</code>
           </article>
         </div>
@@ -1954,12 +1954,12 @@
             <div class="track-name"><strong>Karmada Descheduler</strong><code>periodic loop</code></div>
             <div class="track-point"><strong>周期检查</strong>持续发现运行异常</div>
             <div class="track-point"><strong>成员 Pod</strong>长期 Unschedulable</div>
-            <div class="track-point"><strong>缩减旧分配</strong>形成副本缺口</div>
+            <div class="track-point"><strong>缩减旧分配</strong>形成副本（replica）缺口</div>
             <div class="track-point"><strong>等待调度闭环</strong>不承诺一次成功</div>
           </div>
           <div class="compare-track reveal" style="--track-color: var(--ink); --delay: 140ms">
             <div class="track-name"><strong>WorkloadRebalancer</strong><code>rescheduleTriggeredAt</code></div>
-            <div class="track-point"><strong>用户触发</strong>指定工作负载</div>
+            <div class="track-point"><strong>用户触发</strong>指定工作负载（workload）</div>
             <div class="track-point"><strong>Binding</strong>不观察成员 Pod</div>
             <div class="track-point"><strong>Fresh 重算</strong>当前 affinity / candidate context</div>
             <div class="track-point"><strong>写入成功</strong>不代表新副本 Ready</div>

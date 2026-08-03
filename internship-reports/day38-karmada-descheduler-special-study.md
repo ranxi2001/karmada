@@ -2,7 +2,7 @@
 
 日期：2026-07-31
 
-汇报稿：[离线 HTML 演示页](day38-karmada-descheduler-presentation.html)。本文保留完整证据、边界和追问材料；HTML 用于低文字密度现场汇报。
+汇报稿：[Style A 离线 HTML 演示页](day38-karmada-descheduler-presentation-style-a.html)。本文保留完整证据、边界和追问材料；HTML 用于低文字密度现场汇报。
 
 调研基线：
 
