@@ -14,13 +14,13 @@
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
-| [Day 38 Descheduler 专项](internship-reports/day38-karmada-descheduler-special-study.md) | 完整证据报告、两张英文图和 [13 页 Style C HTML 汇报稿](internship-reports/day38-karmada-descheduler-presentation.html)已完成；Humanizer-cs 已清理中英混搭和翻译腔，并保留源码标识与未决边界 | 周一前确认千问 workload 的 Kind、多组件/可替换语义和成功条件，并用 10 副本例子试讲 |
+| [Day 38 Descheduler 专项](internship-reports/day38-karmada-descheduler-special-study.md) | 完整证据报告、两张英文图、[15 页 Style A 无表格汇报稿](internship-reports/day38-karmada-descheduler-presentation-style-a.html)和 [13 页 Style C 高密度汇报稿](internship-reports/day38-karmada-descheduler-presentation.html)已完成；均保留源码标识与未决边界 | 周一前确认千问 workload 的 Kind、多组件/可替换语义和成功条件，并用 10 副本例子试讲 |
 | [PR #7662](https://github.com/karmada-io/karmada/pull/7662) | Open，head 仍为 `586f6fc3508e`；7 月 28 日会议收敛 offline scope，7 月 30 日 maintainer 提议 `GetComponents.selector -> estimator Unschedulable -> dynamicScaleUp` | `@zhy76` / `@RainbowMango` 回复或 proposal commit；再核对 API 集合、ownership、多组件和 completion contract |
 | [PR #7697](https://github.com/karmada-io/karmada/pull/7697) | Open，head `bf24e47ce3bd`；证书轮换实现和定向验证已完成 | 新 review、CI 变化或 maintainer scope 决策 |
 
 ## Last Run
 
-- 2026-08-03：使用 `/home/humanizer-cs/` 的 Humanizer-cs 对 [Day 38 HTML 汇报稿](internship-reports/day38-karmada-descheduler-presentation.html)完成 13 页术语清理：统一“副本缺口”等讲述用语，保留 API、模式、插件名和 #7662 未决边界；复用现有 Chromium build `1234`，通过 1280×720 逐页截图、1920×1080、390×844、键盘导航、溢出和 13 页打印检查。
+- 2026-08-03：完成 [Day 38 Style C 汇报稿](internship-reports/day38-karmada-descheduler-presentation.html)的 Humanizer-cs 术语清理，并新增 [15 页 Style A 无表格汇报稿](internship-reports/day38-karmada-descheduler-presentation-style-a.html)：以时间线、双轨、闭环和风险带替代表格，保留 API、模式、插件名和 #7662 未决边界；复用 Chromium build `1234`，通过 1280×720 逐页截图、1920×1080、390×844、键盘导航、无溢出和 15 页打印检查。
 - 2026-07-31：[PR #7791](https://github.com/karmada-io/karmada/pull/7791) 以 merge commit `35ee6092e499` 合并；PR checks 全绿，post-merge [Chart v1.36.1](https://github.com/karmada-io/karmada/actions/runs/30617396767/job/91113656882) 红灯是拉取 Docker Hub `common:2.41.0` 时的单 runner TCP timeout；[历史 run](https://github.com/karmada-io/karmada/actions/runs/30233127739) 有相同签名，归为 E2 external-registry flake / `NO_FIX`，与 test-only diff 无因果关系。
 - 2026-07-31：完成 [Karmada Descheduler 专项调研](internship-reports/day38-karmada-descheduler-special-study.md)及固定 `1920×1080` 的 13 页 Style C HTML 稿：证明 Deployment-only 是窄 Story 1 MVP，对比 Kubernetes `v0.36.0`；逐页通过 1920×1080、1280×720、390×844 letterbox、键盘导航、溢出和 13 页打印检查。
 - 2026-07-30：复核 [PR #7800 作者回应与新 head](internship-reports/day36-pr7800-waiting-store-deep-review.md#2026-07-30-作者回应与新-head-复核)：本地 full-store retained delta 约 17.98 MiB、`byGVKName` 约 3.19 MiB，race/scaling 通过；[closure reply](https://github.com/karmada-io/karmada/pull/7800#discussion_r3681520974) 已发布，GitHub 因账号权限拒绝 resolve，等待作者/maintainer 关闭 thread。
