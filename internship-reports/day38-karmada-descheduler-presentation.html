@@ -1399,34 +1399,34 @@
       <section class="slide dark active" data-title="Karmada Descheduler" aria-label="第 1 页：标题">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">DAY 38 / SPECIAL STUDY</span>
+            <span class="rail-brand">DAY 38 / 专项调研</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section active">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section active">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">01 / 13</span>
           </header>
           <div class="canvas cover-canvas" data-editable>
             <div class="cover-main" data-anim>
-              <p class="kicker">KARMADA SCHEDULING RESEARCH</p>
+              <p class="kicker">KARMADA 调度专项</p>
               <h1>Karmada<br><em>Descheduler</em></h1>
-              <p class="lead">为什么首版只支持 Deployment，为什么千问子场景更适合周期纠偏，以及 Kubernetes Descheduler 真正领先在哪里。</p>
+              <p class="lead">为什么首版只支持 Deployment，千问场景为什么更适合由 Descheduler 周期修复，以及 Kubernetes Descheduler 的能力为什么更完整。</p>
             </div>
             <aside class="cover-questions" data-anim style="--delay: 80ms">
               <div class="question-title">本次汇报回答四个问题</div>
               <div class="question"><b>01</b><span>为什么最初只支持 Deployment</span></div>
-              <div class="question"><b>02</b><span>为什么本次更倾向 Descheduler</span></div>
-              <div class="question"><b>03</b><span>当前限制与工作原理是什么</span></div>
+              <div class="question"><b>02</b><span>为什么本次建议优先考虑 Descheduler</span></div>
+              <div class="question"><b>03</b><span>它怎样工作，当前又受哪些限制</span></div>
               <div class="question"><b>04</b><span>Karmada 与 Kubernetes 差在哪</span></div>
             </aside>
             <div class="cover-chain" data-anim style="--delay: 140ms">
-              <div class="chain-step"><span class="meta-label">01 / OBSERVE</span><strong>观察异常</strong><p>识别旧分配中长期无法运行的副本</p></div>
-              <div class="chain-step"><span class="meta-label">02 / RELEASE</span><strong>释放目标</strong><p>只把源集群 target 按验证数量下调</p></div>
-              <div class="chain-step"><span class="meta-label">03 / PLACE</span><strong>重新放置</strong><p>仍由 scheduler 选择新的目标集群</p></div>
+              <div class="chain-step"><span class="meta-label">01 / 观察</span><strong>识别异常</strong><p>找出旧分配中长期无法运行的副本</p></div>
+              <div class="chain-step"><span class="meta-label">02 / 缩减</span><strong>下调目标副本数</strong><p>只按已确认的异常数量缩减源集群目标</p></div>
+              <div class="chain-step"><span class="meta-label">03 / 放置</span><strong>重新放置</strong><p>目标集群仍由 karmada-scheduler 选择</p></div>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">BASELINE</span>Karmada <code>ce2a7b8</code> · Kubernetes Descheduler <code>v0.36.0</code> · 2026-07-31</p>
-            <p class="bridge-next"><b>下一问</b>先别把它理解成另一个 scheduler，下一页只看它如何把运行态异常翻译成普通缺口。</p>
+            <p class="bridge-main"><span class="evidence-label">调研基线</span>Karmada <code>ce2a7b8</code> · Kubernetes Descheduler <code>v0.36.0</code> · 2026-07-31</p>
+            <p class="bridge-next"><b>下一问</b>先别把它理解成另一个调度器。下一页只看它怎样把运行异常变成副本缺口。</p>
           </footer>
         </div>
       </section>
@@ -1434,32 +1434,32 @@
       <section class="slide dark" data-title="一句话结论" aria-label="第 2 页：一句话结论">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 01 / BOUNDARY</span>
+            <span class="rail-brand">第 01 章 / 职责边界</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section active">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section active">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">02 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">CORE IDEA</p><h2>它不是第二个 scheduler</h2></div>
-              <div class="head-metric"><strong>01</strong><span>一个边界先讲清</span></div>
+              <div><p class="kicker">核心结论</p><h2>它不是另一个调度器</h2></div>
+              <div class="head-metric"><strong>01</strong><span>先讲清一个边界</span></div>
             </div>
             <div class="thesis-layout" data-anim style="--delay: 90ms">
               <div class="thesis-copy">
-                <p class="thesis-statement">Descheduler 只把<em>失效旧分配</em>变成一个普通副本缺口；新位置仍由 scheduler 决定。</p>
-                <p class="thesis-proof"><span class="meta-label">WHY IT STAYS SIMPLE</span><br>scheduler 不需要理解 Pod condition、异常持续时间或 Deployment owner chain，只处理熟悉的 <code>desired - assigned</code>。</p>
+                <p class="thesis-statement">Descheduler 只把<em>已经失效的旧分配</em>变成副本缺口；新位置仍由 karmada-scheduler 决定。</p>
+                <p class="thesis-proof"><span class="meta-label">为什么调度器仍然简单</span><br>karmada-scheduler 只处理 <code>desired - assigned</code>，无需理解 Pod 异常和归属关系。</p>
               </div>
               <div class="signal-stack">
                 <div class="signal-step"><span class="step-number">1</span><div><strong>观察事实</strong><p>部分 Pod 长期 <code>Unschedulable</code></p></div></div>
-                <div class="signal-step"><span class="step-number">2</span><div><strong>减少源 target</strong><p>Binding 里的 member 副本数 <code>6 → 4</code></p></div></div>
-                <div class="signal-step"><span class="step-number">3</span><div><strong>Steady 补位</strong><p>scheduler 把缺少的 2 个副本放到合适集群</p></div></div>
+                <div class="signal-step"><span class="step-number">2</span><div><strong>下调目标副本数</strong><p>Binding 中该成员集群的副本数 <code>6 → 4</code></p></div></div>
+                <div class="signal-step"><span class="step-number">3</span><div><strong>Steady 模式补位</strong><p>karmada-scheduler 把缺少的 2 个副本放到合适集群</p></div></div>
               </div>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">结论</span>检测旧分配失效，与决定新分配位置，是两种不同职责。</p>
-            <p class="bridge-next"><b>下一问</b>这个翻译之所以成立，是因为检测、撤销和重新放置不属于同一个组件。</p>
+            <p class="bridge-main"><span class="evidence-label">结论</span>判断旧分配是否失效，与决定新副本放在哪里，是两种不同职责。</p>
+            <p class="bridge-next"><b>下一问</b>这套处理方式之所以可行，是因为检测、缩减旧分配和重新放置不属于同一个组件。</p>
           </footer>
         </div>
       </section>
@@ -1467,26 +1467,26 @@
       <section class="slide light" data-title="三个组件，三种职责" aria-label="第 3 页：三个组件职责">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 01 / OWNERSHIP</span>
+            <span class="rail-brand">第 01 章 / 组件职责</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section active">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section active">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">03 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">CURRENT CONTRACT</p><h2>三个组件，三种职责</h2></div>
+              <div><p class="kicker">当前职责</p><h2>三个组件，三种职责</h2></div>
               <div class="head-metric"><strong>3</strong><span>检测不等于放置</span></div>
             </div>
             <div class="responsibility-grid" data-anim style="--delay: 90ms">
-              <article class="responsibility"><span class="ordinal">01</span><div><h3>Karmada Descheduler</h3><span class="verb">检测 + 撤销</span></div><p>周期观察运行态，按已验证异常数量降低 member 副本目标；不选择具体 Pod。</p><code>Binding.spec.clusters[].replicas</code></article>
-              <article class="responsibility"><span class="ordinal">02</span><div><h3>karmada-scheduler</h3><span class="verb">重新放置</span></div><p>过滤、打分、估算容量，决定普通副本缺口应该补到哪个集群。</p><code>Steady / dynamicScaleUp</code></article>
-              <article class="responsibility"><span class="ordinal">03</span><div><h3>WorkloadRebalancer</h3><span class="verb">显式触发</span></div><p>用户点名 workload，写入时间戳触发一次调度；Dynamic Divided assignment 使用 Fresh。</p><code>rescheduleTriggeredAt</code></article>
+              <article class="responsibility"><span class="ordinal">01</span><div><h3>Karmada Descheduler</h3><span class="verb">检测 + 缩减旧分配</span></div><p>周期观察运行状态，根据已确认的异常副本数下调成员集群的目标副本数；不选择具体 Pod。</p><code>Binding.spec.clusters[].replicas</code></article>
+              <article class="responsibility"><span class="ordinal">02</span><div><h3>karmada-scheduler</h3><span class="verb">重新放置</span></div><p>过滤、打分、估算容量，决定在哪个集群补齐副本缺口。</p><code>Steady / dynamicScaleUp</code></article>
+              <article class="responsibility"><span class="ordinal">03</span><div><h3>WorkloadRebalancer</h3><span class="verb">显式触发</span></div><p>用户指定工作负载，并用时间戳触发一次调度；Dynamic Divided 使用 Fresh 模式重新分配副本。</p><code>rescheduleTriggeredAt</code></article>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">EVIDENCE</span>Current Karmada controller and scheduler paths</p>
-            <p class="bridge-next"><b>下一问</b>职责分清后，才能回答历史问题：为什么最先闭环的偏偏是 Deployment。</p>
+            <p class="bridge-main"><span class="evidence-label">证据</span>Karmada 当前控制器与调度器源码</p>
+            <p class="bridge-next"><b>下一问</b>职责分清后，才能回答历史问题：为什么最先跑通完整流程的是 Deployment。</p>
           </footer>
         </div>
       </section>
@@ -1494,27 +1494,27 @@
       <section class="slide dark" data-title="为什么只支持 Deployment" aria-label="第 4 页：历史范围">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 02 / SCOPE</span>
+            <span class="rail-brand">第 02 章 / 历史范围</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section active">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section active">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">04 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">HISTORY</p><h2>Deployment-only 是窄 MVP 的结果</h2></div>
-              <div class="head-metric"><strong>MVP</strong><span>不是通用能力结论</span></div>
+              <div><p class="kicker">历史范围</p><h2>首版为何只支持 Deployment</h2></div>
+              <div class="head-metric"><strong>首版</strong><span>主动收窄，不是能力上限</span></div>
             </div>
             <div class="timeline-grid" data-anim style="--delay: 90ms">
-              <article class="timeline-cell"><time>2021.09</time><span class="scope">ISSUE #697</span><h3>问题最初很宽</h3><p>既谈资源不足，也谈新集群加入后的利用率均衡。</p></article>
-              <article class="timeline-cell"><time>2021.11</time><span class="scope">KEP STORY 1</span><h3>范围主动收窄</h3><p>只处理资源不足造成的长期 <code>Unschedulable</code> Pod。</p></article>
-              <article class="timeline-cell"><time>2022.02</time><span class="scope">FIRST LOOP</span><h3>按 Deployment 闭环</h3><p>围绕 replicas、Ready 与 owner chain 完成第一版实现。</p></article>
-              <article class="timeline-cell"><time>NOW</time><span class="scope">OPEN BOUNDARY</span><h3>通用抽象未完成</h3><p>GVK、abstract workload、custom Ready interpreter 仍有合同缺口。</p></article>
+              <article class="timeline-cell"><time>2021.09</time><span class="scope">Issue #697</span><h3>最初需求范围更广</h3><p>既谈资源不足，也谈新集群加入后的利用率均衡。</p></article>
+              <article class="timeline-cell"><time>2021.11</time><span class="scope">KEP Story 1</span><h3>KEP 主动收窄范围</h3><p>只处理资源不足造成的长期 <code>Unschedulable</code> Pod。</p></article>
+              <article class="timeline-cell"><time>2022.02</time><span class="scope">首个闭环</span><h3>先用 Deployment 跑通流程</h3><p>首版实现围绕副本数、Ready 状态和 Pod 归属链路展开。</p></article>
+              <article class="timeline-cell"><time>当前</time><span class="scope">仍待解决</span><h3>通用抽象未完成</h3><p>GVK 配置、通用工作负载抽象和自定义 Ready 解释仍未完成。</p></article>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">EVIDENCE</span>Issue #697 · KEP-697 · PR #726 · PR #1392</p>
-            <p class="bridge-next"><b>下一问</b>历史解释了范围如何收窄，源码则解释了 Deployment 为什么最容易闭环。</p>
+            <p class="bridge-main"><span class="evidence-label">证据</span>Issue #697 · KEP-697 · PR #726 · PR #1392</p>
+            <p class="bridge-next"><b>下一问</b>接着看源码：为什么 Deployment 最容易先跑通完整流程？</p>
           </footer>
         </div>
       </section>
@@ -1522,30 +1522,30 @@
       <section class="slide light" data-title="Deployment 为什么最容易闭环" aria-label="第 5 页：工作负载语义">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 02 / SEMANTICS</span>
+            <span class="rail-brand">第 02 章 / 工作负载语义</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section active">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section active">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">05 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">WORKLOAD SEMANTICS</p><h2>不是多加一个 GVK，而是先定义“一个副本”</h2></div>
-              <div class="head-metric"><strong>4</strong><span>个合同必须同时成立</span></div>
+              <div><p class="kicker">工作负载语义</p><h2>支持新的 GVK，不只是多加一个类型</h2></div>
+              <div class="head-metric"><strong>4</strong><span>项语义前提缺一不可</span></div>
             </div>
             <div class="semantics-layout" data-anim style="--delay: 90ms">
-              <section class="deployment-contract"><span class="meta-label">REFERENCE CASE</span><h3 class="kind">Deployment</h3><ul class="contract-list"><li><code>replicas</code><span>单一期望副本数</span></li><li><code>readyReplicas</code><span>成功反射时可作运行下界</span></li><li><code>owner UID</code><span>定位本轮 rollout 的 Pod</span></li><li><code>replaceable</code><span>副本通常彼此可替换</span></li></ul></section>
+              <section class="deployment-contract"><span class="meta-label">当前已支持</span><h3 class="kind">Deployment</h3><ul class="contract-list"><li><code>replicas</code><span>单一期望副本数</span></li><li><code>readyReplicas</code><span>成功汇总到 Binding 后，可作为当前运行副本数的下限</span></li><li><code>owner UID</code><span>定位当前版本的 Pod</span></li><li><code>可替换性</code><span>副本通常彼此可替换</span></li></ul></section>
               <div class="boundary-matrix">
-                <article class="boundary-cell"><span class="kind">STATEFULSET</span><h3>身份合同不同</h3><p>ordinal、PVC、稳定身份存在，换集群不等于数据已经迁移。</p></article>
-                <article class="boundary-cell"><span class="kind">JOB</span><h3>完成合同不同</h3><p>completion、index、重试与幂等存在，减副本可能造成重复执行。</p></article>
-                <article class="boundary-cell"><span class="kind">FLINKDEPLOYMENT</span><h3>组件合同不同</h3><p>多组件与 checkpoint 存在，一个 Binding 标量无法表达各组件 placement。</p></article>
-                <article class="boundary-cell"><span class="kind">AI WORKLOAD</span><h3>拓扑合同不同</h3><p>leader、worker、gang、shard 关系不能拆成任意可替换 Pod。</p></article>
+                <article class="boundary-cell"><span class="kind">StatefulSet</span><h3>副本身份不同</h3><p>它有固定序号（ordinal）、PVC 和稳定身份；换集群不等于数据已经迁移。</p></article>
+                <article class="boundary-cell"><span class="kind">Job</span><h3>完成语义不同</h3><p>需要处理完成状态、索引、重试和幂等；直接减副本可能造成重复执行。</p></article>
+                <article class="boundary-cell"><span class="kind">FlinkDeployment</span><h3>组件关系不同</h3><p>它包含多个组件和检查点（checkpoint），一个 Binding 数值无法表达各组件的分配位置。</p></article>
+                <article class="boundary-cell"><span class="kind">AI 工作负载</span><h3>拓扑关系不同</h3><p>leader、worker、gang、shard 之间的关系不能拆成任意可替换的 Pod。</p></article>
               </div>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">结论</span>扩 Kind 之前，必须先有 replica、Ready、ownership、source shrink 四个合同。</p>
-            <p class="bridge-next"><b>下一问</b>把这四个合同代入一个 10 副本例子，Descheduler 实际只改了一个数量。</p>
+            <p class="bridge-main"><span class="evidence-label">结论</span>扩展工作负载类型前，必须先明确副本语义、Ready 判定、Pod 归属和源集群缩减规则。</p>
+            <p class="bridge-next"><b>下一问</b>下一页用 10 个副本说明：Descheduler 只改变源集群的目标副本数。</p>
           </footer>
         </div>
       </section>
@@ -1553,32 +1553,32 @@
       <section class="slide light" data-title="10 副本修复例子" aria-label="第 6 页：10 副本例子">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 03 / EXAMPLE</span>
+            <span class="rail-brand">第 03 章 / 10 副本示例</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section active">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section active">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">06 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">TEN-REPLICA EXAMPLE</p><h2>2 个异常 Pod，只转成 2 个副本缺口</h2></div>
-              <div class="head-metric"><strong>6→4</strong><span>count，不是 Pod identity</span></div>
+              <div><p class="kicker">10 副本示例</p><h2>2 个异常 Pod，只形成 2 个副本缺口</h2></div>
+              <div class="head-metric"><strong>6→4</strong><span>只传数量，不传具体 Pod</span></div>
             </div>
             <div class="example-board" data-anim style="--delay: 90ms">
               <div class="cluster-row">
-                <div class="cluster-name"><strong>member1</strong><span>Assigned 6 / Ready 4</span></div>
+                <div class="cluster-name"><strong>member1</strong><span>已分配 6 / Ready 4</span></div>
                 <div class="replica-tokens" aria-label="4 个 Ready 副本和 2 个长期不可调度副本"><span class="replica-token">R</span><span class="replica-token">R</span><span class="replica-token">R</span><span class="replica-token">R</span><span class="replica-token bad">U</span><span class="replica-token bad">U</span></div>
-                <div class="cluster-total"><strong>6 → 4</strong><span>Descheduler 下调 target</span></div>
+                <div class="cluster-total"><strong>6 → 4</strong><span>Descheduler 下调目标副本数</span></div>
               </div>
               <div class="repair-strip">
-                <div class="repair-step"><span class="meta-label">UNCHANGED</span><strong>member2 保持 4</strong><p>Assigned 4 / Ready 4，没有异常，不做改动。</p></div>
-                <div class="repair-step accent"><span class="meta-label">DEFICIT</span><strong>总量缺 2</strong><p>Binding 总 assigned 从 10 变成 8。</p></div>
-                <div class="repair-step"><span class="meta-label">DESTINATION</span><strong>candidate +2</strong><p>由 scheduler 选择新集群，再补回期望总量 10。</p></div>
+                <div class="repair-step"><span class="meta-label">保持不变</span><strong>member2 保持 4</strong><p>已分配 4 / Ready 4，没有异常，不做改动。</p></div>
+                <div class="repair-step accent"><span class="meta-label">副本缺口</span><strong>总量缺 2</strong><p>Binding 已分配副本总数从 10 降到 8。</p></div>
+                <div class="repair-step"><span class="meta-label">等待放置</span><strong>副本缺口 +2</strong><p>由 karmada-scheduler 选择目标集群，再补回期望总量 10。</p></div>
               </div>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">职责边界</span>member controller 决定删谁；scheduler 决定补去哪。</p>
+            <p class="bridge-main"><span class="evidence-label">职责边界</span>成员集群控制器决定缩掉哪些 Pod；karmada-scheduler 决定把缺口补到哪里。</p>
             <p class="bridge-next"><b>下一问</b>这个 <code>6→4→补2</code> 的算式，展开后就是完整控制闭环。</p>
           </footer>
         </div>
@@ -1587,33 +1587,33 @@
       <section class="slide dark" data-title="控制闭环" aria-label="第 7 页：控制闭环">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 03 / CONTROL LOOP</span>
+            <span class="rail-brand">第 03 章 / 控制闭环</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section active">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section active">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">07 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">CONTROL LOOP</p><h2>统计异常、下调目标、正常补位</h2></div>
-              <div class="head-metric"><strong>COUNT</strong><span>不携带 Pod identity</span></div>
+              <div><p class="kicker">控制闭环</p><h2>统计异常副本、缩减源集群、补齐缺口</h2></div>
+              <div class="head-metric"><strong>数量</strong><span>只传数量，不传具体 Pod</span></div>
             </div>
             <div class="control-board" data-anim style="--delay: 90ms">
               <div class="flow-row">
-                <div class="flow-node"><span class="meta-label">OBSERVE</span><strong>运行态信号</strong><p>Binding、聚合 Ready、member Pod condition</p></div><div class="flow-arrow">→</div>
-                <div class="flow-node"><span class="meta-label">VERIFY</span><strong>统计长期异常</strong><p>核对当前 ReplicaSet ownership；只接受可信计数</p></div><div class="flow-arrow">→</div>
-                <div class="flow-node"><span class="meta-label">RELEASE</span><strong>源 target 6→4</strong><p>Ready 已知时才应用 Ready floor；未知值是 <code>-1</code></p></div><div class="flow-arrow">→</div>
-                <div class="flow-node"><span class="meta-label">EVENT</span><strong>Binding 更新</strong><p>scheduler 与 Binding controller 独立 watch，无先后保证</p></div>
+                <div class="flow-node"><span class="meta-label">观察</span><strong>运行状态</strong><p>Binding、汇总后的 Ready 状态、成员集群 Pod 状态条件</p></div><div class="flow-arrow">→</div>
+                <div class="flow-node"><span class="meta-label">核验</span><strong>统计长期异常</strong><p>核对当前 ReplicaSet 的 Pod 归属；只接受可信计数</p></div><div class="flow-arrow">→</div>
+                <div class="flow-node"><span class="meta-label">缩减</span><strong>源集群 6→4</strong><p>取得可信的 Ready 数量时，才把它作为缩减下限；未知值是 <code>-1</code></p></div><div class="flow-arrow">→</div>
+                <div class="flow-node"><span class="meta-label">更新</span><strong>Binding 更新</strong><p>karmada-scheduler 与 Binding 控制器分别监听，处理顺序没有保证</p></div>
               </div>
               <div class="watcher-row">
-                <div class="watcher"><strong>Binding controller</strong><p>把 source shrink 传播到 member；实际缩 Pod 由 Deployment / ReplicaSet controller 完成。</p></div>
-                <div class="watcher"><strong>karmada-scheduler</strong><p>看到普通 deficit 后走 Steady <code>dynamicScaleUp</code>，用原有过滤、打分和容量估算补位。</p></div>
+                <div class="watcher"><strong>Binding 控制器</strong><p>将下调后的副本数同步到成员集群；具体缩掉哪些 Pod，由 Deployment / ReplicaSet 控制器决定。</p></div>
+                <div class="watcher"><strong>karmada-scheduler</strong><p>看到副本缺口后，按 Steady 模式执行 <code>dynamicScaleUp</code>，沿用原有过滤、打分和容量估算。</p></div>
               </div>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">关键边界</span>source shrink 可能先于 refill 到达 member，当前没有跨组件顺序保证。</p>
-            <p class="bridge-next"><b>下一问</b>闭环看清后，为什么周期 detector 更适合放在 Descheduler，而不是 WorkloadRebalancer？</p>
+            <p class="bridge-main"><span class="evidence-label">关键边界</span>源集群可能先缩容，补位随后才发生；跨组件没有顺序保证。</p>
+            <p class="bridge-next"><b>下一问</b>既然要周期检测，为什么由 Descheduler 做，而不是 WorkloadRebalancer？</p>
           </footer>
         </div>
       </section>
@@ -1621,29 +1621,29 @@
       <section class="slide light" data-title="Descheduler 与 WorkloadRebalancer" aria-label="第 8 页：组件对比">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 04 / CHOICE</span>
+            <span class="rail-brand">第 04 章 / 组件选择</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section active">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section active">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">08 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">DESCHEDULER VS REBALANCER</p><h2>本次建议：周期自愈更贴近 Descheduler</h2></div>
-              <div class="head-metric"><strong>OPEN</strong><span>#7662 owner / API 未收敛</span></div>
+              <div><p class="kicker">组件对比</p><h2>建议：周期自愈优先考虑 Descheduler</h2></div>
+              <div class="head-metric"><strong>未决</strong><span>#7662 的职责归属与 API 形态未收敛</span></div>
             </div>
             <div class="comparison-table" role="table" aria-label="Descheduler 与 WorkloadRebalancer 对比" data-anim style="--delay: 90ms">
               <div class="table-head"></div><div class="table-head">Karmada Descheduler</div><div class="table-head">WorkloadRebalancer</div>
-              <div class="row-label">TRIGGER</div><div class="value recommended">周期观察运行态异常</div><div class="value">用户显式提交 workload 列表</div>
-              <div class="row-label">SCOPE</div><div class="value">按异常数量降低 member target</div><div class="value">触发一次 scheduler 调度</div>
-              <div class="row-label">SIGNAL</div><div class="value">Pod 长期 <code>Unschedulable</code></div><div class="value"><code>rescheduleTriggeredAt</code></div>
-              <div class="row-label">SCHEDULER</div><div class="value">Steady：补普通副本缺口</div><div class="value">Fresh：当前 affinity / candidate 内重算 Dynamic Divided replica assignment</div>
-              <div class="row-label">BEST FIT</div><div class="value recommended">本次建议：持续 detector + 自愈</div><div class="value">当前合同：显式、一次性的批次触发</div>
+              <div class="row-label">触发方式</div><div class="value recommended">周期检查运行异常</div><div class="value">用户显式提交工作负载列表</div>
+              <div class="row-label">处理范围</div><div class="value">按异常数量下调成员集群目标副本数</div><div class="value">触发一次 karmada-scheduler 调度</div>
+              <div class="row-label">输入信号</div><div class="value">Pod 长期 <code>Unschedulable</code></div><div class="value"><code>rescheduleTriggeredAt</code></div>
+              <div class="row-label">调度行为</div><div class="value">Steady：补齐副本缺口</div><div class="value">Fresh：在当前亲和性与候选集群范围内重算 Dynamic Divided 副本分配</div>
+              <div class="row-label">适用场景</div><div class="value recommended">本次建议：持续检测并自愈</div><div class="value">当前定位：显式触发一次批量重调度</div>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">边界</span>这是本次调研建议，不把 maintainer 讨论写成最终 API 共识。</p>
-            <p class="bridge-next"><b>下一问</b>owner 讨论必须建立在业务前提上，Qwen 是否满足四个适用条件仍要内部确认。</p>
+            <p class="bridge-main"><span class="evidence-label">边界</span>这是本次调研建议；#7662 的负责组件和 API 仍未确定。</p>
+            <p class="bridge-next"><b>下一问</b>先确认业务前提：千问场景是否满足这四项条件？</p>
           </footer>
         </div>
       </section>
@@ -1651,26 +1651,26 @@
       <section class="slide dark" data-title="千问场景的适用边界" aria-label="第 9 页：千问场景边界">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 04 / QWEN SCOPE</span>
+            <span class="rail-brand">第 04 章 / 千问适用范围</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section active">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section active">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">09 / 13</span>
           </header>
           <div class="canvas standard with-note" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">QWEN SCOPE</p><h2>先确认四个前提，再决定是不是 Descheduler</h2></div>
-              <div class="head-metric"><strong>4</strong><span>个内部确认 gate</span></div>
+              <div><p class="kicker">千问（Qwen）适用范围</p><h2>先确认四个前提，再判断是否用 Descheduler</h2></div>
+              <div class="head-metric"><strong>4</strong><span>项需内部确认的前提</span></div>
             </div>
-            <div class="scope-evidence" data-anim style="--delay: 60ms"><span class="meta-label">PUBLIC EVIDENCE</span><span>Issue / PR 与官方书面纪要未确认 Qwen / GPU；会议录像本地 ASR 提到 Spot GPU，但不能绑定具体产品。</span></div>
+            <div class="scope-evidence" data-anim style="--delay: 60ms"><span class="meta-label">公开证据</span><span>Issue / PR 与官方书面纪要未确认千问 / GPU；会议录像的本地 ASR 提到 Spot GPU，但不足以证明该讨论针对具体产品。</span></div>
             <div class="fit-grid" data-anim style="--delay: 110ms">
-              <section class="fit-column"><h3>适用前提（待内部确认）</h3><div class="fit-item"><b>01</b><span>离线且允许中断</span></div><div class="fit-item"><b>02</b><span>部分 Pod 长期 <code>Unschedulable</code></span></div><div class="fit-item"><b>03</b><span>replica 可被同类实例替换</span></div><div class="fit-item"><b>04</b><span>只恢复 assignment 即算成功</span></div></section>
-              <section class="fit-column out"><h3>任一成立，当前方案不够</h3><div class="fit-item"><b>01</b><span>在线流量、服务不能中断</span></div><div class="fit-item"><b>02</b><span>warm-up、checkpoint、数据搬迁</span></div><div class="fit-item"><b>03</b><span>leader、worker、shard、gang</span></div><div class="fit-item"><b>04</b><span>必须 target Ready 后才能删 source</span></div></section>
+              <section class="fit-column"><h3>适用前提（待内部确认）</h3><div class="fit-item"><b>01</b><span>离线且允许中断</span></div><div class="fit-item"><b>02</b><span>部分 Pod 长期 <code>Unschedulable</code></span></div><div class="fit-item"><b>03</b><span>副本可被同类实例替换</span></div><div class="fit-item"><b>04</b><span>只恢复分配结果即可视为成功</span></div></section>
+              <section class="fit-column out"><h3>任一成立，当前方案不够</h3><div class="fit-item"><b>01</b><span>在线流量、服务不能中断</span></div><div class="fit-item"><b>02</b><span>预热、checkpoint、数据搬迁</span></div><div class="fit-item"><b>03</b><span>leader、worker、shard、gang</span></div><div class="fit-item"><b>04</b><span>必须等目标副本 Ready 后，才能缩减源集群</span></div></section>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">判断规则</span>右侧任一条件成立，就需要 workload-aware migration 合同。</p>
-            <p class="bridge-next"><b>下一问</b>即使四条前提成立，当前实现仍缺四类工程保护，不能宣称支持任意 workload。</p>
+            <p class="bridge-main"><span class="evidence-label">判断规则</span>右侧任一条件成立，就需要能理解工作负载状态的迁移机制；当前 Descheduler 不够。</p>
+            <p class="bridge-next"><b>下一问</b>即使满足这四项前提，当前实现仍缺四类工程保护。</p>
           </footer>
         </div>
       </section>
@@ -1678,27 +1678,27 @@
       <section class="slide light" data-title="当前限制与挑战" aria-label="第 10 页：当前限制">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 04 / LIMITS</span>
+            <span class="rail-brand">第 04 章 / 当前限制</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section active">组件选择</span><span class="rail-section">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section active">组件选择</span><span class="rail-section">对比与路线</span>
             </nav>
             <span class="rail-count">10 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">CURRENT LIMITS</p><h2>真正限制扩展的，不是策略数量</h2></div>
-              <div class="head-metric"><strong>4</strong><span>类工程合同缺口</span></div>
+              <div><p class="kicker">当前限制</p><h2>真正限制扩展的，不是策略数量</h2></div>
+              <div class="head-metric"><strong>4</strong><span>类关键约束仍未定义</span></div>
             </div>
             <div class="limits-grid" data-anim style="--delay: 90ms">
-              <article class="limit-cell"><span class="limit-number">01</span><div><h3>工作负载语义</h3><p>当前固定 Deployment；多组件、身份、完成进度和数据状态无法映射为一个标量副本缺口。</p></div></article>
-              <article class="limit-cell"><span class="limit-number">02</span><div><h3>信号与归属</h3><p>必须定位本轮 workload 的 Pod，并区分真实长期不可调度、发布中状态和暂态抖动。</p></div></article>
-              <article class="limit-cell"><span class="limit-number">03</span><div><h3>安全与策略</h3><p>缺少 release budget、dry-run 和共享安全层；Ready 缺失时是 <code>-1</code>，不会自动 fail-closed。</p></div></article>
-              <article class="limit-cell"><span class="limit-number">04</span><div><h3>一致性与 single writer</h3><p>Descheduler、scheduler、Rebalancer 不能独立争写同一 Binding，完成条件也必须唯一。</p></div></article>
+              <article class="limit-cell"><span class="limit-number">01</span><div><h3>工作负载语义</h3><p>当前只处理 Deployment；多组件关系、副本身份、完成进度和数据状态无法用一个副本数完整表达。</p></div></article>
+              <article class="limit-cell"><span class="limit-number">02</span><div><h3>信号与归属</h3><p>必须定位当前工作负载的 Pod，并区分真正的长期不可调度、发布中状态和短暂抖动。</p></div></article>
+              <article class="limit-cell"><span class="limit-number">03</span><div><h3>安全与策略</h3><p>缺少每轮缩减上限、dry-run（只观察不执行）和统一安全检查；Ready 缺失时记录为 <code>-1</code>，不会仅因此停止缩减。</p></div></article>
+              <article class="limit-cell"><span class="limit-number">04</span><div><h3>Binding 写入职责</h3><p>Descheduler、karmada-scheduler、WorkloadRebalancer 不能各自独立修改同一个 Binding，完成条件也必须唯一。</p></div></article>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">优先级</span>先建立 safety、ownership 与 completion，再谈多 Kind、多策略。</p>
-            <p class="bridge-next"><b>下一问</b>这些限制难补，不只是实现量大，而是 Karmada 与 Kubernetes 的调度单元根本不同。</p>
+            <p class="bridge-main"><span class="evidence-label">优先级</span>先明确安全机制、写入职责和完成条件，再扩展工作负载类型与策略。</p>
+            <p class="bridge-next"><b>下一问</b>难点不只在代码量，更在于两者处理的调度单元不同。</p>
           </footer>
         </div>
       </section>
@@ -1706,26 +1706,26 @@
       <section class="slide light" data-title="Karmada 与 Kubernetes 的抽象层" aria-label="第 11 页：抽象层对比">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 05 / LAYERS</span>
+            <span class="rail-brand">第 05 章 / 抽象层</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section active">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section active">对比与路线</span>
             </nav>
             <span class="rail-count">11 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">DIFFERENT LAYERS</p><h2>名字相同，处理的调度单元不同</h2></div>
-              <div class="head-metric"><strong>≠</strong><span>不是插件数的一比一差距</span></div>
+              <div><p class="kicker">抽象层不同</p><h2>名字相同，处理的调度单元不同</h2></div>
+              <div class="head-metric"><strong>≠</strong><span>差距不只在插件数量</span></div>
             </div>
             <div class="layer-compare" data-anim style="--delay: 90ms">
-              <section class="layer-column"><h3>Kubernetes Descheduler</h3><div class="layer-step"><code>UNIT</code><p><strong>Pod → Node</strong><br>统一 Pod identity 与 Node informer</p></div><div class="layer-step"><code>RELEASE</code><p>标准 Eviction API、PDB、owner controller</p></div><div class="layer-step"><code>DESTINATION</code><p>kube-scheduler 重新选择 Node</p></div></section>
+              <section class="layer-column"><h3>Kubernetes Descheduler</h3><div class="layer-step"><code>调度单元</code><p><strong>Pod → Node</strong><br>统一的 Pod 标识和 Node informer</p></div><div class="layer-step"><code>处理动作</code><p>标准 Eviction API、PDB 和上层工作负载控制器</p></div><div class="layer-step"><code>目标选择</code><p>kube-scheduler 重新选择 Node</p></div></section>
               <div class="layer-divider">不同抽象层</div>
-              <section class="layer-column"><h3>Karmada Descheduler</h3><div class="layer-step"><code>UNIT</code><p><strong>Binding(GVK) → Cluster</strong><br>当前修正 Deployment per-member target</p></div><div class="layer-step"><code>RELEASE</code><p>降低 count，不选择具体 Pod，也不搬迁状态</p></div><div class="layer-step"><code>DESTINATION</code><p>karmada-scheduler 只放置普通 replica deficit</p></div></section>
+              <section class="layer-column"><h3>Karmada Descheduler</h3><div class="layer-step"><code>调度单元</code><p><strong>Binding(GVK) → Cluster</strong><br>当前修正 Deployment 在各成员集群的目标副本数</p></div><div class="layer-step"><code>处理动作</code><p>降低副本数，不选择具体 Pod，也不搬迁状态</p></div><div class="layer-step"><code>目标选择</code><p>karmada-scheduler 只负责放置副本缺口</p></div></section>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">结论</span>Karmada 值得借鉴框架与安全机制，不应直接复制 Node 级策略。</p>
-            <p class="bridge-next"><b>下一问</b>统一到 <code>Pod→Node</code> 后，Kubernetes 才能把策略、安全和观测做成平台。</p>
+            <p class="bridge-main"><span class="evidence-label">结论</span>Karmada 值得借鉴框架与安全机制，不能直接照搬 Node 级策略。</p>
+            <p class="bridge-next"><b>下一问</b>统一处理 <code>Pod→Node</code>，让 Kubernetes 能复用同一套策略和安全框架。</p>
           </footer>
         </div>
       </section>
@@ -1733,28 +1733,28 @@
       <section class="slide dark" data-title="Kubernetes Descheduler 为什么更丰富" aria-label="第 12 页：Kubernetes Descheduler 能力">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 05 / KUBERNETES</span>
+            <span class="rail-brand">第 05 章 / Kubernetes</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section active">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section active">对比与路线</span>
             </nav>
             <span class="rail-count">12 / 13</span>
           </header>
           <div class="canvas standard" data-editable>
             <div class="section-head" data-anim>
               <div><p class="kicker">KUBERNETES DESCHEDULER v0.36.0</p><h2>Kubernetes 已经是 Pod 驱逐平台</h2></div>
-              <div class="head-metric"><strong>10</strong><span>strategy plugins<br>另有 shared safety layer</span></div>
+              <div class="head-metric"><strong>10</strong><span>个策略插件<br>另有统一安全检查</span></div>
             </div>
             <div class="plugin-layout" data-anim style="--delay: 90ms">
               <div class="plugin-groups">
-                <section class="plugin-group"><h3>4 Balance plugins</h3><div class="plugin-names"><code>RemoveDuplicates</code><code>LowNodeUtilization</code><code>HighNodeUtilization</code><code>RemovePodsViolatingTopologySpreadConstraint</code></div></section>
-                <section class="plugin-group"><h3>6 Deschedule plugins</h3><div class="plugin-names"><code>RemovePodsViolatingInterPodAntiAffinity</code><code>RemovePodsViolatingNodeAffinity</code><code>RemovePodsViolatingNodeTaints</code><code>RemovePodsHavingTooManyRestarts</code><code>PodLifeTime</code><code>RemoveFailedPods</code></div></section>
+                <section class="plugin-group"><h3>4 个 Balance 插件</h3><div class="plugin-names"><code>RemoveDuplicates</code><code>LowNodeUtilization</code><code>HighNodeUtilization</code><code>RemovePodsViolatingTopologySpreadConstraint</code></div></section>
+                <section class="plugin-group"><h3>6 个 Deschedule 插件</h3><div class="plugin-names"><code>RemovePodsViolatingInterPodAntiAffinity</code><code>RemovePodsViolatingNodeAffinity</code><code>RemovePodsViolatingNodeTaints</code><code>RemovePodsHavingTooManyRestarts</code><code>PodLifeTime</code><code>RemoveFailedPods</code></div></section>
               </div>
-              <aside class="safety-stack"><h3>共享平台能力</h3><div class="safety-item"><strong>DefaultEvictor</strong><span>内置策略复用 Filter / PreEvictionFilter hooks</span></div><div class="safety-item"><strong>Eviction budgets</strong><span>total / per-node / per-namespace</span></div><div class="safety-item"><strong>Dry-run</strong><span>先观察候选，再决定是否驱逐</span></div><div class="safety-item"><strong>Observability</strong><span>Events / metrics / tracing</span></div><div class="safety-item"><strong>Profiles</strong><span>启停、顺序、参数和校验</span></div></aside>
+              <aside class="safety-stack"><h3>统一的安全与观测能力</h3><div class="safety-item"><strong>DefaultEvictor</strong><span>内置策略复用 <code>Filter</code> / <code>PreEvictionFilter</code> 扩展点</span></div><div class="safety-item"><strong>驱逐预算</strong><span>全局 / 每个 Node / 每个 namespace</span></div><div class="safety-item"><strong>dry-run</strong><span>先观察候选，再决定是否驱逐</span></div><div class="safety-item"><strong>可观测性</strong><span>事件 / 指标 / 链路追踪</span></div><div class="safety-item"><strong>策略配置（Profiles）</strong><span>控制启停、顺序、参数和校验</span></div></aside>
             </div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">成熟原因</span>统一 Pod 边界、标准撤销动作，以及从 2017 年开始的持续演进。</p>
-            <p class="bridge-next"><b>下一问</b>所以 Karmada 应借的是安全骨架，而不是照搬十个插件。</p>
+            <p class="bridge-main"><span class="evidence-label">成熟原因</span>统一的 Pod 调度单元、标准撤销动作，以及从 2017 年开始的持续演进。</p>
+            <p class="bridge-next"><b>下一步</b>Karmada 应借鉴安全框架，而不是直接照搬这些插件。</p>
           </footer>
         </div>
       </section>
@@ -1762,27 +1762,27 @@
       <section class="slide dark" data-title="建议路线" aria-label="第 13 页：建议路线">
         <div class="slide-frame">
           <header class="rail">
-            <span class="rail-brand">CHAPTER 05 / ROUTE</span>
+            <span class="rail-brand">第 05 章 / 演进路线</span>
             <nav class="rail-sections" aria-label="汇报章节">
-              <span class="rail-section">结论与职责</span><span class="rail-section">Deployment</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section active">对比与路线</span>
+              <span class="rail-section">结论与职责</span><span class="rail-section">首版范围</span><span class="rail-section">控制闭环</span><span class="rail-section">组件选择</span><span class="rail-section active">对比与路线</span>
             </nav>
             <span class="rail-count">13 / 13</span>
           </header>
           <div class="canvas roadmap-canvas" data-editable>
             <div class="section-head" data-anim>
-              <div><p class="kicker">RECOMMENDATION</p><h2>借框架，不抢 scheduler 的目标选择权</h2></div>
+              <div><p class="kicker">建议路线</p><h2>借鉴安全框架，不改变调度职责</h2></div>
               <div class="head-metric"><strong>3</strong><span>阶段演进路线</span></div>
             </div>
             <div class="roadmap-grid" data-anim style="--delay: 90ms">
-              <article class="roadmap-step"><span class="phase">PHASE 0</span><span class="phase-number">先做稳</span><h3>收紧窄场景</h3><p>明确 opt-in、长期 Unschedulable、replaceable replica、已知 Ready 下界和唯一完成条件。</p></article>
-              <article class="roadmap-step"><span class="phase">PHASE 1</span><span class="phase-number">再做安全</span><h3>抽共享骨架</h3><p>增加 dry-run、release budget、strategy / reason metrics，以及统一 Binding mutation executor。</p></article>
-              <article class="roadmap-step"><span class="phase">PHASE 2</span><span class="phase-number">最后扩展</span><h3>逐类支持 workload</h3><p>定义 resolver 合同和 support matrix；多组件先解决 per-component placement，不宣称 any workload。</p></article>
+              <article class="roadmap-step"><span class="phase">阶段 0</span><span class="phase-number">先做稳</span><h3>限定适用场景</h3><p>明确启用方式、长期 <code>Unschedulable</code>、副本可替换、可信的 Ready 下界和唯一完成条件。</p></article>
+              <article class="roadmap-step"><span class="phase">阶段 1</span><span class="phase-number">再做安全</span><h3>建立共用安全机制</h3><p>增加 dry-run、每轮缩减上限、按策略和原因分类的指标，以及统一的 Binding 写入入口。</p></article>
+              <article class="roadmap-step"><span class="phase">阶段 2</span><span class="phase-number">最后扩展</span><h3>逐类支持工作负载</h3><p>定义工作负载解析接口和支持范围表；多组件先解决按组件分配，不宣称支持任意工作负载。</p></article>
             </div>
-            <div class="final-statement" data-anim style="--delay: 150ms"><p>最终原则：Descheduler 把旧 target 异常转成<em>数量缺口</em>，scheduler 始终决定新位置。</p><a class="report-link" href="day38-karmada-descheduler-special-study.md">完整证据报告</a></div>
+            <div class="final-statement" data-anim style="--delay: 150ms"><p>最终原则：Descheduler 只把异常的旧分配变成<em>副本缺口</em>，新位置始终由 karmada-scheduler 决定。</p><a class="report-link" href="day38-karmada-descheduler-special-study.md">完整证据报告</a></div>
           </div>
           <footer class="bridge" data-editable>
-            <p class="bridge-main"><span class="evidence-label">TAKEAWAY</span>先解决 safety、single writer 与 completion，再讨论通用 workload。</p>
-            <p class="bridge-next"><b>汇报收束</b>回答问题时始终回到同一主线：Observe → Release → Place。</p>
+            <p class="bridge-main"><span class="evidence-label">最终结论</span>先明确安全机制、Binding 写入入口和完成条件，再扩展到更多工作负载类型。</p>
+            <p class="bridge-next"><b>汇报收束</b>回答问题时始终回到同一主线：观察 → 缩减 → 放置。</p>
           </footer>
         </div>
       </section>
