@@ -46,7 +46,7 @@ For speaker-led decks, replace tables with the visual form that matches the rela
 - prerequisites: gates plus stop conditions;
 - limitations: horizontal risk bands;
 - abstraction comparison: split layers;
-- plugin inventory: typography wall;
+- plugin inventory: annotated typography wall with each exact identifier followed by one plain-language Chinese role; names alone are not an explanation;
 - safety chain: pipeline;
 - implementation proposal: staged roadmap.
 
@@ -72,6 +72,7 @@ Use Swiss Modern / Style A for a speaker-led technical route presentation:
 - expose a quiet 12-column construction grid and use square, hairline geometry;
 - avoid gradients, shadows, decorative cards, nested cards, and table-heavy composition;
 - use circles only when the shape carries meaning, such as a gate or replica token;
+- lay out repeated sibling blocks with grid gaps or centered calculations when equal spacing is implied, then measure the rendered gaps instead of trusting visual approximation;
 - reserve large display type for the cover and primary slide conclusion;
 - keep red for conclusions or state-changing risk, blue for scheduler or placement, and green for allowed, safe, or replacement paths;
 - use orange sparingly for validation or transition when a five-step flow needs a distinct intermediate stage; do not let orange become the page background or dominant palette.
@@ -96,11 +97,11 @@ Run all of these checks after any content or layout change:
 
 1. Render every slide at `1280x720`; capture individual screenshots and a contact sheet.
 2. Confirm exactly one active slide, the expected page counter, and zero browser console or page errors.
-3. For every active slide, reject elements outside the slide bounds, clipped children, or a slide `scrollWidth` or `scrollHeight` larger than `1920x1080`.
+3. For every active slide, reject elements outside the slide bounds, clipped children, a slide `scrollWidth` or `scrollHeight` larger than `1920x1080`, or a fixed-height content block whose `scrollHeight` exceeds its `clientHeight` even when overflow remains visible.
 4. Check `1920x1080` fills the viewport and has zero document overflow.
 5. Check `390x844` preserves the complete 16:9 stage, has zero document overflow, and leaves controls outside the stage.
 6. Test `End`, `ArrowLeft`, hash navigation, fullscreen state handling, and print output page count.
-7. Visually inspect the cover and the densest actor, comparison, plugin, safety, and roadmap slides. DOM measurements do not detect every visual collision.
+7. Visually inspect the cover and the densest actor, comparison, plugin, safety, and roadmap slides. Check whether a later band or overlay covers preceding text; ordinary slide-bound checks do not detect every visual collision.
 8. Run static searches for forbidden tables, gradients, yellow theme tokens, stale filenames, and missing protected identifiers.
 
 Do not call the deck complete while any clipped text, incoherent overlap, stale link, blank slide, or unexplained abbreviation remains.

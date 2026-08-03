@@ -1358,15 +1358,25 @@
       column-gap: 28px;
     }
 
-    .plugin-list code {
-      min-height: 76px;
-      display: flex;
-      align-items: center;
-      padding: 12px 0;
+    .plugin-item {
+      min-height: 112px;
+      padding: 12px 0 10px;
       border-top: 1px solid var(--ink);
-      font-size: 18px;
+    }
+
+    .plugin-item code {
+      display: block;
+      font-size: 17px;
       line-height: 1.35;
       overflow-wrap: anywhere;
+    }
+
+    .plugin-item span {
+      display: block;
+      margin-top: 6px;
+      color: #c7cac6;
+      font-size: 17px;
+      line-height: 1.35;
     }
 
     .plugin-note {
@@ -1380,7 +1390,7 @@
 
     .slide.dark .plugin-wall,
     .slide.dark .plugin-group,
-    .slide.dark .plugin-list code {
+    .slide.dark .plugin-item {
       border-color: rgba(247, 247, 243, 0.34);
     }
 
@@ -1489,11 +1499,11 @@
     .roadmap-step.s0 {
       left: 0;
       bottom: 0;
-      height: 265px;
+      height: 310px;
     }
 
     .roadmap-step.s1 {
-      left: 540px;
+      left: calc((100% - 520px) / 2);
       bottom: 88px;
       height: 322px;
     }
@@ -1744,7 +1754,7 @@
         </header>
         <div class="slide-title" data-editable>
           <div><p class="eyebrow">历史结论</p><h2>首版收窄，不是最终能力结论</h2></div>
-          <div class="metric"><strong>Story 1</strong><span>先处理长期 Unschedulable</span></div>
+          <div class="metric"><strong>Story 1</strong><span>先处理长期 Unschedulable（无法调度）</span></div>
         </div>
         <div class="slide-content" data-editable>
           <div class="history-line draw-line" aria-hidden="true"></div>
@@ -1752,10 +1762,10 @@
             <time>2021.09</time><code>Issue #697</code><h3>最初范围更广</h3><p>资源不足与新集群加入后的利用率均衡都在问题范围内。</p>
           </article>
           <article class="history-event bottom e2 reveal" style="--event-color: var(--red); --delay: 100ms">
-            <time>2021.11</time><code>KEP Story 1</code><h3>主动收窄范围</h3><p>只保留资源不足导致 Deployment Pod 长期 Unschedulable。</p>
+            <time>2021.11</time><code>KEP Story 1</code><h3>主动收窄范围</h3><p>只保留资源不足导致 Deployment Pod 长期 Unschedulable（无法调度）。</p>
           </article>
           <article class="history-event top e3 reveal" style="--event-color: var(--red); --delay: 200ms">
-            <time>2022.02</time><code>PR #1392</code><h3>跑通首个闭环</h3><p>围绕副本数、Ready 状态与 Pod 归属链实现。</p>
+            <time>2022.02</time><code>PR #1392</code><h3>跑通首个闭环</h3><p>围绕副本数、Ready（就绪）状态与 Pod 归属链实现。</p>
           </article>
           <article class="history-event bottom e4 reveal" style="--event-color: var(--muted); --delay: 300ms">
             <time>NOW</time><code>OPEN BOUNDARY</code><h3>通用抽象未完成</h3><p>GVK（Group / Version / Kind，资源类型标识）、通用工作负载和自定义 Ready 解释仍留在边界外。</p>
@@ -1789,8 +1799,8 @@
           <div class="kind-boundaries reveal" style="--delay: 320ms">
             <article class="kind-boundary"><code>StatefulSet</code><strong>身份不同</strong><p>固定序号、PVC 与稳定身份。</p></article>
             <article class="kind-boundary"><code>Job</code><strong>完成语义不同</strong><p>索引、重试、幂等和完成状态。</p></article>
-            <article class="kind-boundary"><code>FlinkDeployment</code><strong>组件关系不同</strong><p>多组件和 checkpoint 不能压成一个数。</p></article>
-            <article class="kind-boundary"><code>AI workload</code><strong>拓扑关系不同</strong><p>leader、worker、shard、gang 彼此相关。</p></article>
+            <article class="kind-boundary"><code>FlinkDeployment</code><strong>组件关系不同</strong><p>多组件和 checkpoint（状态检查点）不能压成一个数。</p></article>
+            <article class="kind-boundary"><code>AI workload</code><strong>拓扑关系不同</strong><p>leader（主角色）、worker（工作角色）、shard（数据分片）、gang（成组调度）彼此相关。</p></article>
           </div>
         </div>
         <footer class="slide-footer" data-editable>
@@ -1947,25 +1957,25 @@
         </header>
         <div class="slide-title" data-editable>
           <div><p class="eyebrow">本次建议</p><h2>周期自愈优先评估 Descheduler</h2></div>
-          <div class="metric"><strong>未决</strong><span>#7662 的 owner 与 API 未收敛</span></div>
+          <div class="metric"><strong>未决</strong><span>#7662 的责任组件与 API 尚未收敛</span></div>
         </div>
         <div class="slide-content track-compare" data-editable>
           <div class="track-labels"><span>触发方式</span><span>观察对象</span><span>实际动作</span><span>完成含义</span></div>
           <div class="compare-track reveal" style="--track-color: var(--red)">
-            <div class="track-name"><strong>Karmada Descheduler</strong><code>periodic loop</code></div>
+            <div class="track-name"><strong>Karmada Descheduler</strong><code>periodic loop（周期扫描）</code></div>
             <div class="track-point"><strong>周期检查</strong>持续发现运行异常</div>
-            <div class="track-point"><strong>成员 Pod</strong>长期 Unschedulable</div>
+            <div class="track-point"><strong>成员 Pod</strong>长期无法调度（Unschedulable）</div>
             <div class="track-point"><strong>缩减旧分配</strong>形成副本（replica）缺口</div>
             <div class="track-point"><strong>等待调度闭环</strong>不承诺一次成功</div>
           </div>
           <div class="compare-track reveal" style="--track-color: var(--ink); --delay: 140ms">
             <div class="track-name"><strong>WorkloadRebalancer</strong><code>rescheduleTriggeredAt</code></div>
             <div class="track-point"><strong>用户触发</strong>指定工作负载（workload）</div>
-            <div class="track-point"><strong>Binding</strong>不观察成员 Pod</div>
-            <div class="track-point"><strong>Fresh 重算</strong>当前 affinity / candidate context</div>
-            <div class="track-point"><strong>写入成功</strong>不代表新副本 Ready</div>
+            <div class="track-point"><strong>Binding（资源绑定）</strong>记录“分到哪、分多少”，不观察成员 Pod</div>
+            <div class="track-point"><strong>Fresh（重新分配模式）</strong>按当前 affinity（集群亲和规则）与候选集群范围重算</div>
+            <div class="track-point"><strong>写入成功</strong>不代表新副本已就绪（Ready）</div>
           </div>
-          <p class="track-boundary reveal" style="--delay: 260ms">边界：这是本次调研建议，不是社区已经选择 Descheduler。Fresh 也不会自动回到更早的 clusterAffinities 或重置全部 placement。</p>
+          <p class="track-boundary reveal" style="--delay: 260ms">边界：这是本次调研建议，不是社区已经选择 Descheduler。Fresh（重新分配模式）不会自动回到更早的 clusterAffinities（多组集群亲和性规则），也不会重置全部 placement（放置策略）。</p>
         </div>
         <footer class="slide-footer" data-editable>
           <p class="answer"><b>本页回答</b>若千问需要持续发现运行异常，Descheduler 比一次触发更贴近问题。</p>
@@ -1989,18 +1999,18 @@
         <div class="slide-content" data-editable>
           <div class="gate-line">
             <div class="gate reveal"><b>01</b><strong>离线且允许中断</strong></div>
-            <div class="gate reveal" style="--delay: 80ms"><b>02</b><strong>部分 Pod 长期 Unschedulable</strong></div>
+            <div class="gate reveal" style="--delay: 80ms"><b>02</b><strong>部分 Pod 长期 Unschedulable（无法调度）</strong></div>
             <div class="gate reveal" style="--delay: 160ms"><b>03</b><strong>副本可由同类实例替换</strong></div>
             <div class="gate reveal" style="--delay: 240ms"><b>04</b><strong>修复分配结果即可视为成功</strong></div>
           </div>
           <div class="stop-band reveal" style="--delay: 320ms">
             <h3>任一成立<br>就暂停</h3>
             <div class="stop-item">在线流量或服务不能中断</div>
-            <div class="stop-item">需要预热、checkpoint 或数据搬迁</div>
-            <div class="stop-item">存在 leader、worker、shard、gang 关系</div>
-            <div class="stop-item">必须等目标副本 Ready 后才能缩源</div>
+            <div class="stop-item">需要预热、checkpoint（状态检查点）或数据搬迁</div>
+            <div class="stop-item">存在 leader（主角色）、worker（工作角色）、shard（数据分片）、gang（成组调度）关系</div>
+            <div class="stop-item">必须等目标副本 Ready（就绪）后才能缩源</div>
           </div>
-          <p class="gate-evidence evidence">公开 Issue、PR 与书面纪要没有确认千问（Qwen）或 GPU 产品归属；会议 ASR 只提到 Spot GPU，不能替代产品事实。</p>
+          <p class="gate-evidence evidence">公开 Issue、PR 与书面纪要没有确认千问（Qwen）或 GPU（图形处理器）产品归属；会议 ASR（自动语音识别转写）只提到 Spot GPU（可抢占式 GPU），不能替代产品事实。</p>
         </div>
         <footer class="slide-footer" data-editable>
           <p class="answer"><b>判断规则</b>四项都成立时，才建议优先评估 Descheduler。</p>
@@ -2024,7 +2034,7 @@
         <div class="slide-content limit-bands" data-editable>
           <article class="limit-band reveal" style="--band-color: var(--ink)"><span class="number">01</span><h3>工作负载语义</h3><p>多组件、身份、完成进度与数据状态，不能用一个副本数完整表达。</p></article>
           <article class="limit-band reveal" style="--band-color: var(--ink); --delay: 70ms"><span class="number">02</span><h3>信号与归属</h3><p>必须识别当前版本，并确认 <code>PodScheduled=False / Unschedulable</code> 持续超过阈值。</p></article>
-          <article class="limit-band reveal" style="--band-color: var(--red); --delay: 140ms"><span class="number">03</span><h3>安全与策略</h3><p>缺少明确 opt-in、每轮缩减上限、dry-run 和统一的安全检查入口。</p></article>
+          <article class="limit-band reveal" style="--band-color: var(--red); --delay: 140ms"><span class="number">03</span><h3>安全与策略</h3><p>缺少明确 opt-in（工作负载显式启用）、每轮缩减上限、dry-run（只预演不执行）和统一的安全检查入口。</p></article>
           <article class="limit-band reveal" style="--band-color: var(--blue); --delay: 210ms"><span class="number">04</span><h3>Binding 写入职责</h3><p>多个组件不能各自独立修改同一个 Binding，完成条件也必须唯一。</p></article>
         </div>
         <footer class="slide-footer" data-editable>
@@ -2076,34 +2086,34 @@
         </header>
         <div class="slide-title" data-editable>
           <div><p class="eyebrow">策略广度</p><h2>10 个插件，建立在统一 Pod 之上</h2></div>
-          <div class="metric"><strong>4 + 6</strong><span>Balance / Deschedule</span></div>
+          <div class="metric"><strong>4 + 6</strong><span>Balance（整体均衡） / Deschedule（逐 Pod 纠偏）</span></div>
         </div>
         <div class="slide-content plugin-wall" data-editable>
           <section class="plugin-group reveal" style="--group-color: var(--green); --columns: 1">
             <div class="plugin-count"><strong>04</strong><span>Balance</span></div>
             <div class="plugin-list">
-              <code>RemoveDuplicates</code>
-              <code>LowNodeUtilization</code>
-              <code>HighNodeUtilization</code>
-              <code>RemovePodsViolatingTopologySpreadConstraint</code>
+              <div class="plugin-item"><code>RemoveDuplicates</code><span>驱逐同一工作负载挤在同一节点的重复 Pod</span></div>
+              <div class="plugin-item"><code>LowNodeUtilization</code><span>从高负载节点驱逐，期望重建到低负载节点</span></div>
+              <div class="plugin-item"><code>HighNodeUtilization</code><span>从低负载节点驱逐，期望压实后释放节点</span></div>
+              <div class="plugin-item"><code>RemovePodsViolatingTopologySpreadConstraint</code><span>最少驱逐 Pod，纠正拓扑域分布偏斜</span></div>
             </div>
             <p class="plugin-note">处理整体分布与资源利用率失衡。</p>
           </section>
           <section class="plugin-group reveal" style="--group-color: var(--green); --columns: 2; --delay: 140ms">
             <div class="plugin-count"><strong>06</strong><span>Deschedule</span></div>
             <div class="plugin-list">
-              <code>RemovePodsViolatingInterPodAntiAffinity</code>
-              <code>RemovePodsViolatingNodeAffinity</code>
-              <code>RemovePodsViolatingNodeTaints</code>
-              <code>RemovePodsHavingTooManyRestarts</code>
-              <code>PodLifeTime</code>
-              <code>RemoveFailedPods</code>
+              <div class="plugin-item"><code>RemovePodsViolatingInterPodAntiAffinity</code><span>驱逐违反 Pod 间反亲和约束的 Pod</span></div>
+              <div class="plugin-item"><code>RemovePodsViolatingNodeAffinity</code><span>驱逐已不满足节点亲和约束的 Pod</span></div>
+              <div class="plugin-item"><code>RemovePodsViolatingNodeTaints</code><span>驱逐不再容忍节点污点的 Pod</span></div>
+              <div class="plugin-item"><code>RemovePodsHavingTooManyRestarts</code><span>驱逐重启次数超过阈值的 Pod</span></div>
+              <div class="plugin-item"><code>PodLifeTime</code><span>按年龄、状态与条件筛选并驱逐 Pod</span></div>
+              <div class="plugin-item"><code>RemoveFailedPods</code><span>按失败原因与退出码驱逐 Failed Pod</span></div>
             </div>
             <p class="plugin-note">既包含调度约束纠偏，也包含失败 Pod 清理和生命周期淘汰；不能全部解释为“更优重调度”。</p>
           </section>
         </div>
         <footer class="slide-footer" data-editable>
-          <p class="answer"><b>边界</b>DefaultEvictor 不是第 11 个策略插件。</p>
+          <p class="answer"><b>边界</b>DefaultEvictor（统一候选过滤器）不是第 11 个策略插件。</p>
           <p class="next"><b>下一页</b>真正值得借鉴的，是插件之外的安全与观测框架。</p>
         </footer>
       </section>
@@ -2157,8 +2167,8 @@
         </div>
         <div class="slide-content" data-editable>
           <div class="roadmap-stairs">
-            <article class="roadmap-step s0 reveal" style="--step-color: var(--ink)"><span class="phase">Phase 0 / 先做稳</span><span class="number">00</span><h3>限定适用场景</h3><p>明确 opt-in、支持语义、唯一 Binding 写入方和完成条件。</p></article>
-            <article class="roadmap-step s1 reveal" style="--step-color: var(--red); --delay: 120ms"><span class="phase">Phase 1 / 再做安全</span><span class="number">01</span><h3>建立统一护栏</h3><p>增加 dry-run、每轮缩减上限、结构化原因、指标和跨组件 e2e。</p></article>
+            <article class="roadmap-step s0 reveal" style="--step-color: var(--ink)"><span class="phase">Phase 0 / 先做稳</span><span class="number">00</span><h3>限定适用场景</h3><p>明确启用范围、支持语义、唯一写入方与完成条件。</p></article>
+            <article class="roadmap-step s1 reveal" style="--step-color: var(--red); --delay: 120ms"><span class="phase">Phase 1 / 再做安全</span><span class="number">01</span><h3>建立统一护栏</h3><p>增加 dry-run（预演）、每轮缩减上限、结构化原因、指标和跨组件 e2e。</p></article>
             <article class="roadmap-step s2 reveal" style="--step-color: var(--green); --delay: 240ms"><span class="phase">Phase 2 / 最后扩展</span><span class="number">02</span><h3>逐类定义工作负载</h3><p>建立 workload resolver 与支持范围表，不宣称支持任意 GVK。</p></article>
           </div>
           <div class="roadmap-boundary reveal" style="--delay: 360ms"><span>不选择具体 Pod</span><i></i><span>不搬迁状态</span><i></i><span>不让多个组件独立写 Binding</span></div>
