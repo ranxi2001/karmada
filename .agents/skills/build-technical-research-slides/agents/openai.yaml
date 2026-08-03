@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Technical Research Slides"
+  short_description: "Build clear, evidence-backed technical research slides"
+  default_prompt: "Use $build-technical-research-slides to turn this technical research into a clear, speaker-led HTML presentation."

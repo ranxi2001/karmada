@@ -1757,7 +1757,7 @@
             <time>2022.02</time><code>PR #1392</code><h3>跑通首个闭环</h3><p>围绕副本数、Ready 状态与 Pod 归属链实现。</p>
           </article>
           <article class="history-event bottom e4 reveal" style="--event-color: var(--muted); --delay: 300ms">
-            <time>NOW</time><code>OPEN BOUNDARY</code><h3>通用抽象未完成</h3><p>GVK、通用工作负载和自定义 Ready 解释仍留在边界外。</p>
+            <time>NOW</time><code>OPEN BOUNDARY</code><h3>通用抽象未完成</h3><p>GVK（Group / Version / Kind，资源类型标识）、通用工作负载和自定义 Ready 解释仍留在边界外。</p>
           </article>
         </div>
         <footer class="slide-footer" data-editable>
@@ -2054,8 +2054,8 @@
           <div class="layer-slash reveal" style="--delay: 100ms">/</div>
           <section class="layer-side reveal" style="--layer-color: var(--red); --delay: 200ms">
             <span class="owner">Karmada Descheduler</span>
-            <div class="equation">Binding(GVK)<br><span class="red">→ Cluster</span></div>
-            <div class="action"><strong>当前是目标副本数修正</strong><p>只处理 Deployment 在成员集群的目标副本数；不选择具体 Pod，不搬迁状态，karmada-scheduler 放置缺口。</p></div>
+            <div class="equation">Binding<br><span class="red">→ Cluster</span></div>
+            <div class="action"><strong>GVK = Group / Version / Kind</strong><p>它标识资源类型。当前只修正 Deployment 目标副本数；不选 Pod、不搬状态，缺口仍由 karmada-scheduler 放置。</p></div>
           </section>
         </div>
         <footer class="slide-footer" data-editable>
