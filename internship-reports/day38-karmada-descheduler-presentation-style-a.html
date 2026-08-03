@@ -22,7 +22,6 @@
       --red: #e63b2e;
       --blue: #2563a6;
       --green: #27845b;
-      --yellow: #f1c94b;
       --stage-bg: #d8d8d2;
       --slide-bg: var(--paper);
       --display: "Archivo", "Noto Sans SC", sans-serif;
@@ -1038,7 +1037,7 @@
 
     .formula code {
       display: block;
-      color: var(--yellow);
+      color: var(--green);
       font-family: var(--display);
       font-size: 66px;
       font-weight: 800;
@@ -1721,7 +1720,7 @@
             <p>在这条补位路径中继续过滤、打分和估算容量，决定缺少的副本应该放到哪个候选集群。</p>
             <code>Steady / dynamicScaleUp</code>
           </article>
-          <article class="actor-lane reveal" style="--lane-color: var(--yellow); --delay: 180ms">
+          <article class="actor-lane reveal" style="--lane-color: var(--green); --delay: 180ms">
             <span class="ordinal">03</span><h3>WorkloadRebalancer</h3><span class="verb">表达一次重调度意图</span>
             <p>用户指定工作负载并写入时间戳，触发一次调度；当前不周期观察成员 Pod 的运行异常。</p>
             <code>rescheduleTriggeredAt</code>
@@ -1889,7 +1888,7 @@
             <article class="flow-node reveal" style="--node-color: var(--ink)"><b>01</b><strong>读取 Binding</strong><p>Assigned、汇总 Ready、成员 Pod 状态。</p></article>
             <article class="flow-node reveal" style="--node-color: var(--red); --delay: 80ms"><b>02</b><strong>estimator 核验</strong><p>沿当前 ReplicaSet owner UID 统计长期 Unschedulable。</p></article>
             <article class="flow-node reveal" style="--node-color: var(--red); --delay: 160ms"><b>03</b><strong>更新目标副本数</strong><p>Ready 缺失为 <code>-1</code>，不会仅因此停止估算。</p></article>
-            <article class="flow-node reveal" style="--node-color: var(--yellow); --delay: 240ms"><b>04</b><strong>Binding 事件</strong><p>controller 与 scheduler 分别监听同一次更新。</p></article>
+            <article class="flow-node reveal" style="--node-color: var(--green); --delay: 240ms"><b>04</b><strong>Binding 事件</strong><p>controller 与 scheduler 分别监听同一次更新。</p></article>
             <article class="flow-node reveal" style="--node-color: var(--blue); --delay: 320ms"><b>05</b><strong>形成新 assignment</strong><p>Steady / <code>dynamicScaleUp</code> 补副本缺口。</p></article>
           </div>
           <div class="watchers reveal" style="--delay: 380ms">
@@ -2079,7 +2078,7 @@
           <div class="metric"><strong>4 + 6</strong><span>Balance / Deschedule</span></div>
         </div>
         <div class="slide-content plugin-wall" data-editable>
-          <section class="plugin-group reveal" style="--group-color: var(--yellow); --columns: 1">
+          <section class="plugin-group reveal" style="--group-color: var(--green); --columns: 1">
             <div class="plugin-count"><strong>04</strong><span>Balance</span></div>
             <div class="plugin-list">
               <code>RemoveDuplicates</code>
