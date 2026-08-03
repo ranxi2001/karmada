@@ -66,14 +66,15 @@ Split a crowded page instead of shrinking technical text. Do not use a table mer
 Use Swiss Modern / Style A for a speaker-led technical route presentation:
 
 - author at `1920x1080` and scale the stage uniformly without mobile reflow;
-- use paper `#f7f7f3`, ink `#111111`, red `#e63b2e`, blue `#2563a6`, and green `#27845b`;
+- use paper `#f7f7f3`, ink `#111111`, red `#e63b2e`, orange `#d96724`, blue `#2563a6`, and green `#27845b`;
 - do not use yellow accents on the white or paper background;
 - use Archivo for display text, Noto Sans SC for Chinese body text, and IBM Plex Mono for identifiers;
 - expose a quiet 12-column construction grid and use square, hairline geometry;
 - avoid gradients, shadows, decorative cards, nested cards, and table-heavy composition;
 - use circles only when the shape carries meaning, such as a gate or replica token;
 - reserve large display type for the cover and primary slide conclusion;
-- keep red for conclusions or risk, blue for scheduler or placement, and green for allowed, safe, or replacement paths.
+- keep red for conclusions or state-changing risk, blue for scheduler or placement, and green for allowed, safe, or replacement paths;
+- use orange sparingly for validation or transition when a five-step flow needs a distinct intermediate stage; do not let orange become the page background or dominant palette.
 
 Keep controls out of the authored content. On 16:9 landscape viewports, place them vertically in the right gutter; on portrait viewports, place them in the letterbox below the stage.
 

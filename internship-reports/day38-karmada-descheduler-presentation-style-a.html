@@ -20,6 +20,7 @@
       --line: #d9d9d2;
       --soft: #ecece6;
       --red: #e63b2e;
+      --orange: #d96724;
       --blue: #2563a6;
       --green: #27845b;
       --stage-bg: #d8d8d2;
@@ -1886,7 +1887,7 @@
         <div class="slide-content" data-editable>
           <div class="flow-track">
             <article class="flow-node reveal" style="--node-color: var(--ink)"><b>01</b><strong>读取 Binding</strong><p>Assigned、汇总 Ready、成员 Pod 状态。</p></article>
-            <article class="flow-node reveal" style="--node-color: var(--red); --delay: 80ms"><b>02</b><strong>estimator 核验</strong><p>沿当前 ReplicaSet owner UID 统计长期 Unschedulable。</p></article>
+            <article class="flow-node reveal" style="--node-color: var(--orange); --delay: 80ms"><b>02</b><strong>estimator 核验</strong><p>沿当前 ReplicaSet owner UID 统计长期 Unschedulable。</p></article>
             <article class="flow-node reveal" style="--node-color: var(--red); --delay: 160ms"><b>03</b><strong>更新目标副本数</strong><p>Ready 缺失为 <code>-1</code>，不会仅因此停止估算。</p></article>
             <article class="flow-node reveal" style="--node-color: var(--green); --delay: 240ms"><b>04</b><strong>Binding 事件</strong><p>controller 与 scheduler 分别监听同一次更新。</p></article>
             <article class="flow-node reveal" style="--node-color: var(--blue); --delay: 320ms"><b>05</b><strong>形成新 assignment</strong><p>Steady / <code>dynamicScaleUp</code> 补副本缺口。</p></article>
