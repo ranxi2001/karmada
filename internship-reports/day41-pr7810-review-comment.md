@@ -1,11 +1,12 @@
-# Day 41: PR #7810 Upstream Review Comment Draft
+# Day 41: PR #7810 Published Upstream Review Comment
 
 - Target: [`karmada-io/karmada#7810`](https://github.com/karmada-io/karmada/pull/7810)
 - Review surface: top-level PR comment
 - Reviewed head: `31bef8d37e6505cb333026ec86b00d8ea3172339`
-- Status: **not posted; waiting for exact target/text confirmation**
+- Status: **published** at [`issuecomment-5178016994`](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994)
+- Published at: `2026-08-04T10:53:52Z`
 
-## Exact English Draft
+## Published English Comment
 
 Thanks for validating the observed 10 ms case. I think time-based coalescing can be a useful best-effort optimization, but the current implementation has a correctness gap beyond the window-size limitation discussed in #7805.
 

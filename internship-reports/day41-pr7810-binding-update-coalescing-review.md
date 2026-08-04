@@ -261,9 +261,9 @@ legacy queue
 - 同一 sync wave 的 Suspension + workload update 仍有竞态。可靠 Suspension 需要显式阶段和 acknowledgement barrier。
 - 截至本次 review，PR #7810 没有人类 `lgtm` / `approved`，只有 bot review；不能把 bot 意见或作者实验写成社区共识。
 
-## 准备发布的评论
+## 已发布的评论
 
-英文 top-level review 已写入：[day41-pr7810-review-comment.md](day41-pr7810-review-comment.md)。
+英文 top-level review 已发布：[`issuecomment-5178016994`](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994)，本地正文保存在 [day41-pr7810-review-comment.md](day41-pr7810-review-comment.md)。
 
 评论只保留三件事：
 
@@ -271,4 +271,4 @@ legacy queue
 2. 一个代码级语义判断：`AddAfter` 是 earliest-deadline fixed window，且会被其他 producer 绕过；
 3. 一个具体请求：先降级为 best-effort、增加 dequeue guard、收窄字段范围并补 fake-clock / queue-mode / failover / Descheduler tests。
 
-当前尚未发布。按照 upstream 写入规则，必须先让用户确认 `karmada-io/karmada#7810` 和评论全文。
+发布前已确认 target、reviewed head 和 192-word exact text；发布后通过 GitHub API 回读，作者、正文与链接均一致。后续只在作者更新代码或回复该 finding 时复查。

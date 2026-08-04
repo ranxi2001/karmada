@@ -63,7 +63,7 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - [Day 38：Karmada Descheduler 专项调研与 Kubernetes 对比](day38-karmada-descheduler-special-study.md)（[Style A 无表格汇报稿](day38-karmada-descheduler-presentation-style-a.html)；[控制闭环 Mermaid](day38-karmada-descheduler-control-loop.mmd) / [PNG](day38-karmada-descheduler-control-loop.png)；[分层对比 Mermaid](day38-karmada-vs-kubernetes-descheduler.mmd) / [PNG](day38-karmada-vs-kubernetes-descheduler.png)）
 - [Day 39：Karmada Descheduler 的任务调度本质、整任务重入队与方案对比](day39-karmada-descheduler-code-contracts-and-options.md)（[16 页 Style A 汇报稿](day39-karmada-descheduler-code-research-presentation.html)；[未启动任务整任务重入队 Mermaid](day39-karmada-descheduler-code-contract-breaks.mmd) / [PNG](day39-karmada-descheduler-code-contract-breaks.png)）
 - [Day 40：PR #7662 长期 Unschedulable 副本重调度 API 与开发基准](day40-pr7662-unschedulable-replica-rescheduling-api-plan.md)（[当前/一期流程 Mermaid](day40-pr7662-unschedulable-replica-rescheduling-flow.mmd) / [PNG](day40-pr7662-unschedulable-replica-rescheduling-flow.png)）
-- [Day 41：PR #7810 Binding 更新合并补丁的代码与系统 Review](day41-pr7810-binding-update-coalescing-review.md)（[英文 review 草稿](day41-pr7810-review-comment.md)；[delayed-key race Mermaid](day41-pr7810-delayed-key-race.mmd)）
+- [Day 41：PR #7810 Binding 更新合并补丁的代码与系统 Review](day41-pr7810-binding-update-coalescing-review.md)（[已发布英文 review](day41-pr7810-review-comment.md)；[Upstream comment](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994)；[delayed-key race Mermaid](day41-pr7810-delayed-key-race.mmd)）
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
