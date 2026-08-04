@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant GitOps
+    participant Detector
+    participant API as ResourceBinding API
+    participant Queue as Legacy Workqueue
+    participant SchedulerA as Scheduler A
+
+    GitOps->>Detector: Apply policy change
+    Detector->>API: Write generation N+1 (mixed inputs)
+    API->>Queue: AddAfter(key, D)
+    Note over Queue: Earliest readyAt = t0 + D
+
+    GitOps->>Detector: Apply workload change at t0 + D - epsilon
+    Detector->>API: Write generation N+2
+    API->>Queue: AddAfter(key, D)
+    Note over Queue: Later readyAt is ignored<br/>deadline remains t0 + D
+
+    opt Immediate Add or requeue
+        API-->>Queue: Cluster requeue calls Add(key)
+        Queue->>SchedulerA: Key can run before t0 + D
+    end
+
+    opt Ownership or suspension changes
+        GitOps->>API: schedulerName = B<br/>or SchedulingSuspended = true
+        Note over API,Queue: Filter emits delete<br/>but delayed key is not cancelled
+    end
+
+    Queue->>SchedulerA: Pop key at the retained deadline
+    SchedulerA->>API: Lister Get latest ResourceBinding
+    Note over SchedulerA,API: Dequeue path does not recheck<br/>schedulerName or suspension
+    SchedulerA->>API: Patch scheduling result and status
+
+    Note over GitOps,SchedulerA: Time coalescing reduces some races,<br/>but creates no cross-object transaction

@@ -379,3 +379,21 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Enumerate the source store order, eligibility rule, batch-collection point, lock held by each transition, signal point, consumer lock, worker count, and every lock the consumer must reacquire after one item. Compare both legal event orders: `first push -> pop -> remaining pushes` and `all pushes -> priority pop`.
 - Evidence to gather: Exact comparator keys, timer cutoffs, producer and consumer goroutines, lock order, condition-variable behavior, post-pop retry/forget path, external requeue loops, existing test seams, official ordering contract, and production traces needed to estimate frequency.
 - Test or fix cue: Use a fake clock for eligibility and a wrapper around the real active queue that pauses after its first delegated push. Test equal expiry, staggered-but-simultaneously-eligible expiry, and a full-batch control. For map-backed stores, assert `first popped == actual first pushed`; do not make a particular unspecified map order a pass condition. Report reachability, frequency, contract, and bounded blast radius separately.
+
+## AddAfter On One Producer Is Not A Queue-Wide Not-Before Barrier
+
+- Pattern: Calling `AddAfter` from one event handler delays only that producer's insertion; another `Add`, retry, already-ready item, or processing item for the same key can still make the consumer run before the intended window.
+- Seen in: `karmada-io/karmada#7810`, where ResourceBinding update events used `AddAfter`, while cluster requeues used immediate `Add` and scheduler failures used `AddRateLimited` on the same legacy workqueue key.
+- Miss symptom: A PR describes the delay as debounce or settling time, tests only the new branch, and assumes every scheduling attempt now waits for the configured duration.
+- Review check: Enumerate every producer for the key, the base queue's dirty/processing sets, delayed-entry deduplication, retry deadlines, consumer count, and whether any path enforces a common not-before at dequeue.
+- Evidence to gather: Delaying-queue deadline replacement rule, immediate and rate-limited producers, already queued/processing behavior, fake-clock interleavings, leader restart behavior, and the exact guarantee claimed to users.
+- Test or fix cue: If the contract requires a quiet period, maintain shared per-key deadline state and recheck it at dequeue. Otherwise name and document the feature as best-effort fixed-window coalescing, then test boundary misses and fast-path bypass explicitly.
+
+## Long-Lived Queue Keys Must Revalidate Current Ownership At Consumption
+
+- Pattern: A queue key can remain valid as an identifier while the current object becomes suspended, deleted, reassigned, or otherwise ineligible; admission-time filtering cannot protect a delayed or retried consumer.
+- Seen in: `karmada-io/karmada#7810`, where the informer filter rejected a ResourceBinding after `schedulerName` or scheduling suspension changed, but the delete handler did not cancel the delayed key and `doScheduleBinding` did not recheck eligibility after its lister read.
+- Miss symptom: The event filter appears to enforce ownership, yet a stale delayed key lets the former owner run an algorithm or patch status/spec after handoff.
+- Review check: For every queue whose entries can outlive one event turn, map `filter/admit -> enqueue -> ownership change -> cancel/delete -> dequeue -> authoritative re-read -> mutation` and identify where current eligibility is revalidated.
+- Evidence to gather: Filter transition behavior, delete-handler effects, queue cancellation capability, key payload, lister/API read, ownership and suspension fields, and all writes after dequeue.
+- Test or fix cue: Revalidate ownership, suspension, deletion, and other mutation gates after reading the current object and before side effects. Use a fake clock to retain a key, change eligibility, advance time, and assert no algorithm call or patch occurs.
