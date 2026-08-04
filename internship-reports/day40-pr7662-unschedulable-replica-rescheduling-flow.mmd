@@ -1,0 +1,53 @@
+flowchart LR
+  classDef existing fill:#EEF2F5,stroke:#61717C,color:#17232B,stroke-width:1.5px
+  classDef intent fill:#E7F1FF,stroke:#2878C8,color:#102A43,stroke-width:1.5px
+  classDef observe fill:#FFF0D9,stroke:#E67E22,color:#4B2A0B,stroke-width:1.5px
+  classDef schedule fill:#E5F5EA,stroke:#238B57,color:#123B28,stroke-width:1.5px
+  classDef commit fill:#F0EAFE,stroke:#7453B8,color:#2F2253,stroke-width:1.5px
+  classDef risk fill:#FDEBEC,stroke:#C94444,color:#5A1717,stroke-width:1.5px
+
+  subgraph CURRENT["Current path"]
+    direction TB
+    C1["WorkloadRebalancer\nworkloads + TTL"]:::existing
+    C2["Controller writes\nrescheduleTriggeredAt"]:::existing
+    C3["WR marks Success\nimmediately"]:::risk
+    C4["Scheduler selects\nFresh assignment"]:::existing
+    C5["Patch final clusters"]:::existing
+    C6["lastScheduledTime ack\nnot consumed by WR"]:::risk
+    C1 --> C2 --> C4 --> C5 --> C6
+    C2 --> C3
+  end
+
+  subgraph PROPOSED["Phase 1: Deployment"]
+    direction TB
+    P1["Finalizer + materialized request\nID + mode + threshold + baseline"]:::intent
+    P2["Recovery-first arbitration\ncommit before baseline check"]:::intent
+    P3["Live source + Binding baseline\nsource UID + spec generation\nBinding scheduling generation"]:::observe
+    P4["Estimator V2 complete snapshot\nsource + member + RS + Pod facts\nPodScheduled=False / Unschedulable"]:::observe
+    P5["In-memory lower bounds\nP = assigned - unschedulable"]:::schedule
+    P6["Filter + strict target capacity\nno general-estimator fallback"]:::schedule
+    P7["Steady scale-up\nexclude problem sources"]:::schedule
+    P8{"Invariants hold?\nfull desired count\nno lower-bound loss"}:::commit
+    P9["One JSON Patch\nRV + request ID tests\nplacement + commit record"]:::commit
+    P10["Request-scoped Binding ack\nID + applied generation"]:::commit
+    P11["WR status, then consumed annotation\nnext request may enter"]:::intent
+    PF["Fail closed\nPending reason + old placement\nretry same request"]:::risk
+    PX["Concurrent API change\nre-arbitrate latest Binding\nno business Pending reason"]:::intent
+    PT["Terminal request rejection\nwrite Failed ack\ncontinue ordinary schedule if needed"]:::risk
+    PA["Producer deletion recovery\ncommitted: consume\nuncommitted: abandon, Failed, consume\nno request / Binding gone: status only"]:::intent
+
+    P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7 --> P8
+    P8 -- Yes --> P9 --> P10 --> P11
+    P1 -. producer deletion .-> PA
+    P2 -. unsupported or invalid .-> PT
+    P3 -. baseline changed or invalid .-> PT
+    P4 -. stale or incomplete .-> PF
+    P6 -. filter or select error .-> PF
+    P7 -. assign or no-fit error .-> PF
+    P9 -. JSON Patch conflict .-> PX
+    P8 -- No --> PF
+  end
+
+  CURRENT ~~~ PROPOSED
+  style CURRENT fill:#FFFFFF,stroke:#A7B2BA,stroke-width:1px
+  style PROPOSED fill:#FFFFFF,stroke:#A7B2BA,stroke-width:1px
