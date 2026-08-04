@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Day39｜Karmada Descheduler 代码契约专项调研</title>
+  <title>Day39｜Karmada Descheduler 任务级重调度专项调研</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -1123,7 +1123,7 @@
 
     .change-row {
       display: grid;
-      grid-template-columns: 260px 1fr;
+      grid-template-columns: 340px 1fr;
       gap: 20px;
       padding: 11px 0;
       border-top: 1px solid var(--line);
@@ -1131,7 +1131,11 @@
       line-height: 1.4;
     }
 
-    .change-row code { color: var(--route-color); }
+    .change-row code {
+      color: var(--route-color);
+      font-size: 16px;
+      overflow-wrap: anywhere;
+    }
 
     .route-verdict {
       padding: 18px 20px;
@@ -1433,6 +1437,596 @@
       line-height: 1.43;
     }
 
+    /* Day39 corrected narrative: atomic task scheduling and placement revocation. */
+    .atomic-thesis {
+      display: grid;
+      grid-template-rows: 258px 1fr;
+      gap: 28px;
+    }
+
+    .atomic-callout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      border-top: 9px solid var(--green);
+      border-bottom: 2px solid var(--ink);
+    }
+
+    .atomic-callout strong {
+      align-self: center;
+      color: var(--green);
+      font-family: var(--display);
+      font-size: 72px;
+      line-height: 0.98;
+    }
+
+    .atomic-callout p {
+      align-self: center;
+      margin: 0;
+      font-family: var(--display);
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .model-layout {
+      display: grid;
+      grid-template-rows: 310px 1fr;
+      gap: 30px;
+    }
+
+    .lifecycle-track {
+      display: grid;
+      grid-template-columns: 1fr 62px 1fr 62px 1fr 62px 1fr;
+      align-items: stretch;
+    }
+
+    .lifecycle-node {
+      padding: 20px;
+      border-top: 9px solid var(--node-color);
+      border-bottom: 2px solid var(--ink);
+      background: rgba(255, 255, 255, 0.46);
+    }
+
+    .lifecycle-node b {
+      color: var(--node-color);
+      font-family: var(--mono);
+      font-size: 17px;
+    }
+
+    .lifecycle-node h3 {
+      margin: 12px 0 9px;
+      font-family: var(--display);
+      font-size: 34px;
+    }
+
+    .lifecycle-node p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.42;
+    }
+
+    .lifecycle-arrow {
+      align-self: center;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 38px;
+      text-align: center;
+    }
+
+    .primitive-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 22px;
+    }
+
+    .primitive {
+      padding: 15px 16px;
+      border-left: 8px solid var(--primitive-color);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .primitive b {
+      display: block;
+      color: var(--primitive-color);
+      font-family: var(--mono);
+      font-size: 17px;
+    }
+
+    .primitive h3 {
+      margin: 7px 0 6px;
+      font-size: 25px;
+    }
+
+    .primitive p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.38;
+    }
+
+    .scenario-layout {
+      display: grid;
+      grid-template-columns: 0.82fr 1.18fr;
+      gap: 38px;
+    }
+
+    .scenario-snapshot {
+      padding-top: 16px;
+      border-top: 10px solid var(--blue);
+    }
+
+    .scenario-snapshot h3,
+    .scenario-decision h3 {
+      margin: 0 0 16px;
+      font-family: var(--display);
+      font-size: 34px;
+    }
+
+    .snapshot-row {
+      display: grid;
+      grid-template-columns: 190px 1fr;
+      gap: 18px;
+      padding: 13px 0;
+      border-top: 1px solid var(--line);
+      font-size: 19px;
+      line-height: 1.4;
+    }
+
+    .snapshot-row b {
+      color: var(--blue);
+      font-family: var(--mono);
+      font-size: 16px;
+    }
+
+    .scenario-decision {
+      padding: 22px 26px;
+      border: 3px solid var(--green);
+    }
+
+    .and-chain {
+      display: grid;
+      grid-template-columns: 1fr 44px 1fr 44px 1fr;
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 18px;
+    }
+
+    .and-term {
+      padding: 16px;
+      border-top: 7px solid var(--green);
+      border-bottom: 2px solid var(--ink);
+    }
+
+    .and-term b {
+      display: block;
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 15px;
+    }
+
+    .and-term strong {
+      display: block;
+      margin-top: 9px;
+      font-size: 23px;
+      line-height: 1.25;
+    }
+
+    .and-symbol {
+      align-self: center;
+      font-family: var(--display);
+      font-size: 30px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .scenario-result {
+      margin: 22px 0 0;
+      padding-top: 18px;
+      border-top: 4px solid var(--green);
+      font-size: 23px;
+      line-height: 1.45;
+    }
+
+    .state-policy {
+      display: grid;
+      grid-template-rows: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .state-row {
+      display: grid;
+      grid-template-columns: 280px 1fr 370px;
+      gap: 24px;
+      align-items: center;
+      padding: 12px 18px;
+      border-left: 10px solid var(--state-color);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .state-row .state-name {
+      color: var(--state-color);
+      font-family: var(--mono);
+      font-size: 19px;
+      font-weight: 600;
+    }
+
+    .state-row .meaning {
+      font-size: 20px;
+      line-height: 1.4;
+    }
+
+    .state-row .action {
+      padding: 9px 12px;
+      border: 2px solid var(--state-color);
+      color: var(--state-color);
+      font-size: 17px;
+      font-weight: 750;
+      text-align: center;
+    }
+
+    .signal-layout {
+      display: grid;
+      grid-template-columns: 1.02fr 0.98fr;
+      gap: 38px;
+    }
+
+    .hook-contract {
+      padding-top: 16px;
+      border-top: 10px solid var(--green);
+    }
+
+    .hook-contract h3,
+    .signal-sources h3 {
+      margin: 0 0 16px;
+      font-family: var(--display);
+      font-size: 33px;
+    }
+
+    .hook-code {
+      padding: 22px;
+      border: 2px solid var(--line);
+      background: var(--white);
+      font-family: var(--mono);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .hook-code .new-api { color: var(--green); font-weight: 600; }
+
+    .hook-contract > p {
+      margin: 17px 0 0;
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.48;
+    }
+
+    .signal-sources {
+      padding-top: 16px;
+      border-top: 10px solid var(--blue);
+    }
+
+    .signal-row {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 16px;
+      padding: 13px 0;
+      border-top: 1px solid var(--line);
+      font-size: 18px;
+      line-height: 1.42;
+    }
+
+    .signal-row b { color: var(--blue); }
+
+    .signal-stop {
+      margin-top: 16px;
+      padding: 13px 15px;
+      border: 3px solid var(--red);
+      color: var(--red);
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    .gate-layout {
+      display: grid;
+      grid-template-rows: 1fr 104px;
+      gap: 24px;
+    }
+
+    .gate-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .gate-item {
+      padding: 16px 18px;
+      border-top: 8px solid var(--gate-color);
+      border-bottom: 2px solid var(--ink);
+    }
+
+    .gate-item b {
+      color: var(--gate-color);
+      font-family: var(--mono);
+      font-size: 16px;
+    }
+
+    .gate-item h3 {
+      margin: 8px 0 7px;
+      font-size: 24px;
+    }
+
+    .gate-item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.38;
+    }
+
+    .all-gates {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      align-items: center;
+      padding: 14px 18px;
+      border: 3px solid var(--green);
+      font-size: 21px;
+      line-height: 1.35;
+    }
+
+    .all-gates strong {
+      color: var(--green);
+      font-family: var(--display);
+      font-size: 34px;
+    }
+
+    .whole-flow {
+      display: grid;
+      grid-template-rows: 390px 1fr;
+      gap: 28px;
+    }
+
+    .relocation-track {
+      display: grid;
+      grid-template-columns: 1fr 42px 1fr 42px 1fr 42px 1fr 42px 1fr;
+      align-items: stretch;
+    }
+
+    .relocation-step {
+      padding: 19px 16px;
+      border-top: 9px solid var(--step-color);
+      border-bottom: 2px solid var(--ink);
+    }
+
+    .relocation-step b {
+      color: var(--step-color);
+      font-family: var(--mono);
+      font-size: 15px;
+    }
+
+    .relocation-step h3 {
+      margin: 10px 0 9px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .relocation-step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.42;
+    }
+
+    .relocation-arrow {
+      align-self: center;
+      color: var(--muted);
+      font-size: 32px;
+      text-align: center;
+    }
+
+    .completion-band {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 22px;
+    }
+
+    .completion-band article {
+      padding: 15px 16px;
+      border-left: 8px solid var(--band-color);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .completion-band b {
+      color: var(--band-color);
+      font-family: var(--mono);
+      font-size: 15px;
+    }
+
+    .completion-band p {
+      margin: 7px 0 0;
+      font-size: 17px;
+      line-height: 1.4;
+    }
+
+    .evidence-wall {
+      display: grid;
+      grid-template-rows: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .evidence-row {
+      display: grid;
+      grid-template-columns: 420px 240px 1fr;
+      gap: 22px;
+      align-items: center;
+      padding: 10px 16px;
+      border-left: 9px solid var(--evidence-color);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .evidence-row code {
+      color: var(--evidence-color);
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .evidence-row strong {
+      font-size: 20px;
+    }
+
+    .evidence-row p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.38;
+    }
+
+    .versus-layout {
+      display: grid;
+      grid-template-columns: 1fr 90px 1fr;
+      gap: 26px;
+    }
+
+    .mechanism-side {
+      padding-top: 16px;
+      border-top: 10px solid var(--mechanism-color);
+    }
+
+    .mechanism-side h3 {
+      margin: 0 0 12px;
+      font-family: var(--display);
+      font-size: 34px;
+    }
+
+    .mechanism-side .intent {
+      min-height: 76px;
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.42;
+    }
+
+    .mechanism-line {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 16px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      font-size: 18px;
+      line-height: 1.4;
+    }
+
+    .mechanism-line b { color: var(--mechanism-color); }
+
+    .mechanism-verdict {
+      margin-top: 16px;
+      padding: 13px 15px;
+      border: 3px solid var(--mechanism-color);
+      color: var(--mechanism-color);
+      font-size: 19px;
+      font-weight: 750;
+    }
+
+    .versus-mark {
+      display: grid;
+      place-items: center;
+      color: var(--red);
+      font-family: var(--display);
+      font-size: 66px;
+      font-weight: 900;
+    }
+
+    .boundary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .boundary-item {
+      padding: 17px 18px;
+      border-top: 8px solid var(--boundary-color);
+      border-bottom: 2px solid var(--ink);
+    }
+
+    .boundary-item b {
+      color: var(--boundary-color);
+      font-family: var(--mono);
+      font-size: 16px;
+    }
+
+    .boundary-item h3 {
+      margin: 8px 0 8px;
+      font-size: 24px;
+    }
+
+    .boundary-item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.42;
+    }
+
+    .route-compare {
+      display: grid;
+      grid-template-rows: 52px repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .route-head,
+    .route-band {
+      display: grid;
+      grid-template-columns: 92px 330px 1fr 235px;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .route-head {
+      border-bottom: 2px solid var(--ink);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .route-band {
+      padding: 10px 15px;
+      border-left: 9px solid var(--route-color);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .route-band > b {
+      color: var(--route-color);
+      font-family: var(--display);
+      font-size: 42px;
+    }
+
+    .route-band strong {
+      font-size: 20px;
+      line-height: 1.3;
+    }
+
+    .route-band p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.36;
+    }
+
+    .route-band .route-role {
+      padding: 9px 10px;
+      border: 2px solid var(--route-color);
+      color: var(--route-color);
+      font-size: 16px;
+      font-weight: 750;
+      text-align: center;
+    }
+
     /* Controls stay outside authored slide content. */
     .deck-controls {
       position: fixed;
@@ -1514,14 +2108,15 @@
       color: var(--paper);
       background: rgba(17, 17, 17, 0.82);
       opacity: 0;
-      pointer-events: none;
+      pointer-events: auto;
       transition: opacity 160ms ease;
     }
 
+    .edit-toggle:hover,
+    .edit-toggle:focus-visible,
     .edit-toggle.show,
     .edit-toggle.active {
       opacity: 1;
-      pointer-events: auto;
     }
 
     [contenteditable="true"] {
@@ -1624,400 +2219,389 @@
   </style>
 </head>
 <body>
-  <main class="deck-viewport" aria-label="Day39 Karmada Descheduler 代码契约专项调研演示文稿">
+  <main class="deck-viewport" aria-label="Day39 Karmada Descheduler 任务级重调度专项调研演示文稿">
     <div class="deck-stage" id="deck-stage">
 
       <!-- 01 / Cover -->
-      <section class="slide dark cover active" data-title="代码契约专项调研" aria-label="第 1 页：标题">
-        <div class="cover-mark"><strong>KARMADA / DAY39</strong><span>CODE RESEARCH · STYLE A</span></div>
+      <section class="slide dark cover active" data-title="任务级重放专项调研" aria-label="第 1 页：标题">
+        <div class="cover-mark"><strong>KARMADA / DAY39</strong><span>CODE RESEARCH · PROPOSED TARGET</span></div>
         <div class="cover-body" data-editable>
           <div class="cover-title">
             <p class="day">Karmada Descheduler 专项调研</p>
-            <h1>从 Deployment 白名单<br>到工作负载迁移契约</h1>
-            <p class="lead">代码层回答：为什么首版只闭环 Deployment；扩到更多任务类型会在哪 5 层断开；A-D 四条实现路线如何取舍。</p>
+            <h1>任务级重放<br>从生命周期判定到安全撤销 Placement</h1>
+            <p class="lead">目标行为：只重放“已分配、尚未启动、长期不可调度”的完整任务。强保证要求任务从创建起由 admission handshake（准入握手）保持冻结，Placement 提交后才释放，或 Operator 提供等价锁；否则只能 best-effort。</p>
           </div>
           <aside class="cover-questions">
-            <div class="cover-question reveal"><b>01</b><span>历史事实是什么，工程推断是什么？</span></div>
-            <div class="cover-question reveal" style="--delay: 90ms"><b>02</b><span>“支持所有类型”具体要改哪 5 层？</span></div>
-            <div class="cover-question reveal" style="--delay: 180ms"><b>03</b><span>哪条路线能交付，又不透支正确性？</span></div>
+            <div class="cover-question reveal"><b>01</b><span>为什么 Deployment 只是 2022 首版范围？</span></div>
+            <div class="cover-question reveal" style="--delay: 90ms"><b>02</b><span>怎样把 Placement 当成可撤销的集群租约？</span></div>
+            <div class="cover-question reveal" style="--delay: 180ms"><b>03</b><span>A-D 四种状态来源与控制器归属怎么选？</span></div>
           </aside>
-          <div class="cover-baseline"><span>upstream/master baseline · a5cf21eac</span><span>2026-08-03 · intern research</span></div>
+          <div class="cover-baseline"><span>upstream/master baseline · a5cf21eac</span><span>2026-08-04 · intern research</span></div>
         </div>
       </section>
 
-      <!-- 02 / Thesis and terms -->
-      <section class="slide" data-title="不是一条白名单" aria-label="第 2 页：核心结论与术语">
-        <header class="slide-header"><span class="chapter">01 / 结论</span><span class="question">先把问题改写成代码契约</span><span class="page">02 / 16</span></header>
+      <!-- 02 / Corrected conclusion -->
+      <section class="slide" data-title="本期是撤销放置" aria-label="第 2 页：核心结论与术语">
+        <header class="slide-header"><span class="chapter">01 / 结论</span><span class="question">先明确本期做什么、不做什么</span><span class="page">02 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Executive answer</p><h2>Deployment 支持，不只是一条 GVK 白名单</h2></div>
-          <div class="metric"><strong>5 层</strong><span>类型 · 归属 · 状态 · 放置 · 执行</span></div>
+          <div><p class="eyebrow">Proposed target behavior / 目标行为</p><h2>本期核心不是扩副本算法，而是撤销一份尚未开始的放置</h2></div>
+          <div class="metric"><strong>1 → 0 → 1</strong><span>撤销源 Placement，再由 scheduler 选新目标</span></div>
         </div>
-        <div class="slide-content thesis-layout" data-editable>
-          <div class="thesis-statement reveal">
-            <span class="number">≠</span>
-            <p>加几个 <code>case</code> 只能通过入口；要支持更多工作负载，5 层必须同时回答“删什么、搬什么、何时完成”。</p>
+        <div class="slide-content atomic-thesis" data-editable>
+          <div class="atomic-callout reveal">
+            <strong>Assigned<br>→ Queued</strong>
+            <p>只有完整任务尚未产生业务进度、且执行围栏仍有效时，Descheduler 才撤销源 Placement；任务重新入队后，目标仍由 scheduler 决定。</p>
           </div>
           <div class="term-strip">
-            <article class="term reveal" style="--term-color: var(--green); --delay: 70ms"><b>工作负载（workload）</b><p>需要被调度、运行并持续维护的资源对象。</p></article>
-            <article class="term reveal" style="--term-color: var(--red); --delay: 140ms"><b>副本（replica）</b><p>可被计数和分配的运行实例；并非所有任务都可互换。</p></article>
-            <article class="term reveal" style="--term-color: var(--blue); --delay: 210ms"><b>GVK（API 组 / 版本 / 类型）</b><p>资源类型标识，只说明“它是谁”，不说明迁移语义。</p></article>
-            <article class="term reveal" style="--term-color: var(--orange); --delay: 280ms"><b>Binding（调度结果对象）</b><p><code>ResourceBinding</code> 记录工作负载被分到哪些集群。</p></article>
+            <article class="term reveal" style="--term-color: var(--green); --delay: 70ms"><b>工作负载（workload）</b><p>Karmada 传播和观察的资源对象；本期面向任务型工作负载。</p></article>
+            <article class="term reveal" style="--term-color: var(--red); --delay: 140ms"><b>调度单元（SchedulingUnit）</b><p>不可拆分的完整任务；一次只租用一个目标集群。</p></article>
+            <article class="term reveal" style="--term-color: var(--blue); --delay: 210ms"><b>放置（Placement）</b><p>任务对目标集群的可撤销租约，不是永久归属。</p></article>
+            <article class="term reveal" style="--term-color: var(--orange); --delay: 280ms"><b>Binding（调度结果对象）</b><p><code>ResourceBinding</code> 记录当前目标和驱逐任务。</p></article>
           </div>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>真正边界是五层契约，不是 GVK 数量。</p><p class="next"><b>下一页</b>首版是明确收窄，还是社区否定了其他类型？</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>完整任务重放不拆任务内部结构。</p><p class="next"><b>下一页</b>为什么不能用今天的底座倒推 2022 年作者动机？</p></footer>
       </section>
 
       <!-- 03 / History -->
-      <section class="slide" data-title="历史事实与工程推断" aria-label="第 3 页：历史范围">
-        <header class="slide-header"><span class="chapter">01 / 历史边界</span><span class="question">证据与推断分开陈述</span><span class="page">03 / 16</span></header>
+      <section class="slide" data-title="历史范围与后续底座" aria-label="第 3 页：历史事实">
+        <header class="slide-header"><span class="chapter">01 / 历史</span><span class="question">时间顺序决定证据边界</span><span class="page">03 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Evidence ledger</p><h2>历史只证明“首版收窄”，没有证明“其他类型不该做”</h2></div>
-          <div class="metric"><strong>4 站</strong><span>Issue → 增强提案 → 责任拆分 → 实现</span></div>
+          <div><p class="eyebrow">Evidence timeline</p><h2>Deployment 是首版范围；整工作负载驱逐底座在后续版本形成</h2></div>
+          <div class="metric"><strong>2022 → 2023</strong><span>先有专用算法，后有整工作负载驱逐底座</span></div>
         </div>
         <div class="slide-content history-layout" data-editable>
           <div class="history-line">
-            <article class="history-item reveal" style="--item-color: var(--blue)"><b>ISSUE #697</b><h3>提出跨集群纠偏</h3><p>动机较宽；讨论同时担心新增组件负担与重调度状态边界。</p></article>
-            <article class="history-item reveal" style="--item-color: var(--green); --delay: 80ms"><b>KEP #697</b><h3>增强提案只承诺 Story 1</h3><p>Karmada Enhancement Proposal（KEP）中的两个用户故事都用 Deployment；只处理资源不足导致 Pod 长期不可调度。</p></article>
-            <article class="history-item reveal" style="--item-color: var(--orange); --delay: 160ms"><b>PR #726</b><h3>拆分组件责任</h3><p>Pull Request（PR）中，Descheduler 下调旧集群副本；scheduler 看到缺口后决定新集群。</p></article>
-            <article class="history-item reveal" style="--item-color: var(--red); --delay: 240ms"><b>PR #1380 / #1392</b><h3>落地纵向切片</h3><p>estimator 与 Descheduler 首版都硬编码 Deployment，并留下抽象 TODO。</p></article>
+            <article class="history-item reveal" style="--item-color: var(--red)"><b>2021 · KEP #697</b><h3>提案限定首个故事</h3><p>示例使用 Deployment，处理资源不足导致的长期不可调度 Pod。</p></article>
+            <article class="history-item reveal" style="--item-color: var(--orange); --delay: 80ms"><b>2022-02 · #1392</b><h3>首版合入</h3><p><code>supportedGVKs</code> 与资源估算器（estimator）按 Deployment 定制。GVK（API 组 / 版本 / 类型）只是准入标识。</p></article>
+            <article class="history-item reveal" style="--item-color: var(--green); --delay: 160ms"><b>2022-08 · 2673a991d</b><h3>GracefulEviction 辅助函数</h3><p><code>GracefulEvictCluster</code> 在首版半年后加入。</p></article>
+            <article class="history-item reveal" style="--item-color: var(--blue); --delay: 240ms"><b>2023-04 · d06fe / 80eab</b><h3>驱逐底座形成</h3><p><code>ApplicationFailover</code> 与 <code>ClusterEviction</code> 陆续进入主干。</p></article>
           </div>
           <div class="truth-ledger">
-            <article class="truth-block reveal" style="--truth-color: var(--green); --delay: 280ms"><h3><span class="flag">直接事实</span> 可以确定</h3><p>KEP 和示例以 Deployment 为目标；当前代码仍是 Deployment 专用链。没有 review 文字明确写“拒绝 Job / StatefulSet”。</p></article>
-            <article class="truth-block reveal" style="--truth-color: var(--orange); --delay: 340ms"><h3><span class="flag inference">工程推断</span> 需要注明</h3><p>Deployment 最容易把 desired、ready、assigned、unschedulable 都压成可互换整数，因此适合做 best-effort 标量闭环；这是代码结构推断，不是 maintainer 原话。</p></article>
+            <article class="truth-block reveal" style="--truth-color: var(--green); --delay: 280ms"><h3><span class="flag">直接事实</span> 能从提交与源码确认</h3><p>首版就是 Deployment 范围；当时尚没有后来这套 <code>GracefulEvictionTasks → ClusterEviction → Healthy（健康）/ timeout（超时）</code> 的机械动作底座。</p></article>
+            <article class="truth-block reveal" style="--truth-color: var(--orange); --delay: 340ms"><h3><span class="flag inference">证据边界</span> 不能倒推主观动机</h3><p>没有 review 证据证明作者主观排斥其他任务类型。今天可以选择新路线，是因为底座变了，不是历史结论被推翻。</p></article>
           </div>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>历史选择了可验证的最小可行闭环（MVP），不等于判定其他类型无价值。</p><p class="next"><b>下一页</b>这条 Deployment 专用链在代码里怎样走完？</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>“只支持 Deployment”是首版实现范围，不是通用任务的根本障碍。</p><p class="next"><b>下一页</b>抛开资源类型，一个任务调度系统真正管理什么对象？</p></footer>
       </section>
 
-      <!-- 04 / Current code chain -->
-      <section class="slide" data-title="当前代码链" aria-label="第 4 页：当前代码运行链">
-        <header class="slide-header"><span class="chapter">02 / 当前实现</span><span class="question">谁观察、谁计算、谁写入、谁继续</span><span class="page">04 / 16</span></header>
+      <!-- 04 / Scheduling model -->
+      <section class="slide" data-title="两级调度队列" aria-label="第 4 页：Karmada 与成员集群两级队列">
+        <header class="slide-header"><span class="chapter">02 / 调度本质</span><span class="question">Binding 先选集群，Pod 再选节点</span><span class="page">04 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Runtime chain</p><h2>Descheduler 只制造缺口，scheduler 决定新位置</h2></div>
-          <div class="metric"><strong>5 步</strong><span>scan · filter · count · subtract · reschedule</span></div>
+          <div><p class="eyebrow">Current code essence / 两级队列</p><h2>一级排 Binding 选集群；二级排 Pod 选节点</h2></div>
+          <div class="metric"><strong>2 LEVELS</strong><span>Karmada queue → member queue</span></div>
         </div>
-        <div class="slide-content current-chain" data-editable>
-          <div class="chain-track">
-            <article class="chain-step reveal" style="--step-color: var(--blue)"><span class="step-no">01 / OBSERVE</span><h3>周期扫描 Binding</h3><p>只从命名空间级（namespaced）<code>ResourceBinding</code> 缓存观察器（informer）读取候选。</p><code>descheduler.go · descheduleOnce</code></article>
-            <div class="chain-arrow">→</div>
-            <article class="chain-step reveal" style="--step-color: var(--red); --delay: 70ms"><span class="step-no">02 / FILTER</span><h3>卡住入口</h3><p>要求 <code>Deployment</code>；策略须为 <code>Divided + Aggregated</code>，或 <code>Divided + Weighted + DynamicWeight</code>。</p><code>core/filter.go · FilterBindings</code></article>
-            <div class="chain-arrow">→</div>
-            <article class="chain-step reveal" style="--step-color: var(--orange); --delay: 140ms"><span class="step-no">03 / ESTIMATE</span><h3>找到长期异常 Pod</h3><p>成员集群取 Deployment → current ReplicaSet → owned Pods，计数 <code>PodScheduled=False</code>。</p><code>server/replica/replica.go</code></article>
-            <div class="chain-arrow">→</div>
-            <article class="chain-step reveal" style="--step-color: var(--red); --delay: 210ms"><span class="step-no">04 / WRITE</span><h3>做标量减法</h3><p>仅在 <code>target &lt; Ready ≤ Spec</code> 时抬高 target；缺失时 <code>Ready=-1</code>，保护不生效。</p><code>descheduler.go · updateScheduleResult</code></article>
-            <div class="chain-arrow">→</div>
-            <article class="chain-step reveal" style="--step-color: var(--green); --delay: 280ms"><span class="step-no">05 / PLACE</span><h3>scheduler 填补缺口</h3><p><code>metadata.generation</code> 变化触发 <code>ScaleSchedule</code>（扩缩调度），Binding controller 应用新副本数。</p><code>scheduler.go · division_algorithm.go</code></article>
+        <div class="slide-content model-layout" data-editable>
+          <div class="lifecycle-track">
+            <article class="lifecycle-node reveal" style="--node-color: var(--ink)"><b>01 / LEVEL 1</b><h3>Binding 排队</h3><p>Karmada scheduler queue <code>Pop</code> Binding，执行集群过滤与打分。<code>scheduler.go:359-376</code></p></article>
+            <div class="lifecycle-arrow">→</div>
+            <article class="lifecycle-node reveal" style="--node-color: var(--blue); --delay: 70ms"><b>02 / ASSIGN</b><h3>提交 Placement</h3><p>选集群成功后写 Binding；<code>handleErr(nil) → Forget</code> 清本轮退避记录。<code>scheduler.go:939-956</code></p></article>
+            <div class="lifecycle-arrow">→</div>
+            <article class="lifecycle-node reveal" style="--node-color: var(--orange); --delay: 140ms"><b>03 / LEVEL 2</b><h3>Pod 排队</h3><p>Work 下发后，成员 kube-scheduler queue 排 Pod；资源不足时长期 Unschedulable。</p></article>
+            <div class="lifecycle-arrow">→</div>
+            <article class="lifecycle-node reveal" style="--node-color: var(--red); --delay: 210ms"><b>04 / REVOKE</b><h3>撤回一级</h3><p>Descheduler 撤销 Assigned Placement 并排除 source，让 Binding 回一级重选集群。</p></article>
           </div>
-          <div class="chain-result reveal" style="--delay: 350ms">
-            <p><strong>职责边界：</strong>Descheduler 不选择具体 Pod，也不直接指定新集群；它改旧调度结果，让既有 scheduler 再走过滤、打分和容量估算。</p>
-            <div class="equation-small"><span>desired</span><b>−</b><span>Σ assigned</span><b>=</b><span class="accent-green">deficit</span></div>
+          <div class="primitive-strip">
+            <article class="primitive reveal" style="--primitive-color: var(--blue); --delay: 250ms"><b>DEMAND / 两级资源视图</b><h3>集群容量 ≠ 节点可放置</h3><p>Karmada 估算集群；成员 kube-scheduler 判断具体节点。</p></article>
+            <article class="primitive reveal" style="--primitive-color: var(--green); --delay: 300ms"><b>PLACEMENT / 一级结果</b><h3>Assigned 不等于 Started</h3><p>Binding 已选集群并被 Forget，Pod 仍可能卡在二级队列。</p></article>
+            <article class="primitive reveal" style="--primitive-color: var(--orange); --delay: 350ms"><b>SIGNAL / 二级卡住</b><h3>观察 Pod Unschedulable</h3><p>它是撤回候选证据，不等于可以忽略任务生命周期与围栏。</p></article>
+            <article class="primitive reveal" style="--primitive-color: var(--red); --delay: 400ms"><b>REPLAY / 退回一级</b><h3>撤 Placement，不调 Pod</h3><p>Descheduler 只撤回 Binding；scheduler 仍负责选择新集群。</p></article>
           </div>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>观察与修正归 Descheduler，目标选择仍归 scheduler。</p><p class="next"><b>下一页</b>为什么 Deployment 能让这条链全部用整数闭合？</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>Descheduler 处理的是“一级已成功、二级长期卡住”的跨层回退，不是再造 scheduler。</p><p class="next"><b>下一页</b>把两级队列放到千问 Pending 任务上看一次。</p></footer>
       </section>
 
-      <!-- 05 / Deployment closure -->
-      <section class="slide" data-title="Deployment 的整数闭环" aria-label="第 5 页：Deployment 为什么闭环">
-        <header class="slide-header"><span class="chapter">02 / 具体例子</span><span class="question">10 个副本中，cluster-a 有 2 个长期不可调度</span><span class="page">05 / 16</span></header>
+      <!-- 05 / Qwen example -->
+      <section class="slide" data-title="千问未启动任务" aria-label="第 5 页：千问场景">
+        <header class="slide-header"><span class="chapter">02 / 千问场景</span><span class="question">Applied 不等于业务已经 Running</span><span class="page">05 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Scalar closure</p><h2>四个数指向同一种可互换副本</h2></div>
-          <div class="metric"><strong>6 − 2</strong><span>cluster-a 新目标 = 4</span></div>
+          <div><p class="eyebrow">Proposed admission / 目标准入</p><h2>只搬一个完整、未启动、已证明放不下的任务</h2></div>
+          <div class="metric"><strong>AND</strong><span>Assigned · NotStarted · Infeasible</span></div>
         </div>
-        <div class="slide-content integer-closure" data-editable>
-          <div class="integer-row">
-            <article class="integer-cell reveal" style="--cell-color: var(--blue)"><span>对象期望</span><strong>10</strong><b>Deployment.spec.replicas</b></article>
-            <article class="integer-cell reveal" style="--cell-color: var(--orange); --delay: 70ms"><span>cluster-a 已分配</span><strong>6</strong><b>TargetCluster.Replicas</b></article>
-            <article class="integer-cell reveal" style="--cell-color: var(--green); --delay: 140ms"><span>cluster-a 已就绪</span><strong>4</strong><b>status.readyReplicas</b></article>
-            <article class="integer-cell reveal" style="--cell-color: var(--red); --delay: 210ms"><span>长期不可调度</span><strong>2</strong><b>PodScheduled=False</b></article>
-          </div>
-          <div class="closure-equations reveal" style="--delay: 280ms">
-            <article class="closure-equation"><b>DESCHEDULER</b><p><code>target = max(6 − 2, ready 4)</code><br>把 cluster-a 的目标写成 4。</p></article>
-            <div class="closure-arrow">→</div>
-            <article class="closure-equation"><b>BINDING</b><p>若其他集群仍分配 4，则总分配从 10 降到 8，形成 2 个副本缺口。</p></article>
-            <div class="closure-arrow">→</div>
-            <article class="closure-equation"><b>SCHEDULER</b><p><code>10 − Σassigned 8 = 2</code><br>沿原调度能力重新放置 2 个副本。</p></article>
-          </div>
-        </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>Deployment 用同一个标量跑通 best-effort 链路，但不是迁移事务。</p><p class="next"><b>下一页</b>换成其他类型，这个标量会在哪五层失真？</p></footer>
-      </section>
-
-      <!-- 06 / Five layers -->
-      <section class="slide" data-title="五层代码契约" aria-label="第 6 页：五层代码契约总览">
-        <header class="slide-header"><span class="chapter">03 / 断点总览</span><span class="question">“支持所有类型”不是单点改动</span><span class="page">06 / 16</span></header>
-        <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Contract breaks</p><h2>入口放开以后，还有四层会继续拦住</h2></div>
-          <div class="metric"><strong>L1→L5</strong><span>任一层不成立，都不能安全迁移</span></div>
-        </div>
-        <div class="slide-content layer-overview" data-editable>
-          <figure class="diagram-frame reveal"><img src="day39-karmada-descheduler-code-contract-breaks.png" alt="Current Karmada Descheduler pipeline and five contract breaks"></figure>
-          <div class="layer-ribbon">
-            <article class="layer-chip reveal" style="--layer-color: var(--blue); --delay: 70ms"><b>L1</b><h3>类型与工作单元</h3><p>它能否缩减？计数单位是什么？</p></article>
-            <article class="layer-chip reveal" style="--layer-color: var(--green); --delay: 120ms"><b>L2</b><h3>Pod 归属</h3><p>异常 Pod 应归到哪个组件或控制器？</p></article>
-            <article class="layer-chip reveal" style="--layer-color: var(--orange); --delay: 170ms"><b>L3</b><h3>运行状态</h3><p>ready、完成进度与故障怎样解释？</p></article>
-            <article class="layer-chip reveal" style="--layer-color: var(--red); --delay: 220ms"><b>L4</b><h3>放置结果</h3><p>Binding 能否表达组件、身份与缺口？</p></article>
-            <article class="layer-chip reveal" style="--layer-color: var(--ink); --delay: 270ms"><b>L5</b><h3>执行与完成</h3><p>何时扩目标、缩来源、回滚并确认完成？</p></article>
-          </div>
-        </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>GVK 准入白名单只是 L1 的第一行代码。</p><p class="next"><b>下一页</b>先看入口和 Pod 归属为什么不能靠 selector 猜。</p></footer>
-      </section>
-
-      <!-- 07 / L1 L2 -->
-      <section class="slide" data-title="类型能力与 Pod 归属" aria-label="第 7 页：L1 与 L2">
-        <header class="slide-header"><span class="chapter">03 / L1 + L2</span><span class="question">先确定能做什么，再确定异常属于谁</span><span class="page">07 / 16</span></header>
-        <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Capability & ownership</p><h2>资源类型和 Pod 归属，是两个独立问题</h2></div>
-          <div class="metric"><strong>3 处</strong><span>filter · member fetch · owned Pods</span></div>
-        </div>
-        <div class="slide-content two-contracts" data-editable>
-          <article class="contract-column reveal" style="--contract-color: var(--blue)">
-            <span class="label">L1 / TYPE CAPABILITY</span><h3>当前能力由硬编码决定</h3>
-            <p>即使资源实现了 <code>GetReplicas</code>，也无法自动进入 Descheduler；当前没有“允许纠偏、计数单位、安全边界”的通用能力描述。</p>
-            <div class="code-stack">
-              <div><code>supportedGVKs</code><span>仅 <code>apps/v1 Deployment</code></span></div>
-              <div><code>validatePlacement</code><span>仅 <code>Dynamic / Divided</code></span></div>
-              <div><code>supportedGVRs</code><span>workload 缓存仅 Deployment；Pod / ReplicaSet 是辅助 lister</span></div>
+        <div class="slide-content scenario-layout" data-editable>
+          <section class="scenario-snapshot reveal">
+            <h3>source（源集群）= cluster-a</h3>
+            <div class="snapshot-row"><b>PLACEMENT</b><span>策略声明单集群，Binding 当前只有 <code>cluster-a</code>。</span></div>
+            <div class="snapshot-row"><b>DELIVERY</b><span><code>Applied=true</code>：对象已下发成功，不代表任务已运行。</span></div>
+            <div class="snapshot-row"><b>LIFECYCLE</b><span>任务解释器返回 <code>NotStarted</code>，没有业务进度。</span></div>
+            <div class="snapshot-row"><b>FEASIBILITY</b><span>状态报告 <code>Pending / Unschedulable</code>，且原因指向资源不可满足。</span></div>
+            <div class="snapshot-row"><b>DURATION</b><span>异常持续 12 分钟，超过策略阈值 10 分钟。</span></div>
+            <div class="snapshot-row"><b>FENCE / 围栏</b><span>任务从创建起由准入握手保持冻结；写 Binding 前复核 observed revision（已观察版本），提交后才释放。</span></div>
+            <p class="source-line">示意值用于说明判定；具体字段由千问资源解释器映射。</p>
+          </section>
+          <section class="scenario-decision reveal" style="--delay: 120ms">
+            <h3>为什么本次可以自动撤销？</h3>
+            <div class="and-chain">
+              <article class="and-term"><b>PLACEMENT STATE</b><strong>Assigned</strong></article>
+              <div class="and-symbol">∧</div>
+              <article class="and-term"><b>EXECUTION STATE</b><strong>NotStarted</strong></article>
+              <div class="and-symbol">∧</div>
+              <article class="and-term"><b>SCHEDULABILITY</b><strong>Infeasible</strong></article>
             </div>
-            <div class="stop-band">放开 GVK 只会把不懂的对象送进下一处报错。</div>
-          </article>
-          <article class="contract-column reveal" style="--contract-color: var(--green); --delay: 120ms">
-            <span class="label">L2 / POD OWNERSHIP</span><h3>异常 Pod 必须可追溯</h3>
-            <p>Deployment 有稳定路径：current ReplicaSet 再到 owned Pods。其他类型可能直接拥有 Pod、经过子控制器，或同时包含多个组件。</p>
-            <div class="owner-path"><span>Deployment</span><i></i><span>current ReplicaSet</span><i></i><span>owned Pods</span></div>
-            <div class="code-stack">
-              <div><code>GetUnschedulableReplicas</code><span><code>switch gvk</code> 仅 Deployment</span></div>
-              <div><code>getPodsForDeployment</code><span>先找当前 ReplicaSet，再按 owner UID（对象唯一标识）取 Pod</span></div>
-              <div><code>缺失契约</code><span>组件 / 版本（revision）/ 归属链 / 工作单元身份</span></div>
-            </div>
-            <div class="stop-band">selector（标签选择器）可能命中旧版本或兄弟组件，不能替代 owner 关系。</div>
-          </article>
+            <p class="scenario-result"><strong class="accent-green">动作：</strong>围栏与版本复核通过后调用 <code>GracefulEvictCluster("cluster-a")</code>，撤销源 Placement 并重排完整任务。</p>
+            <p class="scenario-result"><strong class="accent-red">边界：</strong>策略拒绝 <code>Running</code> / 部分运行；没有围栏时仍有竞态，只能降级为 best-effort。</p>
+          </section>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>“能缩减”与“这些 Pod 属于它”都要有显式契约。</p><p class="next"><b>下一页</b>找到 Pod 后，ready 仍不是所有任务的共同语言。</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>关键是“尚未开始且当前放置不可行”，不是 Pod 数量。</p><p class="next"><b>下一页</b>每个生命周期状态分别由谁处理？</p></footer>
       </section>
 
-      <!-- 08 / L3 -->
-      <section class="slide" data-title="运行状态语义" aria-label="第 8 页：L3 运行状态">
-        <header class="slide-header"><span class="chapter">03 / L3</span><span class="question">同一个数字，在不同控制器里含义不同</span><span class="page">08 / 16</span></header>
+      <!-- 06 / State policy -->
+      <section class="slide" data-title="状态与动作边界" aria-label="第 6 页：生命周期动作矩阵">
+        <header class="slide-header"><span class="chapter">02 / 状态边界</span><span class="question">只自动处理一个交叉状态</span><span class="page">06 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Runtime semantics</p><h2><code>readyReplicas</code> 不是通用任务进度</h2></div>
-          <div class="metric"><strong>1 字段</strong><span>当前 helper 顶层硬读 readyReplicas</span></div>
+          <div><p class="eyebrow">Proposed state policy / 目标策略</p><h2>策略只接受 Assigned × NotStarted；实现还要挡住状态竞态</h2></div>
+          <div class="metric"><strong>1 / 5</strong><span>只有一类状态允许自动重放</span></div>
         </div>
-        <div class="slide-content semantics-layout" data-editable>
-          <article class="semantic-lane reveal" style="--semantic-color: var(--green)"><h3>Deployment</h3><div class="status-shape">desired<br>readyReplicas<br>unschedulable Pods</div><p>副本近似同质，可用 ready 作为缩减下界。</p><div class="verdict">标量语义闭合</div></article>
-          <article class="semantic-lane reveal" style="--semantic-color: var(--blue); --delay: 80ms"><h3>StatefulSet</h3><div class="status-shape">readyReplicas<br>currentRevision<br>ordinal + PVC</div><p>“减 2”没有说明是哪两个序号；PVC（持久卷声明）也需要明确恢复位置。</p><div class="verdict">有数量，不等于可互换</div></article>
-          <article class="semantic-lane reveal" style="--semantic-color: var(--orange); --delay: 160ms"><h3>Job</h3><div class="status-shape">parallelism<br>active / succeeded<br>failed / completions</div><p><code>parallelism</code> 是并发度，<code>succeeded</code> 是已完成进度；不能把终态 Pod 当普通副本。</p><div class="verdict">并发度 ≠ 剩余工作</div></article>
-          <article class="semantic-lane reveal" style="--semantic-color: var(--red); --delay: 240ms"><h3>Flink / AI</h3><div class="status-shape">component roles<br>gang readiness<br>checkpoint / jobId</div><p>单个 worker Ready 不能证明作业可切换；gang（成组调度）和 checkpoint（检查点）决定能否恢复。</p><div class="verdict">需要领域完成条件</div></article>
-          <div class="semantics-risk reveal" style="--delay: 300ms">当前风险：缺失 <code>readyReplicas</code> 会得到 <code>Ready=-1</code>，但流程不会停止；代码不校验状态时效，字段不是 JSON number 时还可能 panic。</div>
+        <div class="slide-content state-policy" data-editable>
+          <article class="state-row reveal" style="--state-color: var(--ink)"><span class="state-name">QUEUED</span><span class="meaning">没有有效 Placement，任务本来就在等待调度。</span><span class="action">scheduler 负责；Descheduler 不处理</span></article>
+          <article class="state-row reveal" style="--state-color: var(--green); --delay: 70ms"><span class="state-name">ASSIGNED × NOTSTARTED</span><span class="meaning">对象已下发，但任务未开始；放置不可行并持续超过阈值。</span><span class="action">唯一自动路径：撤销 Placement 后重排</span></article>
+          <article class="state-row reveal" style="--state-color: var(--blue); --delay: 140ms"><span class="state-name">RUNNING / PARTIAL</span><span class="meaning">已经有执行进度，整任务重放可能造成重复计算或副作用。</span><span class="action">准入拒绝；并用执行围栏阻断竞态</span></article>
+          <article class="state-row reveal" style="--state-color: var(--orange); --delay: 210ms"><span class="state-name">SUCCEEDED / FAILED</span><span class="meaning">成功或失败都属于 Terminal；失败原因未必是集群放置。</span><span class="action">交任务控制器、TTL（生存时间清理）或显式失败策略</span></article>
+          <article class="state-row reveal" style="--state-color: var(--red); --delay: 280ms"><span class="state-name">UNKNOWN</span><span class="meaning">状态缺失、过期、解释失败或证据相互冲突。</span><span class="action">fail closed（保守拒绝）并告警</span></article>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>状态解释必须按工作负载语义定义，不能硬读一个字段。</p><p class="next"><b>下一页</b>即使状态解释正确，Binding 也未必装得下结果。</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>目标契约拒绝 Running；事后再 suspend 仍会竞态，强保证必须从创建时就持有围栏。</p><p class="next"><b>下一页</b>谁把各类任务状态翻译成统一生命周期？</p></footer>
       </section>
 
-      <!-- 09 / L4 -->
-      <section class="slide" data-title="放置结果表达" aria-label="第 9 页：L4 放置模型">
-        <header class="slide-header"><span class="chapter">03 / L4</span><span class="question">全局组件结构如何落到每个集群</span><span class="page">09 / 16</span></header>
+      <!-- 07 / Lifecycle signal contract -->
+      <section class="slide" data-title="生命周期解释契约" aria-label="第 7 页：状态来源">
+        <header class="slide-header"><span class="chapter">03 / 状态来源</span><span class="question">让工作负载作者定义开始与终止</span><span class="page">07 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Placement model</p><h2><code>Components</code> 已有，逐集群组件结果仍缺失</h2></div>
-          <div class="metric"><strong>向量 → 标量</strong><span>信息在 TargetCluster 处丢失</span></div>
+          <div><p class="eyebrow">Normalized lifecycle</p><h2>Descheduler 消费统一 SchedulingState（调度状态），不猜 CR 字段</h2></div>
+          <div class="metric"><strong>B 核心</strong><span>ResourceInterpreter（资源解释器）承载领域语义</span></div>
         </div>
-        <div class="slide-content placement-layout" data-editable>
-          <article class="placement-side reveal" style="--placement-color: var(--blue)">
-            <h3>ResourceBindingSpec：描述全局需求</h3>
-            <div class="shape-code"><b>Components[]</b><br>{ name: "master", replicas: 1 }<br>{ name: "worker", replicas: 8 }<br><br><b>Replicas</b>: legacy scalar</div>
-            <p><code>GetComponents</code> 能提取多 Pod template 的资源需求，但当前适用路径要求整个组件集合只落到一个集群。</p>
-          </article>
-          <div class="placement-break reveal" style="--delay: 120ms">≠</div>
-          <article class="placement-side reveal" style="--placement-color: var(--red); --delay: 180ms">
-            <h3>TargetCluster：只保存逐集群标量</h3>
-            <div class="shape-code"><b>TargetCluster</b> {<br>&nbsp;&nbsp;Name string<br>&nbsp;&nbsp;Replicas int32<br>}<br><br><span class="accent-red">no component / ordinal / task</span></div>
-            <p>无法表达“cluster-a 移走 2 个 worker，但保留 master”，也无法检测组件互换或分别扩缩。</p>
-            <div class="source-quote"><span class="flag">源码事实</span> <code>pkg/util/binding.go</code> 明确指出：完整方案需要改变调度结果存储，并可能扩展 <code>TargetCluster</code> 的逐组件信息。</div>
-          </article>
+        <div class="slide-content signal-layout" data-editable>
+          <section class="hook-contract reveal">
+            <h3><span class="flag proposal">建议接口</span> 两个最小 hook（扩展接口）</h3>
+            <div class="hook-code"><span class="new-api">GetTaskLifecycle</span>(object, status)<br>→ NotStarted | Running | Succeeded | Failed | Unknown<br><br><span class="new-api">IsRelocatable</span>(object, status)<br>→ allowed, reason, evidence</div>
+            <p>接口名是设计建议，不是当前 API。工作负载作者映射原生字段；同一生命周期结果必须同时服务准入判断与迁移完成判断。</p>
+            <p><span class="flag inference">当前缺口</span> <code>GracefulEvictionTask</code> 只读取 Health / timeout，尚未接入这套 SchedulingState。</p>
+          </section>
+          <section class="signal-sources reveal" style="--delay: 120ms">
+            <h3>每个事实只认一个权威来源</h3>
+            <div class="signal-row"><b>是否 Assigned</b><span><code>binding.Spec.Clusters</code> 与已生效 Placement。</span></div>
+            <div class="signal-row"><b>是否 Applied</b><span><code>AggregatedStatusItem.Applied</code>，只证明下发。</span></div>
+            <div class="signal-row"><b>是否 Started</b><span>ResourceInterpreter 的任务生命周期 hook。</span></div>
+            <div class="signal-row"><b>是否 Infeasible</b><span>优先使用 CR status。Pod Condition 里稳定结构化证据只有 <code>PodScheduled=False / Unschedulable</code>；GPU 等细节常在 Message，需新增诊断契约。</span></div>
+            <div class="signal-row"><b>是否超时</b><span>Descheduler 记录首次观察时间并按策略阈值判断。</span></div>
+            <div class="signal-stop">任何关键来源缺失或状态过期，都返回 Unknown，不自动驱逐。</div>
+          </section>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>当前 Binding 只能表达“集群有 N 个”，不能表达“哪类任务有多少”。</p><p class="next"><b>下一页</b>结果能表达之后，还要定义谁执行、何时完成。</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>生命周期语义归工作负载解释器，并贯穿准入与完成两个阶段。</p><p class="next"><b>下一页</b>真正执行前，必须连续通过哪些门？</p></footer>
       </section>
 
-      <!-- 10 / L5 -->
-      <section class="slide" data-title="执行与完成契约" aria-label="第 10 页：L5 执行与完成">
-        <header class="slide-header"><span class="chapter">03 / L5</span><span class="question">数量变化不等于迁移已经安全完成</span><span class="page">10 / 16</span></header>
+      <!-- 08 / Decision gates -->
+      <section class="slide" data-title="自动迁移准入门" aria-label="第 8 页：准入条件">
+        <header class="slide-header"><span class="chapter">03 / 决策门</span><span class="question">缺一个条件都不自动迁移</span><span class="page">08 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Actuation & completion</p><h2>当前执行只有 <code>ReviseReplica</code>，没有迁移事务</h2></div>
-          <div class="metric"><strong>1 标量</strong><span>对象修订入口只接收 replica</span></div>
+          <div><p class="eyebrow">Proposed gates / 目标准入门</p><h2>先证明“可撤销”，再写 Binding</h2></div>
+          <div class="metric"><strong>6 / 6</strong><span>全部为真才进入执行链</span></div>
         </div>
-        <div class="slide-content actuation-layout" data-editable>
-          <div class="actuation-now">
-            <article class="act-node reveal" style="--act-color: var(--red)"><b>CURRENT 01</b><h3>改 Binding</h3><p><code>binding.Spec.Clusters[i].Replicas = target</code></p></article>
-            <div class="act-arrow">→</div>
-            <article class="act-node reveal" style="--act-color: var(--blue); --delay: 80ms"><b>CURRENT 02</b><h3>scheduler 补缺口</h3><p>选择目标集群，但没有 workload-specific 完成任务。</p></article>
-            <div class="act-arrow">→</div>
-            <article class="act-node reveal" style="--act-color: var(--green); --delay: 160ms"><b>CURRENT 03</b><h3>controller 改对象</h3><p><code>ReviseReplica(object, int64)</code> 写入副本或 Job 并发度。</p></article>
+        <div class="slide-content gate-layout" data-editable>
+          <div class="gate-grid">
+            <article class="gate-item reveal" style="--gate-color: var(--blue)"><b>GATE 01 / OPT-IN</b><h3>显式启用</h3><p>策略声明允许自动重放；默认不扩大现有行为。</p></article>
+            <article class="gate-item reveal" style="--gate-color: var(--green); --delay: 60ms"><b>GATE 02 / ATOMIC</b><h3>单目标 Placement</h3><p>完整任务只占一个集群，不接受 Duplicated（复制）/ Divided（分片）模式。</p></article>
+            <article class="gate-item reveal" style="--gate-color: var(--orange); --delay: 120ms"><b>GATE 03 / REVISION</b><h3>Assigned、Applied 且版本一致</h3><p>捕获 Binding 与任务 observed revision，拒绝陈旧观察。</p></article>
+            <article class="gate-item reveal" style="--gate-color: var(--green); --delay: 180ms"><b>GATE 04 / FENCE</b><h3>NotStarted 且创建时围栏仍有效</h3><p>准入握手或等价 Operator lock 持续冻结；事后 suspend 不算强围栏。</p></article>
+            <article class="gate-item reveal" style="--gate-color: var(--red); --delay: 240ms"><b>GATE 05 / INFEASIBLE</b><h3>长期不可调度</h3><p>Pending / Unschedulable 原因持续超过阈值，不把短暂抖动当失败。</p></article>
+            <article class="gate-item reveal" style="--gate-color: var(--ink); --delay: 300ms"><b>GATE 06 / MEMORY</b><h3>无在途任务与冷却</h3><p>同一 source 未处于 eviction、exclusion 或 cooldown，避免重复触发。</p></article>
           </div>
-          <div class="missing-contracts">
-            <article class="missing-contract reveal" style="--missing-color: var(--blue); --delay: 200ms"><b>WORK UNIT</b><p>要迁走哪个 component / ordinal / task？</p></article>
-            <article class="missing-contract reveal" style="--missing-color: var(--orange); --delay: 250ms"><b>ORDER</b><p>先补目标还是先缩来源？何时允许切换？</p></article>
-            <article class="missing-contract reveal" style="--missing-color: var(--green); --delay: 300ms"><b>COMPLETION</b><p>目标就绪、组件成组就绪、检查点恢复，哪个才算完成？</p></article>
-            <article class="missing-contract reveal" style="--missing-color: var(--red); --delay: 350ms"><b>ROLLBACK</b><p>目标失败后如何恢复旧分配并避免重复执行？</p></article>
-            <article class="missing-contract reveal" style="--missing-color: var(--ink); --delay: 400ms"><b>OWNERSHIP</b><p>Descheduler、scheduler、领域控制器谁是唯一写入方？</p></article>
+          <div class="all-gates reveal" style="--delay: 360ms"><strong>ALL TRUE</strong><span>才调用 <code>GracefulEvictCluster(source)</code>；缺围栏时只能显式进入 best-effort 模式，不能给绝对安全承诺。</span></div>
+        </div>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>状态正确性优先于迁移覆盖率。</p><p class="next"><b>下一页</b>通过准入后，现有 Karmada 底座怎样完成闭环？</p></footer>
+      </section>
+
+      <!-- 09 / Whole workload relocation -->
+      <section class="slide" data-title="整工作负载重放闭环" aria-label="第 9 页：执行闭环">
+        <header class="slide-header"><span class="chapter">04 / 执行闭环</span><span class="question">复用已有驱逐任务，不发明第二套 scheduler</span><span class="page">09 / 16</span></header>
+        <div class="slide-title" data-editable>
+          <div><p class="eyebrow">Proposed execution chain / 目标闭环</p><h2>撤销源租约，排除原集群，按任务生命周期清理旧 Work</h2></div>
+          <div class="metric"><strong>5 步</strong><span>detect · revoke · exclude · place · retire</span></div>
+        </div>
+        <div class="slide-content whole-flow" data-editable>
+          <div class="relocation-track">
+            <article class="relocation-step reveal" style="--step-color: var(--red)"><b>01 / DETECT</b><h3>发现未启动失败</h3><p>Assigned、Applied、NotStarted、Infeasible 持续超阈值。</p></article>
+            <div class="relocation-arrow">→</div>
+            <article class="relocation-step reveal" style="--step-color: var(--orange); --delay: 70ms"><b>02 / REVOKE</b><h3>写驱逐任务</h3><p><code>GracefulEvictCluster(source)</code> 从 <code>Clusters</code> 移除源并追加 task。</p></article>
+            <div class="relocation-arrow">→</div>
+            <article class="relocation-step reveal" style="--step-color: var(--blue); --delay: 140ms"><b>03 / EXCLUDE</b><h3>源集群不可再选</h3><p><code>ClusterEviction</code> 读取 task，在 Filter（过滤）阶段拒绝 source。</p></article>
+            <div class="relocation-arrow">→</div>
+            <article class="relocation-step reveal" style="--step-color: var(--green); --delay: 210ms"><b>04 / PLACE</b><h3>scheduler 选新目标</h3><p>沿现有过滤、打分和资源估算产生新单集群 Placement。</p></article>
+            <div class="relocation-arrow">→</div>
+            <article class="relocation-step reveal" style="--step-color: var(--ink); --delay: 280ms"><b>05 / RETIRE</b><h3>按生命周期确认完成</h3><p>同一 revision 在新目标进入 Running / Succeeded 才记成功；timeout 单列失败，再按策略决定清源。</p></article>
+          </div>
+          <div class="completion-band">
+            <article class="reveal" style="--band-color: var(--green); --delay: 320ms"><b>RETENTION ≠ COMPLETION</b><p><code>PurgeMode=Gracefully</code> 只延后删旧 Work；普通 task 仍仅按 Health / timeout 收尾。</p></article>
+            <article class="reveal" style="--band-color: var(--blue); --delay: 360ms"><b>SIMPLE SCHEDULER</b><p>Descheduler 写纠偏意图；现有 <code>ClusterEviction</code> 排源，scheduler 仍只做过滤、打分与选址。</p></article>
+            <article class="reveal" style="--band-color: var(--red); --delay: 400ms"><b>FENCE REQUIRED</b><p>需从创建起冻结到 Placement commit；事后 suspend 与 revision 复核仍可能竞态。</p></article>
           </div>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>非同质任务需要可追踪、可完成、可回滚的执行契约。</p><p class="next"><b>下一页</b>按语义分组后，哪些类型能共用一条路线？</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>已有原语能排源重排；围栏与 lifecycle-aware completion（生命周期完成判断）仍需新增。</p><p class="next"><b>下一页</b>哪些是现有事实，哪些仍是代码缺口？</p></footer>
       </section>
 
-      <!-- 11 / Workload classes -->
-      <section class="slide" data-title="工作负载能力分层" aria-label="第 11 页：具体类型断点">
-        <header class="slide-header"><span class="chapter">03 / 类型落点</span><span class="question">不要按 GVK 枚举，先按迁移语义分层</span><span class="page">11 / 16</span></header>
+      <!-- 10 / Existing substrate -->
+      <section class="slide" data-title="现有源码底座" aria-label="第 10 页：源码证据">
+        <header class="slide-header"><span class="chapter">04 / 源码证据</span><span class="question">新设计复用哪些已经存在的机制</span><span class="page">10 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Capability classes</p><h2>“所有类型”至少拆成三类能力</h2></div>
-          <div class="metric"><strong>T0 / T1 / T2</strong><span>标量可替换 · 身份进度 · 多组件状态</span></div>
+          <div><p class="eyebrow">Current code facts / 现状证据</p><h2>动作原语已有；状态准入、执行围栏与完成语义仍缺</h2></div>
+          <div class="metric"><strong>5 处</strong><span>辅助函数 · 过滤 · 完成 · 清理 · 模板</span></div>
         </div>
-        <div class="slide-content workload-spectrum" data-editable>
-          <article class="workload-band reveal" style="--band-color: var(--green)"><span class="tier">T0 / REPLACEABLE SCALAR</span><div class="types">Deployment · ReplicaSet · 合规单组件自定义资源（CRD）</div><div class="breaks">缺通用能力描述、Pod 归属解析和状态解释；但放置结果仍可用一个整数表达。</div><div class="range">优先扩展<br>B 可覆盖</div></article>
-          <article class="workload-band reveal" style="--band-color: var(--orange); --delay: 100ms"><span class="tier">T1 / IDENTITY OR PROGRESS</span><div class="types">StatefulSet · Job · CronJob · Pod</div><div class="breaks">StatefulSet 需要序号与 PVC；Job 的 <code>parallelism</code> 不等于剩余任务；CronJob 还隔着子 Job。</div><div class="range">必须领域执行<br>D 主导</div></article>
-          <article class="workload-band reveal" style="--band-color: var(--red); --delay: 200ms"><span class="tier">T2 / COMPONENT & STATE</span><div class="types">FlinkDeployment · 分布式训练 · 多角色 AI 任务</div><div class="breaks"><code>Components[]</code> 只描述全局需求；缺逐集群组件向量、成组调度、检查点与 <code>jobId</code> 完成语义。</div><div class="range">D 先保证语义<br>C 取决于产品</div></article>
+        <div class="slide-content evidence-wall" data-editable>
+          <article class="evidence-row reveal" style="--evidence-color: var(--red)"><code>binding_types_helper.go<br>:153-195</code><strong>GracefulEvictCluster</strong><p>从 <code>spec.Clusters</code> 移除 source，追加含 FromCluster、PurgeMode、Reason、Producer、grace period（宽限期）的任务。</p></article>
+          <article class="evidence-row reveal" style="--evidence-color: var(--blue); --delay: 70ms"><code>cluster_eviction.go<br>:49-56</code><strong>ClusterEviction</strong><p>只要集群仍在 <code>GracefulEvictionTasks</code>，scheduler Filter 就返回 Unschedulable，防止立刻选回 source。</p></article>
+          <article class="evidence-row reveal" style="--evidence-color: var(--green); --delay: 140ms"><code>evictiontask.go<br>:67-116</code><strong>现有完成缺口</strong><p>未设置 <code>SuppressDeletion</code> 的普通 task 在新目标全 Healthy 或到期时移除；不读取新任务生命周期。</p></article>
+          <article class="evidence-row reveal" style="--evidence-color: var(--orange); --delay: 210ms"><code>helper/binding.go :190-211<br>binding_controller.go :109-123</code><strong>旧 Work 清理</strong><p><code>Gracefully</code> task 存在时 source 仍算现有目标；task 消失后旧 Work 成为孤儿对象（orphan）并被清理。</p></article>
+          <article class="evidence-row reveal" style="--evidence-color: var(--ink); --delay: 280ms"><code>features.go :175<br>scheduler.go :253-256<br>queue/types.go :26-42<br>applicationfailover/common.go :34-106</code><strong>内存不是迁移历史</strong><p>priority queue 默认关闭；<code>Attempts</code> 与 first-unhealthy map 都在进程内，重启即丢，只能借鉴退避 / 阈值模式。</p></article>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>GVK 相同不代表语义相同；能力类别比白名单更稳定。</p><p class="next"><b>下一页</b>先看最直接、交付最快的逐类型方案 A。</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>复用机械原语不等于功能完成；A/B 都要补围栏、生命周期完成判断与持久记忆。</p><p class="next"><b>下一页</b>WorkloadRebalancer 为什么仍不是合适入口？</p></footer>
       </section>
 
-      <!-- 12 / Solution A -->
-      <section class="slide" data-title="方案 A：逐 GVK 内建" aria-label="第 12 页：方案 A">
-        <header class="slide-header"><span class="chapter">04 / 方案 A</span><span class="question">最快扩一个类型，但不形成通用契约</span><span class="page">12 / 16</span></header>
+      <!-- 11 / WorkloadRebalancer comparison -->
+      <section class="slide" data-title="为什么不是 WorkloadRebalancer" aria-label="第 11 页：组件选择">
+        <header class="slide-header"><span class="chapter">05 / 组件选择</span><span class="question">显式 Fresh 重算与事实驱动纠偏不是同一动作</span><span class="page">11 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Route A · built-ins</p><h2>逐 GVK 增加内建分支</h2></div>
-          <div class="metric"><strong>快 / 窄</strong><span>过渡方案，不是“全类型架构”</span></div>
+          <div><p class="eyebrow">Intent vs correction</p><h2>千问要“排除失败来源后重放”，不是“重新算一次”</h2></div>
+          <div class="metric"><strong>触发≠完成</strong><span>时间戳不能证明迁移完成</span></div>
+        </div>
+        <div class="slide-content versus-layout" data-editable>
+          <section class="mechanism-side reveal" style="--mechanism-color: var(--orange)">
+            <h3>WorkloadRebalancer</h3>
+            <p class="intent">面向用户显式发起的一批 workload 重新计算，适合主动均衡或策略变化后的 Fresh 调度。</p>
+            <div class="mechanism-line"><b>写入</b><span>只更新 <code>spec.rescheduleTriggeredAt</code>。</span></div>
+            <div class="mechanism-line"><b>scheduler</b><span>切换为 <code>Fresh</code>（全量重算），不参考旧结果重新计算。</span></div>
+            <div class="mechanism-line"><b>source</b><span>没有 <code>GracefulEvictionTask</code>，无法保证过滤原集群。</span></div>
+            <div class="mechanism-line"><b>“成功”</b><span>仅表示触发已处理：Binding 更新成功或无需重复更新，不表示迁移完成。</span></div>
+            <div class="mechanism-verdict">源码：workloadrebalancer_controller.go:189-239</div>
+          </section>
+          <div class="versus-mark">≠</div>
+          <section class="mechanism-side reveal" style="--mechanism-color: var(--green); --delay: 140ms">
+            <h3>Descheduler + GracefulEviction</h3>
+            <p class="intent">面向运行事实持续检测，可表达“撤销具体 source”；目标设计再补执行围栏与生命周期完成判断。</p>
+            <div class="mechanism-line"><b>写入</b><span>移除 source，同时追加带 FromCluster 的 task。</span></div>
+            <div class="mechanism-line"><b>scheduler</b><span><code>ClusterEviction</code> 明确排除 source，再选新目标。</span></div>
+            <div class="mechanism-line"><b>现状</b><span>普通 task 只按 Healthy / timeout 收尾，尚不能证明任务迁移完成。</span></div>
+            <div class="mechanism-line"><b>目标</b><span>围栏后撤销，按同一 lifecycle contract 判断完成。</span></div>
+            <div class="mechanism-verdict">结论：Descheduler 是更合适的扩展入口，但不是开箱即用</div>
+          </section>
+        </div>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>WorkloadRebalancer 不能排源；Descheduler 更接近正确所有者，但仍需补全安全契约。</p><p class="next"><b>下一页</b>上线前必须锁死哪些真实边界？</p></footer>
+      </section>
+
+      <!-- 12 / Boundaries -->
+      <section class="slide" data-title="上线前真实边界" aria-label="第 12 页：安全边界">
+        <header class="slide-header"><span class="chapter">05 / 安全边界</span><span class="question">自动化只在约束内成立</span><span class="page">12 / 16</span></header>
+        <div class="slide-title" data-editable>
+          <div><p class="eyebrow">Proposed safety contract / 目标边界</p><h2>原子放置、执行围栏、完成语义和持久记忆缺一不可</h2></div>
+          <div class="metric"><strong>6 条</strong><span>任何一条不满足都拒绝自动动作</span></div>
+        </div>
+        <div class="slide-content boundary-grid" data-editable>
+          <article class="boundary-item reveal" style="--boundary-color: var(--blue)"><b>01 / ATOMIC + ALTERNATIVE</b><h3>单目标且先证明有候选</h3><p>策略必须是单集群 Placement；预演至少确认一个替代集群。Duplicated / Divided 与无候选任务都拒绝。</p></article>
+          <article class="boundary-item reveal" style="--boundary-color: var(--green); --delay: 60ms"><b>02 / PURGE MODE</b><h3>Gracefully 不是执行围栏</h3><p>它只决定何时删除源 Work，不能阻止任务在“检查 NotStarted”之后突然开始运行。</p></article>
+          <article class="boundary-item reveal" style="--boundary-color: var(--red); --delay: 120ms"><b>03 / COMPLETION</b><h3>Health / timeout 不等于任务完成</h3><p>A/B 必须把统一生命周期接入 <code>evictiontask.go</code>；普通 task timeout 只能记失败，不能冒充成功。</p></article>
+          <article class="boundary-item reveal" style="--boundary-color: var(--orange); --delay: 180ms"><b>04 / PERSISTED MEMORY</b><h3>不要借 scheduler queue 记历史</h3><p><code>PriorityBasedScheduling</code> 默认关闭并走 legacy rate-limiting queue；<code>Attempts</code> 只是内存调度尝试。source / attempt / cooldown / outcome 需另行持久化。</p></article>
+          <article class="boundary-item reveal" style="--boundary-color: var(--ink); --delay: 240ms"><b>05 / TOCTOU RACE</b><h3>围栏必须从任务创建时持有</h3><p>准入握手冻结到 Placement commit，或 Operator 提供等价 lock；事后 <code>spec.suspend</code> 仍竞态，无协作只能 best-effort。</p></article>
+          <article class="boundary-item reveal" style="--boundary-color: var(--blue); --delay: 300ms"><b>06 / OWNERSHIP</b><h3>Binding 只允许一个纠偏写入方</h3><p>Descheduler 持有自动纠偏；任务控制器持有 Running / Terminal；依赖资源需明确 <code>PropagateDeps</code>。</p></article>
+        </div>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>安全性来自明确拒绝条件，不来自更激进的重试。</p><p class="next"><b>下一页</b>四种方案先看最快的逐 GVK 生命周期判定。</p></footer>
+      </section>
+
+      <!-- 13 / Route A -->
+      <section class="slide" data-title="方案 A：逐 GVK 生命周期判定" aria-label="第 13 页：方案 A">
+        <header class="slide-header"><span class="chapter">06 / 方案 A</span><span class="question">直接为千问资源写专用状态解析</span><span class="page">13 / 16</span></header>
+        <div class="slide-title" data-editable>
+          <div><p class="eyebrow">Route A · per-GVK lifecycle</p><h2>在 Descheduler 内按 GVK 解释 NotStarted</h2></div>
+          <div class="metric"><strong>快 / 重复</strong><span>适合试点，不适合作为长期扩展面</span></div>
         </div>
         <div class="slide-content route-layout" data-editable>
-          <aside class="route-id reveal" style="--route-color: var(--red)"><span class="letter">A</span><h3>沿现有纵向切片复制</h3><p>为每一种资源增加 filter、member informer、owner traversal 和 status parse；保留标量 RPC 与 Binding。</p></aside>
+          <aside class="route-id reveal" style="--route-color: var(--red)"><span class="letter">A</span><h3>每种任务写一套状态机</h3><p>从 <code>AggregatedStatusItem.Status.Raw</code> 读取千问字段，同时实现准入状态和目标侧完成判断。</p></aside>
           <section class="route-code reveal" style="--route-color: var(--red); --delay: 100ms">
-            <h3>具体源码改动</h3>
-            <div class="change-row"><code>pkg/descheduler/core/filter.go</code><span>扩 <code>supportedGVKs</code>，仍按类型准入。</span></div>
-            <div class="change-row"><code>pkg/estimator/server/server.go</code><span>增加对应 GVR informer / lister。</span></div>
-            <div class="change-row"><code>server/replica/replica.go</code><span>为新类型增加 owner chain 与 Pod 计数分支。</span></div>
-            <div class="change-row"><code>pkg/descheduler/core/helper.go</code><span>按新类型读取 ready 或等价状态。</span></div>
-            <div class="change-row"><code>tests</code><span>每种 GVK 单测、成员侧 owner 测试、跨组件 e2e。</span></div>
+            <h3>具体改动位置</h3>
+            <div class="change-row"><code>pkg/descheduler/core/filter.go</code><span>增加目标 GVK 与单集群 Placement 准入。</span></div>
+            <div class="change-row"><code>pkg/descheduler/core/lifecycle</code><span>新增千问专用 <code>NotStarted / Running / Terminal</code> 解析器。</span></div>
+            <div class="change-row"><code>pkg/descheduler/descheduler.go</code><span>组合状态、围栏、revision、阈值与记忆，通过后再调用 <code>GracefulEvictCluster</code>。</span></div>
+            <div class="change-row"><code>gracefuleviction/evictiontask.go</code><span>增加千问专用生命周期完成判断；timeout 单列失败。</span></div>
+            <div class="change-row"><code>policy / persisted history</code><span>增加 opt-in、PurgeMode、attempt、source cooldown 与 outcome。</span></div>
+            <div class="change-row"><code>unit + e2e</code><span>覆盖状态竞态、版本变化、完成语义、重启后记忆和 source exclusion。</span></div>
           </section>
           <aside class="route-verdict reveal" style="--route-color: var(--red); --delay: 200ms">
-            <h3>边界评估</h3>
-            <div class="verdict-line"><b>覆盖</b><span>只适合 T0 标量可替换类型。</span></div>
-            <div class="verdict-line"><b>兼容</b><span>不改 API / proto，风险较低。</span></div>
-            <div class="verdict-line"><b>代价</b><span>重复 switch、lister、状态解析，新增类型线性增长。</span></div>
-            <div class="verdict-line"><b>风险</b><span>容易把 StatefulSet / Job 的“数字相似”误当语义等价。</span></div>
-            <p class="route-decision">决策：只用于受控试点或过渡 adapter。</p>
+            <h3>取舍</h3>
+            <div class="verdict-line"><b>状态源</b><span>每个 GVK 的 CR status。</span></div>
+            <div class="verdict-line"><b>优点</b><span>最快验证千问端到端路径，不新增解释器操作。</span></div>
+            <div class="verdict-line"><b>代价</b><span>每扩一种任务都复制准入、围栏与完成判断。</span></div>
+            <div class="verdict-line"><b>风险</b><span>任务控制器升级字段后，Descheduler 语义可能悄悄漂移。</span></div>
+            <p class="route-decision">决策：仅用于短期试验；没有准入握手或等价锁时只能跑 best-effort。</p>
           </aside>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>A 能快速验证一个 T0 类型，无法支撑“任意 GVK”。</p><p class="next"><b>下一页</b>怎样把 T0 共性收进一个可扩展框架？</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>A 能快速跑通千问，但把领域状态长期绑进 Descheduler。</p><p class="next"><b>下一页</b>怎样把状态所有权还给工作负载解释器？</p></footer>
       </section>
 
-      <!-- 13 / Solution B -->
-      <section class="slide" data-title="方案 B：能力驱动适配器" aria-label="第 13 页：方案 B">
-        <header class="slide-header"><span class="chapter">04 / 方案 B</span><span class="question">把标量可替换工作负载抽成明确契约</span><span class="page">13 / 16</span></header>
+      <!-- 14 / Route B -->
+      <section class="slide" data-title="方案 B：ResourceInterpreter 生命周期" aria-label="第 14 页：方案 B">
+        <header class="slide-header"><span class="chapter">06 / 方案 B</span><span class="question">统一状态，复用现有整工作负载驱逐链</span><span class="page">14 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Route B · capability adapter</p><h2>复用 ResourceInterpreter，补齐纠偏能力接口</h2></div>
-          <div class="metric"><strong>推荐主干</strong><span>先覆盖 T0，不承诺 T1 / T2</span></div>
+          <div><p class="eyebrow">Route B · normalized lifecycle</p><h2>ResourceInterpreter 给事实，Descheduler 做统一决策</h2></div>
+          <div class="metric"><strong>推荐</strong><span>领域语义和平台动作各归其位</span></div>
         </div>
         <div class="slide-content route-layout" data-editable>
-          <aside class="route-id reveal" style="--route-color: var(--green)"><span class="letter">B</span><h3>能力驱动的通用标量适配器</h3><p>把 eligibility、Pod 归属和运行状态从 GVK switch 提升为显式能力；Binding 仍保存逐集群标量。</p></aside>
+          <aside class="route-id reveal" style="--route-color: var(--green)"><span class="letter">B</span><h3>同一状态契约贯穿首尾</h3><p>集成方声明状态、可重放性，以及从创建到 Placement commit 的围栏能力；准入与完成消费同一语义。</p></aside>
           <section class="route-code reveal" style="--route-color: var(--green); --delay: 100ms">
-            <h3>具体源码改动 <span class="flag proposal">建议接口</span></h3>
-            <div class="change-row"><code>cmd / client / RBAC</code><span>补原始对象获取、REST mapper、解释器 wiring 与读取权限，或另设 profile resolver。</span></div>
-            <div class="change-row"><code>resourceinterpreter/interpreter.go</code><span>增加类似 <code>GetDeschedulingProfile</code> 的 hook，声明能力、owner / revision 规则和状态语义。</span></div>
-            <div class="change-row"><code>pkg/descheduler/core</code><span>在控制面解析 profile，按能力和状态时效准入，不再硬读 <code>readyReplicas</code>。</span></div>
-            <div class="change-row"><code>estimator.proto</code><span>请求携带 optional profile；响应保留 count，并增加结构化 reason。</span></div>
-            <div class="change-row"><code>estimator/server/replica</code><span>通用 resolver 校验 owner UID / revision，并定义任意 GVR 的缓存或 API fallback。</span></div>
-            <div class="change-row"><code>guardrails</code><span>opt-in（显式启用）、dry-run、每轮预算、唯一 Binding 写入方。</span></div>
+            <h3>具体改动位置 <span class="flag proposal">建议接口</span></h3>
+            <div class="change-row"><code>config/v1alpha1</code><span>新增 interpreter operation：任务生命周期与可重放性。</span></div>
+            <div class="change-row"><code>resourceinterpreter/interpreter.go</code><span>暴露 <code>GetTaskLifecycle</code> / <code>IsRelocatable</code>，支持内建、Lua 或 webhook。</span></div>
+            <div class="change-row"><code>pkg/descheduler/core</code><span>组合 Binding、revision、lifecycle、fence、阈值与持久记忆。</span></div>
+            <div class="change-row"><code>gracefuleviction/evictiontask.go</code><span>复用同一 lifecycle hook 判断目标侧完成，不再只看 Health。</span></div>
+            <div class="change-row"><code>binding helper + history</code><span>复用 <code>GracefulEvictCluster</code> 排源；持久化 source、attempt、cooldown 与 outcome。</span></div>
+            <div class="change-row"><code>contract + concurrency tests</code><span>覆盖状态矩阵、TOCTOU、timeout、重启恢复与无围栏降级。</span></div>
           </section>
           <aside class="route-verdict reveal" style="--route-color: var(--green); --delay: 200ms">
-            <h3>边界评估</h3>
-            <div class="verdict-line"><b>覆盖</b><span>Deployment-like 与显式声明可替换的单组件 CRD。</span></div>
-            <div class="verdict-line"><b>兼容</b><span>Binding 标量不变；新增 hook 可按能力 opt-in。</span></div>
-            <div class="verdict-line"><b>代价</b><span>对象获取、RBAC、解释器、协议和一致性测试都要补齐。</span></div>
-            <div class="verdict-line"><b>止损</b><span>Job / StatefulSet / 多组件对象未满足能力时明确拒绝。</span></div>
-            <p class="route-decision">决策：近期核心路线，覆盖“可替换标量”，不包装成全类型。</p>
+            <h3>取舍</h3>
+            <div class="verdict-line"><b>状态源</b><span>CR status，由工作负载解释器归一化。</span></div>
+            <div class="verdict-line"><b>优点</b><span>不依赖副本形态；完整任务仍是一个 SchedulingUnit。</span></div>
+            <div class="verdict-line"><b>代价</b><span>新增解释器契约、围栏能力、RBAC 与 Descheduler / graceful eviction 跨组件测试。</span></div>
+            <div class="verdict-line"><b>边界</b><span>hook 缺失、Unknown、Running、Terminal 一律拒绝。</span></div>
+            <p class="route-decision">决策：推荐主线；先冻结围栏与完成契约，再接现有驱逐原语。</p>
           </aside>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>B 消除 GVK switch，但有意保留语义边界。</p><p class="next"><b>下一页</b>状态型与多组件任务需要改核心模型，还是交给领域 operator？</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>B 抽象的是任务生命周期，不是副本算法。</p><p class="next"><b>下一页</b>复用 Health 或扫描 Pod 的两个备选为什么只能降级使用？</p></footer>
       </section>
 
-      <!-- 14 / Solutions C and D -->
-      <section class="slide" data-title="方案 C 与 D" aria-label="第 14 页：方案 C 与方案 D">
-        <header class="slide-header"><span class="chapter">04 / 方案 C + D</span><span class="question">复杂类型有两个改造方向：扩核心，或委托执行</span><span class="page">14 / 16</span></header>
+      <!-- 15 / Routes C D and comparison -->
+      <section class="slide" data-title="A-D 四方案对比" aria-label="第 15 页：方案 C D 与总对比">
+        <header class="slide-header"><span class="chapter">06 / 方案对比</span><span class="question">差别在状态来源与语义所有权</span><span class="page">15 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Native model vs delegated execution</p><h2>组件向量进核心，状态语义留给 operator</h2></div>
-          <div class="metric"><strong>C / D</strong><span>一个改表示，一个改执行边界</span></div>
+          <div><p class="eyebrow">State-source decision</p><h2>B 做主线；A 过渡；C 只补证据；D 不推荐合并</h2></div>
+          <div class="metric"><strong>A / B / C / D</strong><span>同一动作底座，四种状态证据</span></div>
         </div>
-        <div class="slide-content dual-routes" data-editable>
-          <article class="dual-route reveal" style="--route-color: var(--blue)">
-            <header><strong>C</strong><h3>原生组件感知的 Binding / scheduler 重构</h3></header>
-            <p>让 Karmada 核心直接表达并重新分配逐集群组件向量，适合明确需要跨集群组件级分布的产品目标。</p>
-            <div class="mini-files">
-              <div class="mini-file"><code>apis/work/.../binding_types.go</code><span>扩 <code>TargetCluster</code> 的 per-component assignment。</span></div>
-              <div class="mini-file"><code>estimator.proto</code><span>返回 component deficits，不再只有 <code>int32</code>。</span></div>
-              <div class="mini-file"><code>scheduler/core</code><span>组件级 estimation、division、scale / reschedule。</span></div>
-              <div class="mini-file"><code>binding controller</code><span>增加类似 <code>ReviseComponents</code> 的应用契约。</span></div>
-              <div class="mini-file"><code>generated / CRD / migration</code><span>生成代码、OpenAPI、兼容读写与升级测试。</span></div>
-            </div>
-            <div class="route-bottom">覆盖较广、核心改动最大；仍不能单独解决 checkpoint / ordinal 等领域语义。仅在产品确认组件级跨集群分配后启动。</div>
-          </article>
-          <article class="dual-route reveal" style="--route-color: var(--orange); --delay: 140ms">
-            <header><strong>D</strong><h3>核心给计划，已注册执行方完成迁移</h3></header>
-            <p>Descheduler 输出候选；scheduler 选目标；adapter、Operator 或存储控制面负责 checkpoint、ordinal、gang 与完成确认。没有执行方时保持不支持。</p>
-            <div class="mini-files">
-              <div class="mini-file"><code>D1 · GracefulEvictionTasks</code><span>扩展现有 embedded task；已有 source、preserved state、health / timeout，仍缺独立 status 与 work-unit identity。</span></div>
-              <div class="mini-file"><code>D2 · new task CRD</code><span>独立 status 和重试更清楚，但增加 controller、RBAC 与升级成本。</span></div>
-              <div class="mini-file"><code>WorkloadRebalancer</code><span>可作为显式 intent 入口；不能与 Descheduler 各自写 Binding。</span></div>
-              <div class="mini-file"><code>pkg/scheduler</code><span>仍负责目标集群选择，不接管应用状态机。</span></div>
-              <div class="mini-file"><code>execution provider</code><span>显式实现 prepare、target-ready、cutover、rollback。</span></div>
-            </div>
-            <div class="route-bottom">安全上限高，但取决于执行合同和真实执行方；Job / StatefulSet 不会天然获得跨集群迁移能力。</div>
-          </article>
+        <div class="slide-content route-compare" data-editable>
+          <div class="route-head"><span>方案</span><span>状态来源 / 控制器归属</span><span>能力与主要风险</span><span>定位</span></div>
+          <article class="route-band reveal" style="--route-color: var(--red)"><b>A</b><strong>逐 GVK 解析<br>归 Descheduler</strong><p>改动快；每种任务重复解析，字段升级会产生语义漂移。</p><span class="route-role">短期过渡</span></article>
+          <article class="route-band reveal" style="--route-color: var(--green); --delay: 70ms"><b>B</b><strong>ResourceInterpreter 生命周期<br>归工作负载集成方</strong><p>同一语义覆盖 NotStarted 准入与目标侧完成；仍需 Operator fence 和持久 history。</p><span class="route-role">推荐主线</span></article>
+          <article class="route-band reveal" style="--route-color: var(--orange); --delay: 140ms"><b>C</b><strong>member Pod observer<br>归 B 的证据适配层</strong><p>读取 <code>PodScheduled=False / Unschedulable</code>；GPU 细节常在 Message，只补 Infeasible 证据，不能判断完整生命周期。</p><span class="route-role">B 的证据兜底</span></article>
+          <article class="route-band reveal" style="--route-color: var(--blue); --delay: 210ms"><b>D</b><strong>扩 ApplicationFailover<br><code>InterpretHealth</code> + threshold</strong><p>可借阈值与 <code>GracefulEvictCluster</code>；但 Health 语义过粗，first-unhealthy map 又在进程内，合并会模糊所有权。</p><span class="route-role">不推荐合并</span></article>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>C 解决核心表示，D 解决领域执行；两者不能互相替代。</p><p class="next"><b>下一页</b>把四条路线放到“覆盖与核心成本”坐标里做决策。</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>B 持有生命周期；C 只补 Pod 证据；D 只借模式，不合并控制器语义。</p><p class="next"><b>最后一页</b>按 B 主线怎样分期落地并回答领导问题？</p></footer>
       </section>
 
-      <!-- 15 / Comparison -->
-      <section class="slide" data-title="四方案决策对比" aria-label="第 15 页：四方案对比">
-        <header class="slide-header"><span class="chapter">05 / 决策对比</span><span class="question">不是选唯一赢家，而是匹配工作负载类别</span><span class="page">15 / 16</span></header>
+      <!-- 16 / Roadmap and answers -->
+      <section class="slide" data-title="推荐路线与汇报结论" aria-label="第 16 页：路线与最终结论">
+        <header class="slide-header"><span class="chapter">07 / 落地</span><span class="question">先证明状态，再接执行链，最后扩大覆盖</span><span class="page">16 / 16</span></header>
         <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Decision map</p><h2>B 是近期主线，D 有执行方再接入；A 过渡，C 条件启动</h2></div>
-          <div class="metric"><strong>2 维</strong><span>语义覆盖 × Karmada 核心改动成本</span></div>
-        </div>
-        <div class="slide-content decision-map" data-editable>
-          <div class="map-plot reveal">
-            <span class="axis-y">语义覆盖：标量 → 身份 / 进度 / 组件</span><span class="axis-x">Karmada 核心改动成本：低 → 高</span>
-            <span class="map-label tl">广覆盖 / 较低核心改动</span><span class="map-label tr">广覆盖 / 核心重构</span><span class="map-label bl">窄覆盖 / 快速交付</span><span class="map-label br">投入大但覆盖仍受限</span>
-            <div class="route-dot" style="--x: 19%; --y: 76%; --dot-color: var(--red)"><strong>A</strong><span>逐 GVK<br>快但重复</span></div>
-            <div class="route-dot" style="--x: 43%; --y: 55%; --dot-color: var(--green)"><strong>B</strong><span>T0 通用<br>边界清楚</span></div>
-            <div class="route-dot" style="--x: 65%; --y: 26%; --dot-color: var(--orange)"><strong>D</strong><span>条件执行<br>上限较高</span></div>
-            <div class="route-dot" style="--x: 84%; --y: 20%; --dot-color: var(--blue)"><strong>C</strong><span>组件原生<br>核心最重</span></div>
-          </div>
-          <aside class="decision-stack">
-            <article class="decision-item reveal" style="--item-color: var(--red); --delay: 80ms"><b>A</b><div><strong>过渡</strong><p>无 API 变化；每加一种类型都重复 L1-L3，不能跨过 L4 / L5。</p></div></article>
-            <article class="decision-item reveal" style="--item-color: var(--green); --delay: 140ms"><b>B</b><div><strong>近期核心</strong><p>中等接口成本；覆盖显式 opt-in 的 T0，保持 Binding 标量兼容。</p></div></article>
-            <article class="decision-item reveal" style="--item-color: var(--orange); --delay: 200ms"><b>D</b><div><strong>条件搭档</strong><p>依赖明确执行方与任务协议；缺一项就不自动迁移 T1 / T2。</p></div></article>
-            <article class="decision-item reveal" style="--item-color: var(--blue); --delay: 260ms"><b>C</b><div><strong>条件平台化</strong><p>API、scheduler、controller 联动迁移；仅在组件级跨集群分配成为明确需求时投入。</p></div></article>
-          </aside>
-        </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>没有一条路线能低成本、安全覆盖任意 GVK。</p><p class="next"><b>最后一页</b>给出分期落地和三条领导可直接带走的结论。</p></footer>
-      </section>
-
-      <!-- 16 / Recommendation and leadership answers -->
-      <section class="slide" data-title="推荐路线与汇报结论" aria-label="第 16 页：推荐路线与最终结论">
-        <header class="slide-header"><span class="chapter">06 / 推荐路线</span><span class="question">先定义支持边界，再逐层扩大</span><span class="page">16 / 16</span></header>
-        <div class="slide-title" data-editable>
-          <div><p class="eyebrow">Phased delivery</p><h2>从“可替换标量”交付，向“领域迁移任务”演进</h2></div>
-          <div class="metric"><strong>B → D</strong><span>A 过渡 · D/C 按条件启动</span></div>
+          <div><p class="eyebrow">Phased delivery</p><h2>用 B 跑通千问单目标任务，C 只在证据不足时补位</h2></div>
+          <div class="metric"><strong>4 阶段</strong><span>接口 · 预演 · 闭环 · 兜底</span></div>
         </div>
         <div class="slide-content final-layout" data-editable>
           <div class="roadmap-line">
-            <article class="phase reveal" style="--phase-color: var(--ink)"><b>PHASE 0 / CONTRACT</b><h3>先划能力边界</h3><p>定义 T0/T1/T2、opt-in、dry-run、预算、唯一写入方与拒绝原因。</p></article>
-            <article class="phase reveal" style="--phase-color: var(--red); --delay: 80ms"><b>PHASE 1 / A → B</b><h3>交付一个受控 adapter</h3><p>用 A 验证额外 T0 类型，但接口按 B 定型，避免继续堆 switch。</p></article>
-            <article class="phase reveal" style="--phase-color: var(--green); --delay: 160ms"><b>PHASE 2 / D GATE</b><h3>先定执行方与任务载体</h3><p>T0 继续走 B；复杂类型先比较 embedded task / 新 CRD，并确认谁执行完成协议。</p></article>
-            <article class="phase reveal" style="--phase-color: var(--blue); --delay: 240ms"><b>PHASE 3 / C GATE</b><h3>产品需要时再改 Binding</h3><p>只有确认跨集群逐组件分配价值，才启动 API 与 scheduler 联动重构。</p></article>
+            <article class="phase reveal" style="--phase-color: var(--ink)"><b>PHASE 0 / CONTRACT</b><h3>冻结首尾语义</h3><p>定义 SchedulingUnit、revision、创建时围栏、NotStarted 与 Running / Succeeded 完成条件。</p></article>
+            <article class="phase reveal" style="--phase-color: var(--orange); --delay: 80ms"><b>PHASE 1 / DRY-RUN</b><h3>千问实现 B hook</h3><p>验证状态、替代目标、准入握手 / 等价锁能力与 diagnostics contract。</p></article>
+            <article class="phase reveal" style="--phase-color: var(--green); --delay: 160ms"><b>PHASE 2 / ACTUATE</b><h3>补齐后再接原语</h3><p>围栏复核 → <code>GracefulEvictCluster</code> → lifecycle completion → 持久 history。</p></article>
+            <article class="phase reveal" style="--phase-color: var(--blue); --delay: 240ms"><b>PHASE 3 / FALLBACK</b><h3>按证据缺口启用 C</h3><p>CR status 不足时补 Pod 证据；Message 细节不直接当稳定分类。</p></article>
           </div>
           <div class="leadership-answers">
-            <article class="leadership-answer reveal" style="--answer-color: var(--green); --delay: 280ms"><span class="q">Q1 / WHY DEPLOYMENT</span><h3>首版闭合了最小纵向切片</h3><p><span class="flag">事实</span> 已核查材料的示例和首版实现都以 Deployment 为边界；<span class="flag inference">推断</span> 它的四个计数可压成同一个可替换标量。</p></article>
-            <article class="leadership-answer reveal" style="--answer-color: var(--red); --delay: 340ms"><span class="q">Q2 / WHY NOT ALL GVK</span><h3>五层契约必须一起成立</h3><p>类型准入、Pod 归属、运行状态、放置表示、执行完成，任一层缺失都会把“重调度”变成不安全缩容。</p></article>
-            <article class="leadership-answer reveal" style="--answer-color: var(--blue); --delay: 400ms"><span class="q">Q3 / WHICH ROUTE</span><h3>B 先落地，D/C 按条件启动</h3><p>B 承担可替换标量通用化；D 先确认执行方和 task 载体；A 仅过渡，C 等组件级需求确认后再投入。</p></article>
+            <article class="leadership-answer reveal" style="--answer-color: var(--green); --delay: 280ms"><span class="q">Q1 / WHY INITIAL SCOPE</span><h3>它是 2022 首版范围</h3><p>首版代码按 Deployment 定制；GracefulEviction、ClusterEviction、ApplicationFailover 驱逐底座随后才加入，不能倒推作者动机。</p></article>
+            <article class="leadership-answer reveal" style="--answer-color: var(--red); --delay: 340ms"><span class="q">Q2 / REAL BLOCKERS</span><h3>难点是首尾状态与竞态</h3><p>既要证明 NotStarted，也要封住 TOCTOU、按生命周期判断完成，并持久化 source attempt / cooldown。</p></article>
+            <article class="leadership-answer reveal" style="--answer-color: var(--blue); --delay: 400ms"><span class="q">Q3 / WHY DESCHEDULER</span><h3>它最接近纠偏所有者</h3><p>它能写带 source 的驱逐意图并复用排源插件；WorkloadRebalancer 只有 Fresh 时间戳。安全闭环仍需本期补齐。</p></article>
           </div>
         </div>
-        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>交付目标应写成能力类别（capability class），不写成“支持所有资源类型”。</p><p class="next"><b>汇报收束</b>先证明语义可迁移，再让代码接受新的 GVK。</p></footer>
+        <footer class="slide-footer" data-editable><p class="answer"><b>本页回答</b>交付名称应标明 proposed：only-not-started whole-workload relocation。</p><p class="next"><b>汇报收束</b>证明并锁住未开始 → 排源重排 → 生命周期确认完成 → 持久记录结果。</p></footer>
       </section>
     </div>
   </main>
@@ -2036,7 +2620,7 @@
     (() => {
       const DESIGN_WIDTH = 1920;
       const DESIGN_HEIGHT = 1080;
-      const STORAGE_KEY = "day39-karmada-descheduler-code-research-v1";
+      const STORAGE_KEY = "day39-karmada-descheduler-task-relocation-v2";
       const stage = document.getElementById("deck-stage");
       const slides = Array.from(document.querySelectorAll(".slide"));
       const previous = document.getElementById("previous");
@@ -2102,8 +2686,7 @@
         });
         counter.textContent = pad(current + 1) + " / " + pad(slides.length);
         const ratio = ((current + 1) / slides.length) * 100;
-        progressFill.style.height = ratio + "%";
-        progressFill.style.width = ratio + "%";
+        progressFill.style.setProperty("--progress", ratio + "%");
         previous.disabled = current === 0;
         next.disabled = current === slides.length - 1;
         document.title = slides[current].dataset.title + "｜Day39 Karmada Descheduler";

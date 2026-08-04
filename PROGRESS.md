@@ -10,38 +10,39 @@
 
 ## Current Snapshot
 
-状态核对时间：2026-08-03。
+状态核对时间：2026-08-04。
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
-| [Day 39 Descheduler 代码专项](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 基于 `upstream/master@a5cf21eac` 完成五层代码合同、A-D 四方案和 [16 页 Style A 汇报稿](internship-reports/day39-karmada-descheduler-code-research-presentation.html)；结论为 B 近期主线、D 有执行方再接入、A 过渡、C 条件启动 | 周一前拿千问真实 YAML 核对 GVK、owner、progress、placement、completion，并用 HTML 试讲 |
+| [Day 39 Descheduler 代码专项](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 已纠偏为整任务调度模型：`ResourceBinding` 是一级队列的 `SchedulingUnit`，Descheduler 只撤回 `Assigned + NotStarted + SchedulerUnschedulable`；五个代码合同为状态、证据、执行前 fence、接管完成、持久重试。A 为逐 GVK 试点，B 为 ResourceInterpreter 主线，C 为 member Pod 观察 fallback，D 仅借 ApplicationFailover 模式；[16 页 Style A 汇报稿](internship-reports/day39-karmada-descheduler-code-research-presentation.html)同步更新 | 周一前拿千问真实 YAML 核对生命周期、不可调度诊断、单目标 Placement、执行前 lock、接管回执和 cooldown，并用 HTML 试讲 |
 | [PR #7662](https://github.com/karmada-io/karmada/pull/7662) | Open，head 仍为 `586f6fc3508e`；7 月 28 日会议收敛 offline scope，7 月 30 日 maintainer 提议 `GetComponents.selector -> estimator Unschedulable -> dynamicScaleUp` | `@zhy76` / `@RainbowMango` 回复或 proposal commit；再核对 API 集合、ownership、多组件和 completion contract |
 | [PR #7697](https://github.com/karmada-io/karmada/pull/7697) | Open，head `bf24e47ce3bd`；证书轮换实现和定向验证已完成 | 新 review、CI 变化或 maintainer scope 决策 |
 
 ## Last Run
 
-- 2026-08-03：新增 [Day 39 Descheduler 五层代码合同与方案对比](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md)、[英文 Mermaid/PNG](internship-reports/day39-karmada-descheduler-code-contract-breaks.mmd) 和 [16 页 Style A 汇报稿](internship-reports/day39-karmada-descheduler-code-research-presentation.html)。历史只证明首版做 Deployment 纵向切片；源码显示准入、Pod 归属、状态、放置、完成五层均依赖可替换标量。四方案改为定性比较：B 覆盖 `ReplaceableScalar`，D 先确认执行方并比较 embedded task/新 CRD，C 仅按组件跨集群硬需求触发。`go test ./pkg/descheduler/... ./pkg/estimator/server/replica` 通过；复用 Chromium `1234` 完成 16 页逐页、1920×1080、390×844、键盘/按钮、无溢出、无 console error 和 16 页打印检查。
+- 2026-08-04：纠偏 [Day 39 Descheduler 代码专项](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) 和 [整任务重入队图](internship-reports/day39-karmada-descheduler-code-contract-breaks.mmd)：不再从 Deployment 副本算法倒推通用设计，改为 Karmada Binding 一级队列、member Pod 二级队列和 whole-task requeue；源码确认默认 legacy queue、可选 priority queue、Job 资源/终态解释及 `GracefulEvictCluster/ClusterEviction` 机械原语。真实缺口收敛为生命周期、不可调度证据、pre-start fence、lifecycle-aware completion、持久 attempts/cooldown；普通 Job 事后 suspend 会删 active Pods，只能在无协作时声明 best-effort。HTML 同步纠偏并重新验收。
 - 2026-08-03：新增 [build-technical-research-slides skill](.agents/skills/build-technical-research-slides/SKILL.md)，固化“证据冻结 → 连续叙事 → 术语首次解释 → Style A 实现 → 真实浏览器验收 → 版本替换与交付”流程，并补充插件逐项释义、等距实测与固定高度覆盖检查；`quick_validate.py` 与独立的 controller retry 调研前向测试均通过。
 - 2026-08-03：最终保留 [15 页 Style A 无表格汇报稿](internship-reports/day38-karmada-descheduler-presentation-style-a.html)，删除已被替代的 Style C：以时间线、双轨、闭环和风险带替代表格，白底主强调色统一为绿色，第 7 页以活力橙区分 estimator 核验；补全 `GVK`、`Binding`、`Fresh`、`affinity`、`opt-in` 等术语的中文作用，第 13 页为 10 个 Kubernetes 插件增加逐项说明，第 15 页路线方块改为等间距。保留 API、模式、插件名和 #7662 未决边界；复用 Chromium build `1234`，通过 1280×720 逐页截图、1920×1080、390×844、键盘导航、无溢出和 15 页打印检查。
 - 2026-07-31：[PR #7791](https://github.com/karmada-io/karmada/pull/7791) 以 merge commit `35ee6092e499` 合并；PR checks 全绿，post-merge [Chart v1.36.1](https://github.com/karmada-io/karmada/actions/runs/30617396767/job/91113656882) 红灯是拉取 Docker Hub `common:2.41.0` 时的单 runner TCP timeout；[历史 run](https://github.com/karmada-io/karmada/actions/runs/30233127739) 有相同签名，归为 E2 external-registry flake / `NO_FIX`，与 test-only diff 无因果关系。
-- 2026-07-30：复核 [PR #7800 作者回应与新 head](internship-reports/day36-pr7800-waiting-store-deep-review.md#2026-07-30-作者回应与新-head-复核)：本地 full-store retained delta 约 17.98 MiB、`byGVKName` 约 3.19 MiB，race/scaling 通过；[closure reply](https://github.com/karmada-io/karmada/pull/7800#discussion_r3681520974) 已发布，GitHub 因账号权限拒绝 resolve，等待作者/maintainer 关闭 thread。
 
 ## Current Blockers
 
-- #7662：estimator 的长期 `PodScheduled=False/Unschedulable` 能识别目标副本，但 public API 仍写 `PreserveAvailableReplicas`；五层 capability/ownership/progress/placement/completion 尚未收敛，复杂类型也没有确认 task 载体和执行方。
+- Day 39：尚缺千问真实 YAML 来证明 `NotStarted`、长期 `SchedulerUnschedulable`、单目标 Placement、执行前 admission lock 和新目标 Running/Completed 回执；无 fence 时只能承诺 best-effort。
+- #7662：estimator 的长期 `PodScheduled=False/Unschedulable` 能识别目标副本，但 public API 仍写 `PreserveAvailableReplicas`；该 PR 的副本重调度 scope 与 Day 39 整任务重入队分开分析。
 - #7697、#7795 当前需要外部 review 或新证据；等待本身不产生代码动作，也不重复催促。
 - `intern` 不含 Karmada 源码；任何源码验证必须在从最新 `upstream/master` 创建的独立 worktree 中进行。
 
 ## Ruled Out
 
 - 不把 #7662 的作者反提案或 maintainer `COMMENTED` review 写成最终 API 共识。
+- 不把旧 Descheduler 的 Deployment whitelist、`readyReplicas` 和副本减法当成新任务模式必须适配的抽象。
 - 不把 #7795 的 fixture-local 机制复现升级成原 CI terminal 根因证明。
 - 不把 #7802 的受控 interleaving 写成线上频率证明，不用 per-namespace API 同时解决 wake-up 与 priority 两项合同。
 - 不把学习记录、skills 或任务状态混入 upstream-facing topic branch，也不把 upstream 源码重新加入 `intern`。
 
 ## Next
 
-- 周一前用 Day 39 HTML 稿试讲；拿千问真实 YAML 逐层确认 GVK、owner、progress、placement、completion，不把公开的 offline / long-running Pending story 自动写成具体产品合同。
+- 周一前用 Day 39 HTML 稿试讲；拿千问真实 YAML 确认 `Queued/Assigned/Running/Terminal` 映射、`NotStarted + SchedulerUnschedulable` 证据、单目标 Placement、pre-start lock、handoff completion 和 cooldown，不把公开的 offline / long-running Pending story 自动写成具体产品合同。
 - #7662 等 `@zhy76` / `@RainbowMango` 回复或 proposal commit；更新后先用 Day 37 的 10 副本反例和 Flink 多组件反例核对 signal、support matrix、owner 与 completion，再决定是否起草 upstream review。
 - #7697 或 #7795 出现 review/CI 时，先回读 current head 和完整 thread，只处理与当前 diff 有因果关系的反馈。
 
