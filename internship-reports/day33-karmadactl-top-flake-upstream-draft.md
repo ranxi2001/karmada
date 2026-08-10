@@ -296,7 +296,7 @@ The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmad
 上一版把 BusyBox command 设计成可选参数，仍然把“是否稳定运行”的责任留给每个调用方。重新从 helper 契约审计后，这个抽象不成立：`NewPod` 是多个 E2E 共用的 Pod fixture，默认应在测试期间保持稳定；测试结束由既有 `DeferCleanup`、`AfterEach` 或 namespace 删除回收资源，而不是依靠 BusyBox 自行退出。
 
 - Current remote head：`8d2148606f3475fea0c3ef113b795951a4cf278a`
-- Pending local head：`aaf1dc24c55afde66448d50fc09149852aa091a4`
+- Pending local head：`aaf1dc24c8c95a5bdd8fca799450ae1502260eab`
 - Residual diff：2 files，`+5/-4`
 - `test/helper/resource.go`：恢复 `NewPod(namespace, name)` 两参数 API；BusyBox 默认使用 `Command: []string{"sleep", "3600"}`；函数注释明确其容器为 long-running fixture
 - `test/e2e/suites/base/karmadactl_test.go`：top 恢复普通两参数调用，继续用 `khelper.IsPodReady`
