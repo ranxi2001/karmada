@@ -231,20 +231,21 @@ Updated. The PR now keeps only the BusyBox command and `khelper.IsPodReady`; the
 
 发布回读：已用精确 lease 将 `14b24b90d` force-push 为 `f1d3685b7`，GitHub PR API 显示 1 file、`+2/-1`、`size/XS`；PR body 与两条回复均逐字匹配确认稿。当前等待新 SHA 的 upstream PR CI 与 `lgtm/approved`，不检查或引用 fork push CI。
 
-## Optional Command Revision（2026-08-10，待发布）
+## Optional Command Revision（2026-08-10，已发布）
 
 ### 先说人话
 
 为避免 top 测试直接依赖 `Containers[1]`，本地进一步把 BusyBox command 封装成 `helper.NewPod` 的可选参数。只有 top 调用传入 `"sleep", "3600"`；其余 19 个两参数调用得到的 `Command` 仍为 `nil`，源码和行为均保持兼容。
 
-- Current remote head：`f1d3685b7e63422eee7c99ac8da65611b4fa69ae`
-- Pending local head：`8d2148606f3475fea0c3ef113b795951a4cf278a`
+- Current remote head：`8d2148606f3475fea0c3ef113b795951a4cf278a`
 - Residual diff：2 files，`+6/-5`
 - `test/helper/resource.go`：`NewPod(namespace, name, busyboxCommand ...string)`，仅将可选参数交给 BusyBox `Command`
 - `test/e2e/suites/base/karmadactl_test.go`：在 `helper.NewPod` 调用中传入 `"sleep", "3600"`，继续用 `khelper.IsPodReady`
 - Validation：`go test ./test/helper ./pkg/controllers/execution ./pkg/util/helper -count=1`、`go test ./test/e2e/suites/base -run '^$' -count=1`、`git diff --check` 均通过
 
 ### PR Body Revision
+
+Status：已发布；GitHub API 回读与下列 183-word、16-nonblank-line 确认稿一致。
 
 ````markdown
 **What type of PR is this?**
@@ -278,10 +279,12 @@ NONE
 
 ### Review Reply Revision
 
-Target: edit the existing reply [`discussion_r3747135026`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135026), rather than add another thread message.
+Published：已原位编辑 [`discussion_r3747135026`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135026)，没有新增 thread message。
 
 ```markdown
 Updated. `helper.NewPod` now accepts an optional `busyboxCommand ...string`, and this test passes `"sleep", "3600"` directly in the call. Existing two-argument callers keep the previous Pod spec.
 ```
 
 The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135768) remains accurate and needs no edit.
+
+发布回读：已用精确 lease 将 `f1d3685b7` force-push 为 `8d2148606`；GitHub PR API 显示 2 files、`+6/-5`、`size/S`，PR body 和第一条编辑后的回复逐字匹配确认稿，第二条回复保持不变。当前等待新 SHA 的 upstream PR CI 与 `lgtm/approved`。
