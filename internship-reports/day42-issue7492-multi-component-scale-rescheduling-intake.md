@@ -18,12 +18,16 @@
 现在可以完成精确 API/流程分析、测试矩阵和协作评论；在现有 owner 或 maintainer
 确认独立切片前，不创建代码分支，不提交重复 PR。
 
+18:26 状态更新：`ranxi2001` 已发布 `/assign` 并成为正式 assignee。这个元数据变化
+不覆盖 `mszacillo` 更早的承接；下一步仍然是先公开协调非重叠切片。
+
 ## Issue 概览
 
 - 目标：Karmada [#7492](https://github.com/karmada-io/karmada/issues/7492)，
   `[Umbrella] Multi-components workload scheduling - phase IV`。
 - 状态：Open，里程碑 v1.19，due 2026-08-31。
-- PR 认领 @：GitHub assignee 为空，但 `@mszacillo` 已公开承接并获 maintainer 同意。
+- PR 认领 @：`@ranxi2001` 已正式 assigned；`@mszacillo` 更早公开承接并获
+  maintainer 同意，必须先协调 ownership。
 - 当前任务：让多组件应用进入重调度；重调度时考虑已经调度的组件；失败时不把新配置
   传播到 member cluster。
 - 本次代码基线：`upstream/master@c884a95908c59a59788c6536fcec798624a09771`。
@@ -37,6 +41,8 @@
    和单一 `Replicas`，无法保存每个 component 的上次分配；建议增加 per-component
    scheduling result，并请 `mszacillo`、`zhzhuang-zju` 评估。
 4. 截至 2026-08-10，没有 PR 直接链接 #7492；这只说明没有公开实现，不表示原认领失效。
+5. `ranxi2001` 在 2026-08-10 18:26 发布 `/assign`，当前 GitHub assignee 已更新为
+   `ranxi2001`。
 
 评论权重：`RainbowMango` 是 issue 作者和 MEMBER，其意见是明确 maintainer direction；
 `mszacillo` 是既有贡献者和 Phase III failover 修复作者；`zhzhuang-zju` 被邀请评估 API。
@@ -123,4 +129,3 @@ sequenceDiagram
    local review-ready。
 4. 如果 owner 正在实现同一部分、明确不需要协助，或未回复，不开重复 PR；转为 baseline
    tests、review 和可复查设计证据。
-
