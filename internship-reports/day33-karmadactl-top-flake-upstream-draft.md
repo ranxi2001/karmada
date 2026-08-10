@@ -288,3 +288,63 @@ Updated. `helper.NewPod` now accepts an optional `busyboxCommand ...string`, and
 The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135768) remains accurate and needs no edit.
 
 发布回读：已用精确 lease 将 `f1d3685b7` force-push 为 `8d2148606`；GitHub PR API 显示 2 files、`+6/-5`、`size/S`，PR body 和第一条编辑后的回复逐字匹配确认稿，第二条回复保持不变。当前等待新 SHA 的 upstream PR CI 与 `lgtm/approved`。
+
+## Default Stable Fixture Revision（2026-08-10，待发布）
+
+### 先说人话
+
+上一版把 BusyBox command 设计成可选参数，仍然把“是否稳定运行”的责任留给每个调用方。重新从 helper 契约审计后，这个抽象不成立：`NewPod` 是多个 E2E 共用的 Pod fixture，默认应在测试期间保持稳定；测试结束由既有 `DeferCleanup`、`AfterEach` 或 namespace 删除回收资源，而不是依靠 BusyBox 自行退出。
+
+- Current remote head：`8d2148606f3475fea0c3ef113b795951a4cf278a`
+- Pending local head：`aaf1dc24c55afde66448d50fc09149852aa091a4`
+- Residual diff：2 files，`+5/-4`
+- `test/helper/resource.go`：恢复 `NewPod(namespace, name)` 两参数 API；BusyBox 默认使用 `Command: []string{"sleep", "3600"}`；函数注释明确其容器为 long-running fixture
+- `test/e2e/suites/base/karmadactl_test.go`：top 恢复普通两参数调用，继续用 `khelper.IsPodReady`
+- 调用审计：8 个 E2E 调用均有 Pod 或 namespace 清理，没有调用依赖 BusyBox 退出、重启或 NotReady；12 个单测调用只构造对象，不执行容器
+- Validation：`go test ./test/helper ./pkg/controllers/execution ./pkg/util/helper -count=1`、`go test ./test/e2e/suites/base -run '^$' -count=1`、`git diff --check` 均通过
+
+> 分析：`NewPod` 使用默认 `RestartPolicyAlways`。无 command 的 BusyBox 不是“一次性任务”，而是退出后持续重启；真正需要“运行结束即完成”语义的 `NewJob` 会显式设置完成命令和 `RestartPolicyNever`。因此这里修复的是共享 fixture 默认值，而非扩张 top 测试范围。
+
+### PR Body Revision
+
+Status：待用户确认后发布。
+
+````markdown
+**What type of PR is this?**
+
+/kind cleanup
+
+**What this PR does / why we need it**:
+
+`helper.NewPod` builds an nginx and BusyBox Pod reused across E2E tests. BusyBox has no long-running command, so it exits and restarts, while `PodRunning` does not guarantee that every container is ready.
+
+This change makes the BusyBox container sleep for 3600 seconds by default, giving every E2E caller a stable test fixture until its existing Pod or namespace cleanup runs. The top test also waits for `PodReady=True` before querying metrics.
+
+This does not claim that the BusyBox restart was the complete cause of the observed `PodMetrics NotFound`; subsequent runs still need to be monitored.
+
+**Which issue(s) this PR fixes**:
+
+Refs #6841
+
+**Special notes for your reviewer**:
+
+- Scope: shared test fixture default and top readiness condition; existing two-argument API retained; no production or CLI retry behavior.
+- Tests: `go test ./test/helper ./pkg/controllers/execution ./pkg/util/helper -count=1`; `go test ./test/e2e/suites/base -run '^$' -count=1`.
+- AI assistance: Codex helped inspect the review feedback, audit the shared helper contract, and run validation; I reviewed the code and results.
+
+**Does this PR introduce a user-facing change?**:
+
+```release-note
+NONE
+```
+````
+
+### Review Reply Revision
+
+Target：原位编辑 [`discussion_r3747135026`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135026)，不新增 thread message。
+
+```markdown
+Updated after checking the shared helper's contract. `helper.NewPod` now sets `Command: []string{"sleep", "3600"}` on its BusyBox container by default, and the call remains `helper.NewPod(namespace, name)`. All E2E callers already remove the Pod or its namespace during cleanup, so the helper now provides a stable fixture consistently.
+```
+
+The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135768) remains accurate and needs no edit.
