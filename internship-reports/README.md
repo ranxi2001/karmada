@@ -65,6 +65,7 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - [Day 40：PR #7662 长期 Unschedulable 副本重调度 API 与开发基准](day40-pr7662-unschedulable-replica-rescheduling-api-plan.md)（[当前/一期流程 Mermaid](day40-pr7662-unschedulable-replica-rescheduling-flow.mmd) / [PNG](day40-pr7662-unschedulable-replica-rescheduling-flow.png)）
 - [Day 41：PR #7810 Binding 更新合并补丁的代码与系统 Review](day41-pr7810-binding-update-coalescing-review.md)（[已发布英文 review](day41-pr7810-review-comment.md)；[Upstream comment](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994)；[delayed-key race Mermaid](day41-pr7810-delayed-key-race.mmd)）
 - [Day 42：#7492 多组件扩缩容重调度承接基线](day42-issue7492-multi-component-scale-rescheduling-intake.md)
+- [Day 43：#5115 多组件调度演进与 #7492 快速实现路线](day43-issue5115-evolution-and-7492-implementation-plan.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
