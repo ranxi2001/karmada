@@ -354,14 +354,36 @@ The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmad
 
 ### 先说人话
 
-本次唯一红项不是 #7795 改坏了 `karmadactl top`。在同一个失败 job 里，本 PR 直接修改的 `Karmadactl top existing pod` 用例已通过；后面另一个 namespace 用例在创建临时 kind 集群时超时，导致 v1.35 E2E 失败。
+本次唯一红项不是 #7795 改坏了 `karmadactl top`。在同一个失败 job 里，本 PR 直接修改的 `Karmadactl top existing pod` 已通过；约十分钟后，另一个 namespace 用例为了测试“新集群加入”而创建临时 kind 集群。此时 runner 控制面已经开始退化，新节点最终没有进入 kind 期望的 cgroup-ready 状态。
 
-- 失败 check：[`e2e test (v1.35.0)`](https://github.com/karmada-io/karmada/actions/runs/31367565125/job/93390881240)，其余实际测试与构建 checks 均通过，Tide 仅因该红项保持 pending
-- 直接回归：`Karmadactl top existing pod` 在 `test/e2e/suites/base/karmadactl_test.go:618` 通过，耗时 `20.830s`
-- 首个硬失败：`namespace_test.go:103` 调用 `createCluster` 创建 `member-e2e-bcfv6`，约 `23m33s` 后报错 `could not find a log line that matches "Reached target .*Multi-User System.*|detected cgroup v1"`
-- 代码边界：错误发生在 `createCluster -> clusterProvider.Create -> kind`，早于 Karmada cluster join 和 namespace 传播；PR diff 没有修改这条路径
-- 交叉证据：同一 SHA 的 v1.34 和 v1.36.1 E2E 通过同类 namespace 用例；v1.35 同一 job 中其他动态 kind 集群也能在约 12-14 秒内创建
-- 后续现象：宿主 kind 集群同时出现 etcd `slow fdatasync`、`ReadIndex` retry 和 timeout，最后清理阶段才出现 API `connection refused`；这些支持测试环境失稳分类，但不能反推具体硬件原因
-- 证据边界：kind 已证实是等待节点 cgroup 就绪日志超时；artifact 没有保留失败的 `member-e2e-bcfv6` 容器日志，因此不进一步猜测 runner 资源、systemd 或 Docker 的底层原因
+通俗地说：被测的 `top` 功能已经答对了自己的题；后面搭建另一套临时考场时，机器本身正在失速，最终没有把考场搭起来。现有证据足以把红项与 PR 代码分开，但还不足以给 GitHub runner 的具体资源故障命名。
 
-结论：高置信度与 PR 无关的 kind 启动/CI 环境失败，不需要改 PR 代码。尚无同 SHA、同 v1.35 的重跑，所以要等重跑通过后才能严格标为已验证的非确定性 flake。最小处理是在 #7795 发布 `/retest`；这是 upstream-facing 操作，待用户确认后执行。
+### 失败链
+
+1. [`e2e test (v1.35.0)`](https://github.com/karmada-io/karmada/actions/runs/31367565125/job/93390881240) 是唯一实际测试红项；同一 SHA 的 v1.34、v1.36.1 E2E 和其余构建、测试 checks 通过。
+2. `Karmadactl top existing pod` 在 `karmadactl_test.go:618` 通过，耗时 `20.830s`。Pod 于 `08:16:53` 创建，三次 `top` 调用于 `08:17:13-14` 成功，随后正常清理。
+3. `namespace_test.go:103` 于 `08:27:11.719` 开始创建 `member-e2e-bcfv6`，在 `BeforeEach` 中停留 `1412.862s`，于 `08:50:44.548` 返回 `could not find a log line that matches "Reached target .*Multi-User System.*|detected cgroup v1"`。
+4. `createCluster` 在 `clusterProvider.Create` 返回错误后立即退出，因此没有执行后续 `docker inspect`、kubeconfig 改写、Karmada join 或 namespace 传播；失败发生在 kind 创建节点阶段，不在本 PR 修改路径上。
+5. kind v0.32.0 的创建路径包含镜像检查或拉取、网络创建、`docker run`、最多 `30s` 的 `docker logs -f` cgroup-ready 匹配，以及 provision 失败后的自动删除；其中多项没有统一超时。`23m33s` 只能归到整个 `clusterProvider.Create`，artifact 没有 phase 时间戳，不能再分摊给其中某一步。终端错误只证明 `docker run` 返回后，日志流在结束或 context 到期前没有出现 ready 标记。
+6. Karmada/aggregated API readiness 早在 `08:25:40` 已经出现 500，比临时集群创建早约 90 秒，因此不能说这次创建触发了整场退化。创建开始后约 18-20 秒，宿主 Kubernetes、member3 和 Karmada 三套独立 etcd 于 `08:27:30-31` 同时首次记录 `slow fdatasync`（分别约 `1.31s`、`1.46s`、`2.11s`）；三者随后分别累计 `38/45/53` 次，峰值约 `6.6s`，并伴随 `ReadIndex`、range 和健康检查超时。
+7. 宿主 kind 节点内的 containerd 从 `08:27:49` 起也出现 task delete/get-state `context deadline exceeded`，之后 API 逐步变为 `connection refused`。这证明故障不只影响单个 Karmada 组件；但这里的 containerd 不是创建 `member-e2e-bcfv6` 的外层宿主 Docker，仍不能直接解释失败节点为何没有 ready 标记。
+
+> 分析：三套独立 etcd 在同一时间窗口一起变慢，说明问题位于它们共享的 runner 基础设施层，而不是某个 Karmada controller 的业务逻辑。现象最像共享 I/O 或运行时抖动，但缺少 runner 宿主 Docker、磁盘和系统压力日志，不能确定物理根因，也不能把动态 kind 创建和这场退化连成已证明的因果关系。
+
+### 证据等级与边界
+
+- `E0`：已观察到原始失败 job、首个失败 spec、完整时间线和错误文本。
+- `E1`：尚未达到。v1.34/v1.36.1 通过是有用的差分证据，但没有同 SHA、同 v1.35 的重跑，不能据此严格证明非确定性。
+- `E2`：动态节点失败与底层 runner 原因分析停在这里。三套 etcd 同时出现 WAL `fdatasync` 延迟，并伴随宿主 kind 内部 containerd 超时，支持共享宿主 I/O 或运行时抖动；缺少关键宿主证据，不能闭合到具体资源项。
+- `E3`：只覆盖同一次运行内可由日志和源码闭合的链条：多 etcd WAL 同步变慢，继而发生读/健康检查超时、API 失联和清理失败；以及 kind 节点没有产生 cgroup-ready 日志、`clusterProvider.Create` 返回错误、测试在 `BeforeEach` 退出。两条链之间仍只有 `E2` 关联。
+- `E4`：未达到，没有做针对该 CI 环境故障的可控修复实验。
+
+artifact 没有 `ENOSPC`、`no space left`、`too many open files`、OOM kill 或 pressure eviction 证据；仍存活的 host/member3 节点容器均为 `OOMKilled: false`。唯一 `inotify` 告警早在 `08:19:01`，内容是短生命周期 cgroup 路径已消失，不是 watcher 或文件描述符耗尽。这个结果只能写成“现有证据不支持 OOM、磁盘写满、inotify 上限或 Kubernetes pressure eviction”，不能写成已经排除资源压力。失败节点在 kind 返回错误前被自动删除，artifact 没有它的 journal、inspect，也没有宿主 `df`/inode、I/O/PSI、kernel OOM/block 或 dockerd 日志。
+
+### 发布与重跑状态
+
+已按确认发布 [`/retest`](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5238860103)，但 [karmada-bot 拒绝执行](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5238862855)：当前作者还没有 `/ok-to-test` 信任标记。更关键的是，红项来自只监听 `push` / `pull_request` 的 GitHub Actions `CI Workflow`，Prow 的 `/ok-to-test` 或 `/retest` 不会重跑这个 job。
+
+截至回读，run `31367565125` 仍为 `run_attempt: 1`。正确入口是由具有仓库写权限的维护者在该 run 上点击 **Re-run failed jobs**；成功触发后同一 run 的 attempt 应由 `1` 变为 `2`。不通过空提交制造新 CI。
+
+结论：这是高置信度与 #7795 无关的 kind 创建/runner 环境失败，不需要修改 PR 代码。终端机制可定位到 kind 没有观察到 cgroup-ready 日志；现场同时存在广泛的 etcd、API 和运行时退化，最深层假设只能谨慎写成“共享 runner I/O 或运行时抖动（E2）”。等维护者完成同 SHA、同 v1.35 重跑并通过后，才能把它正式归为已验证 flake。

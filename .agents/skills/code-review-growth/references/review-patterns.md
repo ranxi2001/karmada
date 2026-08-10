@@ -397,3 +397,12 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: For every queue whose entries can outlive one event turn, map `filter/admit -> enqueue -> ownership change -> cancel/delete -> dequeue -> authoritative re-read -> mutation` and identify where current eligibility is revalidated.
 - Evidence to gather: Filter transition behavior, delete-handler effects, queue cancellation capability, key payload, lister/API read, ownership and suspension fields, and all writes after dequeue.
 - Test or fix cue: Revalidate ownership, suspension, deletion, and other mutation gates after reading the current object and before side effects. Use a fake clock to retain a key, change eligibility, advance time, and assert no algorithm call or patch occurs.
+
+## A Final Readiness Error Does Not Localize The Whole Create Duration
+
+- Pattern: A long cluster-create call can end with a short bounded readiness error even though the elapsed time also includes earlier provider work and failure cleanup; the final message identifies the terminal gate, not where the whole duration was spent.
+- Seen in: `karmada-io/karmada#7795`, where a namespace E2E spent `23m33s` in kind v0.32.0 `Create` and ended at the `30s` cgroup-ready log gate, while the same path also contained image/network operations, `docker run`, and automatic cluster deletion without one enclosing timeout.
+- Miss symptom: The RCA calls the failure a 23-minute readiness timeout, assigns all delay to `docker run`, or claims the dynamic cluster triggered runner collapse even though control-plane health errors began before cluster creation.
+- Review check: Expand the provider path through rollback, compare the first environmental degradation timestamp with the alleged trigger, and separate the proven terminal mechanism from any physical infrastructure cause.
+- Evidence to gather: Per-phase provider timestamps, failed-node journal and inspect output, host dockerd/container-runtime logs, disk and inode state, I/O/PSI metrics, kernel OOM/block events, and synchronized symptoms from independent control-plane stores.
+- Test or fix cue: Keep the physical cause at `E2` when failed-node or host evidence is absent. A same-SHA green rerun upgrades nondeterminism to `E1` only; it does not justify changing unrelated PR code or naming a root cause.
