@@ -166,3 +166,62 @@ NONE
 ````
 
 The published revision changes `/kind flake` to `/kind cleanup`, changes `Part of #6841` to `Refs #6841`, and removes the unproven causal claim. GitHub API readback matched the approved body exactly; PR #7795 remained open at head `14b24b90db739a3091f6d1877c598a9f7f696e3d`. It did not change the title, branch, commit, or code. Immediately after the update, the asynchronous label state still showed `kind/flake`; this is dynamic GitHub state rather than part of the approved body.
+
+## Maintainer Review Update（2026-08-10，待发布）
+
+### 先说人话
+
+维护者把 #7795 的范围进一步收窄为两行行为变化：让 BusyBox 持续运行，并在查询 metrics 前等待整个 Pod Ready。UID、container ID、restart count 和前后快照虽然能诊断 fixture 生命周期，但不是合入这次修复所必需的合同，因此已从本地 patch 删除。
+
+- Review：[直接设置 BusyBox command](https://github.com/karmada-io/karmada/pull/7795#discussion_r3746440045)；[只保留 command 与 `khelper.IsPodReady`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3746457522)
+- Remote head：`14b24b90db739a3091f6d1877c598a9f7f696e3d`
+- Pending local head：`f1d3685b7e63422eee7c99ac8da65611b4fa69ae`
+- Residual diff：`test/e2e/suites/base/karmadactl_test.go`，`+2/-1`
+- Focused validation：`go test ./test/e2e/suites/base -run '^$' -count=1` 通过；`git diff --check` 通过
+- 证据边界：这个 patch 修正不稳定 fixture，但仍不声称 commandless BusyBox 是原 `PodMetrics NotFound` 的完整根因。
+
+### PR Body Revision
+
+````markdown
+**What type of PR is this?**
+
+/kind cleanup
+
+**What this PR does / why we need it**:
+
+The `Karmadactl top existing pod` E2E creates an nginx and BusyBox Pod on each member cluster. BusyBox has no long-running command, so it exits and restarts, while `PodRunning` does not guarantee that every container is ready.
+
+This change keeps BusyBox running only in this test and waits for `PodReady=True` before querying metrics. Shared fixtures and `karmadactl` behavior are unchanged. It does not claim that the BusyBox restart was the complete cause of the observed `PodMetrics NotFound`; subsequent runs still need to be monitored.
+
+**Which issue(s) this PR fixes**:
+
+Refs #6841
+
+**Special notes for your reviewer**:
+
+- Scope: test fixture only; no CLI retry or shared helper change.
+- Tests: `go test ./test/e2e/suites/base -run '^$' -count=1`.
+- AI assistance: Codex helped inspect the review feedback, reduce the patch, and run validation; I reviewed the code and results.
+
+**Does this PR introduce a user-facing change?**:
+
+```release-note
+NONE
+```
+````
+
+### Review Replies
+
+Target: [`discussion_r3746440045`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3746440045)
+
+```markdown
+Updated. The BusyBox command is now set directly on the Pod returned by `helper.NewPod`, without scanning the containers by name.
+```
+
+Target: [`discussion_r3746457522`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3746457522)
+
+```markdown
+Updated. The PR now keeps only the BusyBox command and `khelper.IsPodReady`; the runtime-state snapshot and lifecycle assertions have been removed.
+```
+
+Pending upstream actions after exact user approval: force-push `f1d3685b7` to `origin/test/karmadactl-top-stable-pod`, update the PR body, post the two replies, and resolve the addressed threads if GitHub permits it.
