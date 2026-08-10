@@ -318,7 +318,7 @@ Status：待用户确认后发布。
 
 `helper.NewPod` builds an nginx and BusyBox Pod reused across E2E tests. BusyBox has no long-running command, so it exits and restarts, while `PodRunning` does not guarantee that every container is ready.
 
-This change makes the BusyBox container sleep for 3600 seconds by default, giving every E2E caller a stable test fixture until its existing Pod or namespace cleanup runs. The top test also waits for `PodReady=True` before querying metrics.
+This change makes the BusyBox container sleep for 3600 seconds by default, giving every E2E caller a stable fixture for the expected test duration; existing Pod or namespace cleanup still removes it afterward. The top test also waits for `PodReady=True` before querying metrics.
 
 This does not claim that the BusyBox restart was the complete cause of the observed `PodMetrics NotFound`; subsequent runs still need to be monitored.
 
