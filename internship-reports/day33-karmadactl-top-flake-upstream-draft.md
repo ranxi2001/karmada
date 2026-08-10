@@ -289,14 +289,13 @@ The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmad
 
 发布回读：已用精确 lease 将 `f1d3685b7` force-push 为 `8d2148606`；GitHub PR API 显示 2 files、`+6/-5`、`size/S`，PR body 和第一条编辑后的回复逐字匹配确认稿，第二条回复保持不变。当前等待新 SHA 的 upstream PR CI 与 `lgtm/approved`。
 
-## Default Stable Fixture Revision（2026-08-10，待发布）
+## Default Stable Fixture Revision（2026-08-10，已发布）
 
 ### 先说人话
 
 上一版把 BusyBox command 设计成可选参数，仍然把“是否稳定运行”的责任留给每个调用方。重新从 helper 契约审计后，这个抽象不成立：`NewPod` 是多个 E2E 共用的 Pod fixture，默认应在测试期间保持稳定；测试结束由既有 `DeferCleanup`、`AfterEach` 或 namespace 删除回收资源，而不是依靠 BusyBox 自行退出。
 
-- Current remote head：`8d2148606f3475fea0c3ef113b795951a4cf278a`
-- Pending local head：`aaf1dc24c8c95a5bdd8fca799450ae1502260eab`
+- Current remote head：`aaf1dc24c8c95a5bdd8fca799450ae1502260eab`
 - Residual diff：2 files，`+5/-4`
 - `test/helper/resource.go`：恢复 `NewPod(namespace, name)` 两参数 API；BusyBox 默认使用 `Command: []string{"sleep", "3600"}`；函数注释明确其容器为 long-running fixture
 - `test/e2e/suites/base/karmadactl_test.go`：top 恢复普通两参数调用，继续用 `khelper.IsPodReady`
@@ -307,7 +306,7 @@ The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmad
 
 ### PR Body Revision
 
-Status：待用户确认后发布。
+Status：已发布；GitHub API 回读与下列 194-word、16-nonblank-line 确认稿一致。
 
 ````markdown
 **What type of PR is this?**
@@ -341,10 +340,12 @@ NONE
 
 ### Review Reply Revision
 
-Target：原位编辑 [`discussion_r3747135026`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135026)，不新增 thread message。
+Published：已原位编辑 [`discussion_r3747135026`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135026)，没有新增 thread message。
 
 ```markdown
 Updated after checking the shared helper's contract. `helper.NewPod` now sets `Command: []string{"sleep", "3600"}` on its BusyBox container by default, and the call remains `helper.NewPod(namespace, name)`. All E2E callers already remove the Pod or its namespace during cleanup, so the helper now provides a stable fixture consistently.
 ```
 
 The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135768) remains accurate and needs no edit.
+
+发布回读：已用精确 lease 将 `8d2148606` force-push 为 `aaf1dc24c`；GitHub PR API 显示 2 files、`+5/-4`、`size/XS`，PR body 和第一条编辑后的回复逐字匹配确认稿，第二条回复保持不变。当前等待新 SHA 的 upstream PR CI 与 `lgtm/approved`。

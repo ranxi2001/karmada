@@ -17,11 +17,11 @@
 | [Day 39 Descheduler 代码专项](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 已纠偏为整任务调度模型：`ResourceBinding` 是一级队列的 `SchedulingUnit`，Descheduler 只撤回 `Assigned + NotStarted + SchedulerUnschedulable`；五个代码合同为状态、证据、执行前 fence、接管完成、持久重试。A 为逐 GVK 试点，B 为 ResourceInterpreter 主线，C 为 member Pod 观察 fallback，D 仅借 ApplicationFailover 模式；[16 页 Style A 汇报稿](internship-reports/day39-karmada-descheduler-code-research-presentation.html)同步更新 | 周一前拿千问真实 YAML 核对生命周期、不可调度诊断、单目标 Placement、执行前 lock、接管回执和 cooldown，并用 HTML 试讲 |
 | [PR #7662 / Day 40](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) | Open，head `586f6fc3508e`；partial 一期为 Deployment：source generation/V2 freshness、pinned delta、strict capacity、原子 commit、ack/consume/abandon；Full 保持通用路径 | `@zhy76` / `@RainbowMango` 回复或 proposal commit；逐项确认 10 个 stop gates |
 | [PR #7810 / Day 41](internship-reports/day41-pr7810-binding-update-coalescing-review.md) | Open，reviewed head `31bef8d37`；fixed window 仅是 best-effort。P1 delayed key 可越过 ownership / suspension；delay 还覆盖 failover、Descheduler 和 WR，priority queue 忽略参数；[review 已发布](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994) | 作者回复或 push 新 head 后复查 dequeue guard、作用域、两类 queue、fake-clock tests 和 docs CI |
-| [PR #7795](https://github.com/karmada-io/karmada/pull/7795) | Remote `8d2148606`；本地 `aaf1dc24c` 已纠偏为稳定 fixture：`NewPod(namespace, name)` 内置 BusyBox `sleep 3600`，8 个 E2E 均由既有 cleanup 回收；2 files `+5/-4`，测试通过 | 用户确认 exact force-push、PR body 与第一条回复修订 |
+| [PR #7795](https://github.com/karmada-io/karmada/pull/7795) | 已发布 `aaf1dc24c`：`NewPod(namespace, name)` 默认内置 BusyBox `sleep 3600`，8 个 E2E 均由既有 cleanup 回收；2 files `+5/-4`，194-word body 和第一条回复已回读 | 新 SHA 的 upstream PR CI、`lgtm/approved` 或新 review |
 
 ## Last Run
 
-- 2026-08-10：#7795 发布 `8d2148606` 后重新审计 [`NewPod` 契约](internship-reports/day33-karmadactl-top-flake-upstream-draft.md)：无 command 的 BusyBox 在默认 `RestartPolicyAlways` 下不是一次性任务，而是持续重启；本地 `aaf1dc24c` 已恢复两参数 API 并默认 `sleep 3600`，8 个 E2E 均有 cleanup，测试通过，待确认发布。
+- 2026-08-10：#7795 发布 `8d2148606` 后重新审计 [`NewPod` 契约](internship-reports/day33-karmadactl-top-flake-upstream-draft.md)：无 command 的 BusyBox 在默认 `RestartPolicyAlways` 下不是一次性任务，而是持续重启；最终 `aaf1dc24c` 恢复两参数 API 并默认 `sleep 3600`，8 个 E2E 均有 cleanup；测试、force-push、194-word body 和第一条回复修订均完成并回读。
 - 2026-08-04：完成 [Day 41 PR #7810 代码与系统 review](internship-reports/day41-pr7810-binding-update-coalescing-review.md) 和 [delayed-key 时序](internship-reports/day41-pr7810-delayed-key-race.mmd)：确认 `AddAfter` 保留最早 deadline 且可被 fast path 绕过，并发现 delayed key 可越过 ownership / suspension；全局延迟还覆盖 failover、Descheduler 与 WR，priority queue 不生效。[英文 review](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994)已发布并回读验证。
 - 2026-08-04：新增 [Day 40 #7662 API/代码开发基准](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) 和 [流程图](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-flow.mmd)：确认当前 WR 写请求即成功、V1 estimator freshness 与 `FitError` retry 均有缺口；一期范围及 source generation、pinned capacity、commit recovery、ack/consume/abandon 等 stop gates 已定。
 - 2026-08-04：纠偏 [Day 39 Descheduler 代码专项](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) 和 [整任务重入队图](internship-reports/day39-karmada-descheduler-code-contract-breaks.mmd)：改为 Binding 一级队列、member Pod 二级证据与 whole-task requeue；缺口收敛为生命周期、不可调度证据、pre-start fence、接管完成和持久 retry/cooldown，HTML 已同步验收。
@@ -31,7 +31,7 @@
 
 - Day 39：尚缺千问真实 YAML 来证明 `NotStarted`、长期 `SchedulerUnschedulable`、单目标 Placement、执行前 admission lock 和新目标 Running/Completed 回执；无 fence 时只能承诺 best-effort。
 - #7662：Deployment signal/owner-chain 可复用，但 V1 estimator 缺 source freshness；public mode、threshold、V2 观测合同、requestID/ack、pinned selection、Descheduler 仲裁和旧 WR controller 降级为 Full 的风险均待确认；详见 Day 40 stop gates。
-- #7795 稳定 fixture 版本已在本地完成；force-push、PR body 和第一条回复修订需用户确认 exact action/text。
+- #7795 稳定 fixture 版本已发布，当前只等待 upstream PR CI 与 `lgtm/approved`；没有新的代码 blocker。
 
 ## Ruled Out
 
@@ -46,7 +46,7 @@
 - 周一前用 Day 39 HTML 稿试讲；拿千问真实 YAML 确认 `Queued/Assigned/Running/Terminal` 映射、`NotStarted + SchedulerUnschedulable` 证据、单目标 Placement、pre-start lock、handoff completion 和 cooldown，不把公开的 offline / long-running Pending story 自动写成具体产品合同。
 - #7662 等 `@zhy76` / `@RainbowMango` 回复或 proposal commit；更新后逐项核对 Day 40 的 10 个 stop gates，只在准确 target/text 获用户确认后起草或发布 upstream review。
 - #7810 等作者回复或新 head；更新后复查 dequeue guard、delay 作用域、legacy/priority queue、fake-clock 与 failover/Descheduler tests，不在无新信号时重复催促。
-- #7795 用户确认后以精确 lease force-push `aaf1dc24c`、更新已记录的 PR body 并原位编辑第一条回复；随后等待新 SHA 的 upstream PR CI 与 maintainer gate。
+- #7795 等新 SHA 的 upstream PR CI、`lgtm/approved` 或 maintainer 新反馈；不在无新信号时重复评论或催促。
 
 ## Stop Conditions
 
