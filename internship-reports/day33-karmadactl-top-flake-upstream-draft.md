@@ -348,4 +348,20 @@ Updated after checking the shared helper's contract. `helper.NewPod` now sets `C
 
 The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmada/pull/7795#discussion_r3747135768) remains accurate and needs no edit.
 
-发布回读：已用精确 lease 将 `8d2148606` force-push 为 `aaf1dc24c`；GitHub PR API 显示 2 files、`+5/-4`、`size/XS`，PR body 和第一条编辑后的回复逐字匹配确认稿，第二条回复保持不变。当前等待新 SHA 的 upstream PR CI 与 `lgtm/approved`。
+发布回读：已用精确 lease 将 `8d2148606` force-push 为 `aaf1dc24c`；GitHub PR API 显示 2 files、`+5/-4`、`size/XS`，PR body 和第一条编辑后的回复逐字匹配确认稿，第二条回复保持不变。该次发布回读时等待新 SHA 的 upstream PR CI 与 `lgtm/approved`。
+
+## Upstream CI 红项分类（2026-08-10）
+
+### 先说人话
+
+本次唯一红项不是 #7795 改坏了 `karmadactl top`。在同一个失败 job 里，本 PR 直接修改的 `Karmadactl top existing pod` 用例已通过；后面另一个 namespace 用例在创建临时 kind 集群时超时，导致 v1.35 E2E 失败。
+
+- 失败 check：[`e2e test (v1.35.0)`](https://github.com/karmada-io/karmada/actions/runs/31367565125/job/93390881240)，其余实际测试与构建 checks 均通过，Tide 仅因该红项保持 pending
+- 直接回归：`Karmadactl top existing pod` 在 `test/e2e/suites/base/karmadactl_test.go:618` 通过，耗时 `20.830s`
+- 首个硬失败：`namespace_test.go:103` 调用 `createCluster` 创建 `member-e2e-bcfv6`，约 `23m33s` 后报错 `could not find a log line that matches "Reached target .*Multi-User System.*|detected cgroup v1"`
+- 代码边界：错误发生在 `createCluster -> clusterProvider.Create -> kind`，早于 Karmada cluster join 和 namespace 传播；PR diff 没有修改这条路径
+- 交叉证据：同一 SHA 的 v1.34 和 v1.36.1 E2E 通过同类 namespace 用例；v1.35 同一 job 中其他动态 kind 集群也能在约 12-14 秒内创建
+- 后续现象：宿主 kind 集群同时出现 etcd `slow fdatasync`、`ReadIndex` retry 和 timeout，最后清理阶段才出现 API `connection refused`；这些支持测试环境失稳分类，但不能反推具体硬件原因
+- 证据边界：kind 已证实是等待节点 cgroup 就绪日志超时；artifact 没有保留失败的 `member-e2e-bcfv6` 容器日志，因此不进一步猜测 runner 资源、systemd 或 Docker 的底层原因
+
+结论：高置信度与 PR 无关的 kind 启动/CI 环境失败，不需要改 PR 代码。尚无同 SHA、同 v1.35 的重跑，所以要等重跑通过后才能严格标为已验证的非确定性 flake。最小处理是在 #7795 发布 `/retest`；这是 upstream-facing 操作，待用户确认后执行。
