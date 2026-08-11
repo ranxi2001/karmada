@@ -5,6 +5,7 @@
 - Feature branch：[`ranxi2001/feature/multi-component-scale-rescheduling`](https://github.com/karmada-io/karmada/compare/master...ranxi2001:karmada:feature/multi-component-scale-rescheduling)
 - Feature HEAD：[`a3547a3a84ef93e6cf1bf08422ae6465e381d6bd`](https://github.com/ranxi2001/karmada/commit/a3547a3a84ef93e6cf1bf08422ae6465e381d6bd)
 - Merge base：[`upstream/master@1c278577e7892b6ea44f86a4317c1eb1e013bb93`](https://github.com/karmada-io/karmada/commit/1c278577e7892b6ea44f86a4317c1eb1e013bb93)
+- Maintainer-provided Draft：[`RainbowMango/pr_multi_component_next_move@c14af2f1119a66d4672a814cc80f7612943d35d3`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md)
 - 前置设计与实测：[Day 44：#7492 多组件调度结果 API 设计](day44-issue7492-component-scheduling-result-api-design.md)
 - 本轮范围：只读复核 issue、分支、生产调用链和 PR readiness；没有修改 feature branch，也没有发布 upstream PR 或评论
 
@@ -29,12 +30,13 @@ result:  member1
 
 | 目标 | 当前判断 | 还差什么 |
 | --- | --- | --- |
-| **可以开 API groundwork PR** | 约 **85%–90%** | 准备 exact title/body，明确 `Part of #7492` 和非目标，经用户确认后创建 PR |
-| **API PR 可以合并** | 代码机械检查已完成，但合同尚未 merge-ready | maintainer 确认结果语义、`BindingSnapshot` 暴露范围和 v1alpha1 数据完整性三组问题 |
+| **可以开 API groundwork PR** | 机械 preflight 已完成；可以开更窄的 design/review surface | exact body 必须披露当前 branch 只覆盖 Draft PR1 的 API/codegen，缺 webhook validation 与 `GracefulEvictionTask.Components` |
+| **API PR 可以合并** | 尚未按维护者 Draft 对齐 merge-ready scope | 补齐或明确拆出 PR1 scope gap；处理 v1alpha1 数据保护，不能再把已回答的 single/`BindingSnapshot` 作为 blocker |
 | **完整实现 #7492** | 约 **25% ±5%** | producer、scale trigger、失败保护、component dispatch/interpreter、正式 validation 和行为测试 |
 
 > 分析：百分比是按功能链路和未决合同给出的工程估计，不是测试覆盖率，也不是 maintainer 承诺。
-> 当前最准确的结论是：**离“能开一个范围正确的 PR”很近，离“关闭 #7492”还很远。**
+> 当前最准确的结论是：**代码已足够形成 API review surface，但严格按维护者 Draft 的 PR1 还缺实现；
+> 离“关闭 #7492”仍很远。**
 
 ## 本轮进度
 
@@ -61,7 +63,7 @@ result:  member1
 4. **测试 helper 语义**：`IsScheduleResultEqual` 按 component name 比较，忽略 component 顺序及
    nil/empty 差异，并拒绝重复 name；11 个 table-driven case 已覆盖关键边界。
 5. **API 注释纠偏**：删除未经解释的 “only workloads with multiple pod templates”，改成中性的
-   component-based scheduling result 描述，未擅自决定 single-component 结果编码。
+   component-based scheduling result 描述；它与维护者 Draft 明确的 single-component 双写路线兼容。
 
 ### 已有验证证据
 
@@ -78,6 +80,28 @@ result:  member1
 
 这些结果证明当前 API patch 自洽、可编译、生成物完整；它们不证明 production path 已经使用新字段，也
 不证明未确认的跨字段和版本合同正确。
+
+## Maintainer-provided Draft 已给出的答案
+
+`c14af2f1` 是用户确认的维护者设计资料。它仍标记为 `Draft (design discussion, not yet a formal
+proposal)`，所以这里只把它作为当前实现方向，不写成 upstream 已合入共识。Day44/Day45 原先三组
+blocker 中，下面内容已有答案：
+
+| 事项 | 已给出的方向 |
+| --- | --- |
+| API 方案 | 选择方案 B，在 `TargetCluster` 内保存 name-keyed component result |
+| single component | 迁移期双写 scalar `Replicas` 和一个 `Components` entry |
+| multi component | scheduler 写 `fullComponentSetOf(spec.Components)`，不是 delta |
+| request/result 迁移 | 两侧结构同构，`Components` 是迁移方向，legacy scalar 暂时双写 |
+| result validation | RB webhook 校验 request membership、cluster 内 duplicate；Gate 关闭时拒绝携带结果字段 |
+| `BindingSnapshot` | 复用 `TargetCluster` 是有意的；同名 component merge 取最大 replicas |
+| dispatch | PR3 增加 `ReviseComponents` 并贯通 interpreter；single component 可 fallback `ReviseReplica` |
+| eviction | `GracefulEvictionTask` 增加 `Components` 并保存被驱逐集群结果 |
+| PR 切分 | PR1 API+codegen+webhook，PR2 scheduler 双写，PR3 interpreter+ensureWork，PR4 third-party+Flink E2E，PR5 downstream |
+
+因此 single/scalar 三选一、是否允许 `requiredBy` 暴露 Components、Gate-off 基本策略、
+`ReviseComponents` 是否属于闭环，都不再列为“需要 maintainer 从零回答”。仍未回答的是失败状态机、
+v1alpha1 保护、partial/mismatch/CRB 校验边界和 scale delta/trigger 细节。
 
 ## 完整性分析
 
@@ -120,14 +144,14 @@ GetComponents -> spec.Components -> component capacity estimation
 
 | 层次 | 状态 | 已有基础 | 主要缺口 |
 | --- | --- | --- | --- |
-| 请求解析 | **已有上游基础** | `GetComponents` 生成 `spec.Components` | 与结果字段的权威关系仍未定义 |
-| API 结果载体 | **本分支基本完成** | `TargetCluster.Components`、`TargetComponent`、生成物 | 完整快照、single/scalar、`requiredBy` 合同未确认 |
+| 请求解析 | **已有上游基础** | `GetComponents` 生成 `spec.Components` | Draft 已给同构/双写迁移方向；mismatch 权威与迁移终点未定义 |
+| API 结果载体 | **本分支部分完成** | `TargetCluster.Components`、`TargetComponent`、生成物 | 按 Draft PR1 仍缺 `GracefulEvictionTask.Components` 和 result webhook validation |
 | Scheduler producer | **未接通** | 已有选择结果和 desired components | `AssignReplicas` 仍只写 cluster name；没有成功结果快照 |
 | Reschedule trigger | **未接通** | scheduler 已调用 `IsBindingReplicasChanged` | helper 不比较 request components 与旧 result，scale/swap 不入队 |
 | Estimator | **可部分复用** | `MaxAvailableComponentSets` 已支持完整 component set 和 assumptions | 需要验证 scale-up delta、scale-down skip 与旧成功结果如何组合 |
-| Dispatch / interpreter | **未实现** | scalar `ReviseReplica` 路径成熟 | 缺 `ReviseComponents` interface、webhook/declarative/Lua routing 和原子写回 |
+| Dispatch / interpreter | **未实现** | scalar `ReviseReplica` 路径成熟；Draft 已给 PR3 方向 | 缺 `ReviseComponents` interface、webhook/declarative/Lua routing 和错误原子性 |
 | 失败保护 | **合同和实现均未闭合** | 普通 `FitError` 有既有处理 | 当前 FitError 会 patch 空 `Clusters`；component scale 应保留旧结果、冻结下发还是采用别的状态，需先确认 |
-| Validation / version | **部分完成** | 基础字段 schema 和 list-map 结构存在 | partial/unknown/scalar 共存、Gate、RB/CRB、`requiredBy`、v1alpha1 main/status 未闭合 |
+| Validation / version | **部分完成** | 基础字段 schema 和 list-map 结构存在 | 缺 Draft 要求的 RB membership/duplicate/Gate 校验；partial/mismatch、CRB 与 v1alpha1 main/status 未闭合 |
 | 行为测试 | **未覆盖主链路** | equality、conversion 和既有 component scheduling tests | 缺 producer、trigger、scale up/down、dispatch、failure preservation 和 version-skew tests |
 
 ### 关键源码证据
@@ -168,8 +192,9 @@ GetComponents -> spec.Components -> component capacity estimation
 - diff 聚焦，没有 scheduler/controller 的半成品混入 API patch。
 - #7492 maintainer 已明确提出需要 component scheduling result，并给出候选类型结构。
 
-因此，没有额外普通代码或普通单测是“创建 API groundwork PR”的硬门槛。PR 本身可以作为 API review
-surface，但必须清楚写出它只增加 prerequisite。
+因此，当前 branch 可以作为更窄的 API review surface，但不能再说“没有额外普通代码是 merge-ready
+门槛”。维护者 Draft 推荐的 PR1 还包含 `GracefulEvictionTask.Components`、RB result validation 及测试；
+若不先补齐，PR body 必须明确这是比 Draft PR1 更窄的拆分，并让 reviewer 判断是否接受该切分。
 
 ### PR 不能怎样描述
 
@@ -184,40 +209,26 @@ surface，但必须清楚写出它只增加 prerequisite。
 - additional kind：`/kind api-change`
 - issue relation：`Part of #7492`
 - release note：说明新增 `TargetCluster.Components` / `TargetComponent` API，不能写 `NONE`
-- reviewer notes：最多保留下面三组 merge blocker，并说明 population、trigger、estimator 和 dispatch 是后续
+- reviewer notes：明确 Draft 已回答的设计点、当前 PR1 scope gap、v1alpha1 风险，并说明 trigger、
+  estimator、failed-rescheduling safety 和 dispatch 是后续
 
-## 需要 maintainer 确认的问题
+## 仍需确认的问题
 
-### P0：合并 public API 前必须回答
+### P0：合并 public API 前必须闭合
 
-#### 1. `clusters[].components` 的最小结果合同是什么？
+#### 1. 当前 branch 如何对齐 Draft PR1？
 
-需要一次确认以下相互依赖的问题：
+维护者 Draft 把 PR1 定义为 API、codegen 和 webhook validation，并同时提出
+`GracefulEvictionTask.Components`。当前 branch 只有 `TargetCluster` API/codegen/helper，缺：
 
-- single-component `spec.components` 应写一个 `TargetComponent`、继续写 scalar `Replicas`，还是双写？
-- component result 是否是“最近一次成功调度的完整快照”，而不是 desired mirror、partial 或 delta？
-- missing、unknown 和 duplicate component name 是否必须拒绝？
-- request 侧 `spec.replicas/spec.components` 与 result 侧
-  `clusters[].replicas/clusters[].components` 各自谁是权威，能否共存？
-- 调度失败时是否必须保留旧快照？
+- `GracefulEvictionTask.Components` 及生成物；
+- RB result-name membership、duplicate 与 Gate-off validation；
+- 对应 webhook unit tests。
 
-**当前倾向**：只要进入 component-based path，就以 `components` 为权威；结果保存最近一次成功调度的
-完整快照，成功提交前不覆盖旧结果。若需要迁移期双写，应明确 scalar 是 component 总和还是只服务 legacy
-consumer。
+可选路径只有两个：补齐上述 Draft PR1 后再提交 merge-ready PR，或在 exact PR body 中明确做更窄的
+API-only split。后者可以用于 review，但不能把 scope 差异隐藏成“已经完成 PR1”。
 
-#### 2. `TargetCluster` 复用后扩大的 API surface 是否有意？
-
-`BindingSnapshot.Clusters` 复用 `[]TargetCluster`，所以新增字段自动出现在
-`spec.requiredBy[*].clusters[*].components`。需要选择：
-
-- 允许并定义 dependent binding snapshot 的 component result 语义；
-- 保留类型复用，但 admission 禁止该路径出现非空 `components`；
-- 拆分专用 snapshot target type，避免意外公开字段。
-
-还需要确认结果侧 `Name` 的非空/唯一/请求集合匹配约束。当前倾向是：本期若没有明确 consumer，先禁止
-`requiredBy` 非空 component result，而不是默认为它已有语义。
-
-#### 3. served v1alpha1 如何保护 v1alpha2-only 数据？
+#### 2. served v1alpha1 如何保护 v1alpha2-only 数据？
 
 当前 v1alpha1 无法表达 `spec.components` 和 `clusters[].components`；conversion test 已证明 typed
 round-trip 会丢结果。需要分别决定：
@@ -231,20 +242,24 @@ round-trip 会丢结果。需要分别决定：
 **当前倾向**：可以接受只读 projection，但不能接受一次无关的 legacy write 静默删除调度基线。先用真实
 API server 建立 main/status baseline，再按 maintainer 选择实现拒绝或保留策略。
 
+#### 3. admission 的未覆盖边界是什么？
+
+Draft 已回答 RB 的 unknown/duplicate/Gate-off 校验和 `BindingSnapshot` max merge，不应再问是否禁用
+`requiredBy`。仍需在 PR 中收敛：missing component 是否由 admission 拒绝，scalar/components 不一致时
+如何处理，CRB 是否需要对等 validator，以及 Gate strict-reject 对已存在对象/滚动降级的操作影响。
+
 ### P1：后续实现要确认，但不阻止创建 groundwork PR
 
-1. **producer / consumer ownership**：scheduler 何时写完整结果；旧对象如何 backfill；
-   `IsBindingReplicasChanged` 是唯一 trigger 还是还要修改 detector/controller event path。
+1. **scale trigger / backfill**：Draft 已指定 scheduler 写 full set/dual-write，但没有说明旧对象如何
+   backfill，`IsBindingReplicasChanged` 是唯一 trigger 还是还要修改 detector/controller event path。
 2. **失败状态机**：无可行集群时，谁保留旧成功结果、谁阻止 binding controller 使用新模板，以及什么
    condition 表示 pending/failed reschedule。
 3. **estimator 输入**：scale-up 的 delta 是由 scheduler 先计算后传入 estimator，还是 estimator 同时接收
    desired 与 scheduled snapshot；scale-down 如何绕过 estimate 而不绕过 placement/eligibility 检查。
-4. **validation ownership**：哪些结构规则进入 CRD/CEL，哪些 request/result cross-field 规则由 RB/CRB
-   shared webhook 执行，producer 还要保留哪些 defensive check。
-5. **Feature Gate 生命周期**：Gate 关闭或版本降级后，已有 component result 是保留冻结、允许删除，还是
-   拒绝所有更新；滚动升级期间如何 grandfather existing objects。
-6. **`ReviseComponents` 协议**：是否属于下一阶段；是否必须一次原子修改所有 component；失败时能否退化成
-   多次 `ReviseReplica`。当前倾向是不退化，因为中途失败会留下 partial template。
+4. **`ReviseComponents` 错误合同**：Draft 已把它放入 PR3，并允许 single-component fallback；仍需明确
+   多组件修改是否 all-or-nothing、partial mutation 如何回滚，以及 third-party interpreter error 行为。
+5. **snapshot/eviction consumers**：按 Draft 实现 `BindingSnapshot` component max merge、
+   `GracefulEvictionTask.Components` 快照和 FRQ accounting，并确定对应 unit/integration tests。
 
 ### P2：移出当前 API PR，另做设计或复现
 
@@ -257,29 +272,29 @@ API server 建立 main/status baseline，再按 maintainer 选择实现拒绝或
    result API PR。
 3. **长期 API 迁移**：`Replicas` / `ReplicaRequirements` 是否 deprecated、是否改 pointer、何时删除
    scalar path，不属于本次最小结果载体。
-4. **扩展场景**：component 跨多个集群拆分、add/remove/rename、HPA、Descheduler、FRQ、
-   `GracefulEvictionTask.Components` 和通用状态迁移均另行设计。
+4. **扩展场景**：component 跨多个集群拆分、add/remove/rename、HPA、Descheduler 和通用状态迁移均
+   另行设计；FRQ 与 `GracefulEvictionTask.Components` 已在 Draft 内，不再归为无方向的扩展项。
 
 ## 证据边界
 
 | 标签 | 本文中的含义 | 本轮结论 |
 | --- | --- | --- |
-| `MAINTAINER` | #7492 正文、RainbowMango / mszacillo / zhzhuang-zju 的真人讨论 | 需要结果 API 和 phase IV 三项目标已确认；具体 API 仍是 proposal |
+| `MAINTAINER` | #7492 正文、真人讨论，以及用户确认的 RainbowMango `c14af2f1` Draft | 方案 B、双写、producer、snapshot merge、interpreter 和 PR 切分已有 maintainer direction；仍非 merged project consensus |
 | `CODE` | `a3547a3a8` 及其基线源码 | 新字段无 production producer/consumer；trigger、dispatch 和 FitError 行为可由源码证明 |
 | `OBS` | exact-tree 测试结果、git/remote/issue 回读 | branch clean、0 behind/1 ahead、测试和 verify 通过、无关联 PR |
-| `INFERENCE` | 对完成度、推荐合同和 PR 拆分的工程判断 | 25%/85% 等估计及“完整成功快照”倾向，等待 maintainer 决策 |
+| `INFERENCE` | 对完成度、失败状态机和兼容方案的工程判断 | 完整 feature 约 25%、last-success 保留和 v1alpha1 保护建议仍等待 PR/maintainer 收敛 |
 
 `TargetComponent.Replicas int32` 的 pointer 疑问已经由提问者主动撤回；这只关闭该局部问题，不表示完整
-API 已获 approval。branch 的 list-map markers、validation 下限和无序判等也都是有源码理由的工程选择，
-但 #7492 thread 尚未逐项确认。
+API 已获 approval。维护者 Draft 与 #7492 snippet 在 “only multiple pod templates” 上仍有文字冲突；
+本文采用 Draft 更具体的 single-component 双写步骤，并把注释最终措辞留给 PR review。
 
 ## 下一步
 
-1. 先基于官方 PR template 准备 150–400 词的 exact English title/body：只描述 API prerequisite，使用
-   `/kind feature`、`/kind api-change` 和 `Part of #7492`，列出三组 merge blocker。
-2. 用户确认 exact target/text 后再创建 upstream PR；不需要等待所有 runtime 实现完成才开 API review。
-3. maintainer 回答三组 P0 合同后，按结论调整 schema/conversion，并用真实 API server 覆盖 v1alpha1
-   main/status read-modify-write。
-4. 后续按独立行为阶段实现 scheduler producer、scale trigger、estimator scale 语义、
-   `ReviseComponents`/dispatch 和 failed-rescheduling safety，再补 unit、integration 与 e2e。
-5. 上述生产链路闭合前，PR 只写 `Part of #7492`，不勾选 issue 正文三项，也不宣称完整 feature 可用。
+1. 先决定按维护者 Draft 补齐 PR1 的 `GracefulEvictionTask.Components`、RB result validation/tests，
+   还是提交更窄的 API-only review PR；后一种必须在 exact body 披露 scope 差异。
+2. 基于官方 PR template 准备 150–400 词的 exact English title/body，使用 `/kind feature`、
+   `/kind api-change` 和 `Part of #7492`；用户确认 exact target/text 后再创建 upstream PR。
+3. 用真实 API server 覆盖 v1alpha1 main/status read-modify-write，再按 maintainer 选择实现拒绝或保留策略。
+4. 按 Draft PR2/PR3 实现 scheduler full-set/dual-write producer、snapshot merge、scale trigger/delta、
+   `ReviseComponents`/dispatch 和 failed-rescheduling safety，再推进 third-party/Flink E2E 与 downstream。
+5. 生产链路闭合前，不勾选 issue 正文三项，也不宣称完整 feature 可用。

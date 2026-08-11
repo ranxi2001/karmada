@@ -4,16 +4,21 @@
 - Maintainer API proposal：[`RainbowMango` 在 #7492 的 API 回复](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5248383498)
 - 最新 API 讨论：[`TargetComponent.Replicas` 保持 `int32`](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5252661190)
 - 最新场景补充：[`mszacillo` 提醒跨集群重调度可能丢失应用状态](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5254150877)，尚无复现细节或已接受合同
-- 详细 Draft：[`RainbowMango/pr_multi_component_next_move@c14af2f1119a66d4672a814cc80f7612943d35d3`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md)
+- Maintainer-provided Draft：[`RainbowMango/pr_multi_component_next_move@c14af2f1119a66d4672a814cc80f7612943d35d3`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md)
 - 源码基线：[`upstream/master@1c278577e7892b6ea44f86a4317c1eb1e013bb93`](https://github.com/karmada-io/karmada/commit/1c278577e7892b6ea44f86a4317c1eb1e013bb93)
-- 状态复核：2026-08-11T22:28:19+08:00
-- 上游状态：issue 正文三项仍未勾选，无关联 PR；详细文档仍标记为 `Draft (design discussion, not yet a formal proposal)`
+- 状态复核：2026-08-12（补充维护者 Draft 答案）
+- 上游状态：issue 正文三项仍未勾选，无关联 PR；文档仍标记为 `Draft (design discussion, not yet a formal proposal)`
 - 本文范围：先固定 API 合同；文末追加个人特性分支的 API 实测，不包含调度行为实现
+
+> 证据定位：用户确认上述文档是维护者为本特性提供的设计资料。本文因此把文档中已经明确选择的
+> 方案固定为当前实现依据，不再重复列为“待询问 maintainer”。但该文档位于维护者 fork，且自身仍
+> 标记为 Draft；“已有答案”表示 maintainer-provided direction，不等于已经合入 upstream 的正式合同。
 
 ## 先说人话
 
 `spec.components` 表示用户当前申请的每个组件副本数；
-`spec.clusters[].components` 表示最近一次成功调度后，分配到该集群的每个组件副本数。
+`spec.clusters[].components` 表示分配到该集群的组件调度结果。Day44 建议把它作为“最近一次成功结果”，
+但维护者 Draft 尚未定义失败重调度时是否保留旧值。
 
 例如，FlinkDeployment 请求 `jobmanager=1`、`taskmanager=20`，成功调度到
 `member1` 后，结果写成：
@@ -34,39 +39,41 @@ spec:
       replicas: 20
 ```
 
-请求再次变化时，`spec.components` 可以先变化；只有新请求调度成功后，
-`spec.clusters[].components` 才替换为新结果。调度失败时，已有结果保持不变。
+维护者 Draft 已经回答“结果长什么样、由谁写、怎样下发”：多组件结果写完整 component set；
+单组件迁移期同时写 scalar `Replicas` 和一个 `Components` entry；Binding controller 通过
+`ReviseComponents` 下发。它没有回答“新请求调度失败时，旧成功结果是否保留、谁阻止新模板下发”，
+所以失败状态机仍是本文保留的核心未决项。
 
 ## API 边界
 
-本版的行为目标仍是 `MultiplePodTemplatesScheduling` 下的 multi-pod-template scale。
-已合入的 #7287 证明只要 `spec.components` 非空，即使只有一个 component，也会进入
-component-based scheduling path；但它没有定义新的结果字段应写 `Components`、沿用 scalar
-`Replicas`，还是迁移期双写。本文先定义多组件结果 API，单 component 的结果编码列入 maintainer
-问题，不把实现推论写成已接受合同。本文讨论：
+本版的行为目标仍是 `MultiplePodTemplatesScheduling` 下的 component scale。已合入的 #7287
+证明只要 `spec.components` 非空，即使只有一个 component，也会进入 component-based scheduling
+path；维护者 Draft 则补上了结果编码：迁移期单组件双写 scalar 与 component，多组件写完整
+component set。本文讨论：
 
 1. `TargetCluster.Components`：集群维度的组件调度结果。
 2. `TargetComponent`：结果侧最小组件分配单元。
 3. `ReviseComponents`：把一个集群的组件结果写回资源模板的 Resource Interpreter 操作。
-4. `v1alpha2` 的功能版本合同，以及 `v1alpha1` legacy projection 的保护规则。
+4. `GracefulEvictionTask.Components` 与 `BindingSnapshot` 的组件结果传播。
+5. `v1alpha2` 的功能版本合同，以及 Draft 未覆盖的 `v1alpha1` legacy projection 保护规则。
 
-其中，第 1、2 项来自 #7492 maintainer 回复；第 3 项来自详细 Draft；第 4 项和后文标记为
-“Day44 补充合同”的内容用于固定本地实现边界，不表示已经获得 upstream acceptance。
+其中，第 1、2 项也出现在 #7492 maintainer 回复；第 3、4 项以及 producer、validation、PR 切分来自
+维护者 Draft。后文明确标记为“Day44 补充”的失败保护、版本兼容和原子性内容仍只是本地候选合同。
 
-本文以最新 #7492 回复和 `c14af2f11` 中的 API snippet 为起点。详细 Draft 正文中仍保留的
-单模板双写和 legacy 字段弃用路线不属于本版已确认合同。已合入的
 [#7287](https://github.com/karmada-io/karmada/pull/7287/files) 已把 component-based scheduling
-入口从 `len(spec.Components) >= 2` 改为 `len(spec.Components) > 0`；该事实是提出结果编码问题的
-依据，不是答案本身。
+入口从 `len(spec.Components) >= 2` 改为 `len(spec.Components) > 0`。#7492 issue snippet 中的
+“only for workloads with multiple pod templates” 与 Draft 正文明确的 single-component 双写存在文字
+冲突；本文按更具体的 producer 路线记录双写，并把公开 API 注释对齐留给 PR review，而不是重新把
+编码选择列为无答案。
 
 本版不定义：
 
 - 把不同组件或同一组件的副本拆到多个集群。
-- 单 Pod template workload 的结果迁移策略，包括已经带 `spec.components` 的单 component binding
-  应写 scalar、component 还是两者。
-- `Replicas` / `ReplicaRequirements` 的弃用。
+- 迁移完成后何时弃用 `Replicas` / `ReplicaRequirements`。
 - 组件 add、remove 或 rename；本版只处理组件集合不变时的 replicas 变化。
-- `GracefulEvictionTask.Components`、HPA、Descheduler、FRQ 或可观测性 API。
+- 扩缩容失败时旧 Work/旧成功结果的生命周期和 condition。
+- `v1alpha1` main/status read-modify-write 的字段保护。
+- HPA、Descheduler、可观测性 API，以及跨集群迁移时应用状态连续性。
 
 ## Maintainer 提出的 Work API
 
@@ -102,11 +109,11 @@ type TargetComponent struct {
 }
 ```
 
-该回复原文把结果限定为多 Pod template 工作负载且 feature gate 开启时填充，并保留现有
-`Replicas` 字段。第三方 review 指出了它与 #7287 及 `ResourceBindingSpec.Components` 的
-single-component 说明之间的张力，但 #7287 没有定义结果编码。feature 分支候选注释因此只收敛为
-“用于记录 component-based scheduling results”，不再自行写死 `spec.Components` 非空时一定填充；
-精确边界列入 maintainer 问题。`Replicas` 不增加 deprecated 标记仍是本版范围约束。
+该 issue 回复把结果限定为多 Pod template 工作负载且 feature gate 开启时填充，并保留现有
+`Replicas` 字段。维护者 Draft 的 producer 章节进一步明确：single-component + `Divided` 在迁移期
+双写 `Replicas` 与单元素 `Components`。两处文字存在冲突，feature 分支把注释改成中性的
+component-based result 是合理的；实现方向按 Draft 的具体双写步骤记录，公开注释最终措辞由 PR
+review 收敛。`Replicas` 暂不增加 deprecated 标记。
 
 ### `Replicas` 类型讨论
 
@@ -119,29 +126,55 @@ single-component 说明之间的张力，但 #7287 没有定义结果编码。fe
 因此当前 API snippet 继续使用 `Replicas int32`。这只表示该局部类型疑问已经收敛，
 不表示完整 API 或 Day44 补充合同已经获得 upstream approval。
 
-## Day44 补充合同：结果字段
+## Maintainer-provided Draft 已固定的答案
 
-> 分析：本节是用于推动实现讨论和测试设计的本地候选合同。尤其 single-component 编码、scalar
-> 双写、完整快照和失败保留规则都尚未获得 maintainer acceptance，不能据此宣称上游 API 已定稿。
+以下内容已有维护者资料，不再列入待确认清单：
+
+证据可直接定位到固定 commit：[`方案 B、API 与 single-component 双写`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md#L66-L113)、
+[`producer 与 webhook validation`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md#L131-L159)、
+[`ReviseComponents、BindingSnapshot 与 eviction`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md#L161-L222)、
+[`PR 切分`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md#L235-L243)。
+
+| 设计点 | Draft 给出的方向 | 当前代码状态 |
+| --- | --- | --- |
+| 结果结构 | 选择方案 B，在每个 `TargetCluster` 内增加 name-keyed `Components` | feature branch 已完成类型和生成物 |
+| request/result 关系 | 两侧结构同构；`Components` 是迁移方向，legacy scalar 过渡期双写 | 分支仅有结果载体 |
+| single component | `Divided` 路径同时写 `TargetCluster.Replicas=r` 和 `Components=[{name, replicas:r}]` | producer 未实现 |
+| multi component | `Duplicated` 路径写 `fullComponentSetOf(spec.Components)` | producer 未实现 |
+| 结果校验 | RB webhook 校验 result name 属于 request、同 cluster 不重复；Gate 关闭时拒绝携带结果字段 | 分支未实现 result webhook validation |
+| `BindingSnapshot` | 继续复用 `TargetCluster`；merge 时同名 component 的 replicas 取最大值，与 scalar 规则对齐 | merge helper 未实现 component 语义 |
+| 下发 | 新增 `ReviseComponents` 并贯通 built-in、declarative、webhook、third-party 与 karmadactl；单 component 可 fallback 到 `ReviseReplica` | 未实现 |
+| 驱逐/故障迁移 | `GracefulEvictionTask` 增加 `Components`，保存被驱逐集群的 component result | 当前 API branch 未包含 |
+| PR 切分 | PR1 API+codegen+webhook；PR2 scheduler 双写；PR3 `ReviseComponents`+ensureWork；PR4 third-party+Flink E2E；PR5 downstream | 当前 branch 只覆盖 PR1 的 API/codegen 部分 |
+
+> 注释：Draft 要求正常 producer 写完整集合，但没有规定调度失败是否保留“最近一次成功结果”；
+> webhook 列表也没有明确要求拒绝 missing component。完整 producer 输出与失败提交语义不能混为一谈。
+
+## Day44 结果合同：已回答部分与本地补充
+
+> 分析：single-component 双写、multi-component full-set producer 和 `BindingSnapshot` merge 已由
+> 维护者 Draft 给出方向；“最近一次成功结果”、失败保留、partial admission 和 scalar/component
+> 不一致处理仍是 Day44 补充候选，不能据此宣称上游 API 已定稿。
 
 | 字段 | 合同 |
 | --- | --- |
-| `TargetCluster.Components` | 当前集群最近一次成功调度的完整组件副本快照 |
+| `TargetCluster.Components` | 当前集群的组件调度结果；正常 producer 写完整 component set |
 | `TargetComponent.Name` | 对应 `ResourceBindingSpec.Components[*].Name`；非空，且在一个 `TargetCluster` 内唯一 |
 | `TargetComponent.Replicas` | 该组件在当前集群的已接受副本数；必须大于等于 0 |
-| `TargetCluster.Replicas` | 保留既有 scalar path 语义；component-based result 不使用该字段 |
+| `TargetCluster.Replicas` | 保留 legacy scalar 语义；single-component 迁移期与一个 component entry 双写 |
 
-`TargetCluster.Components` 采用 name-keyed、order-insensitive 语义。对本版完整集合的
-component-based scheduling 模式，
-每个非空列表必须满足：
+`TargetCluster.Components` 采用 name-keyed、order-insensitive 语义。维护者 Draft 已明确：
 
-- 组件 name 集合与 `spec.components` 完全一致。
-- 每个 name 只出现一次。
-- 零副本显式编码为 `{name: <component>, replicas: 0}`。
-- 每次写入完整快照，不使用只包含变化项的 partial result。
+- scheduler producer 从 `spec.components` 写完整集合，不写 delta；
+- result name 必须属于 request components；
+- 同一 `TargetCluster` 内每个 name 只出现一次。
 
-`TargetCluster` 也被 `BindingSnapshot.Clusters` 复用。本版仅定义顶层
-`ResourceBindingSpec.Clusters` 的组件结果；`spec.requiredBy[*].clusters[*].components` 必须缺失。
+零副本应显式编码为 `{name: <component>, replicas: 0}`。是否还要在 admission 层拒绝缺少请求组件的
+partial result，Draft 没有明确写出，不能把 producer 的 full-set 责任自动升级为 API rejection。
+
+`TargetCluster` 也被 `BindingSnapshot.Clusters` 复用。维护者 Draft 明确选择继续复用：
+`spec.requiredBy[*].clusters[*].components` 是有意暴露的 surface，合并 snapshot 时按 component name
+匹配并取最大 replicas，行为与现有 scalar merge 对齐。
 
 `work.karmada.io/v1alpha2` 的 `ResourceBinding` 与 `ClusterResourceBinding` schema 必须将该
 列表声明为 `x-kubernetes-list-type: map`，并将 `name` 声明为
@@ -168,10 +201,11 @@ API 将 absent、`null` 与 `[]` 视为语义等价的“无组件结果”。Go
 
 ### 结果不变量
 
-`spec.clusters[].components` 保存最近一次成功调度结果。在新结果成功提交前，该字段保持原值；
-失败的重调度不覆盖或清空已有结果。
+Day44 的本地候选是：`spec.clusters[].components` 保存最近一次成功调度结果，在新结果成功提交前
+保持原值，失败的重调度不覆盖或清空已有结果。维护者 Draft 没有定义这一失败状态机，因此后续不能
+仅凭这段文字改写通用 `FitError` 行为。
 
-## Draft 提出的 Resource Interpreter API
+## Maintainer Draft 固定的 Resource Interpreter 方向
 
 详细 Draft 提出 `ReviseComponents`，用于把一个目标集群的组件副本结果写回资源模板：
 
@@ -184,7 +218,7 @@ ReviseComponents(
 ) (*unstructured.Unstructured, error)
 ```
 
-## Day44 补充合同：Interpreter 协议
+## Day44 补充合同：Interpreter 细节
 
 ### Operation
 
@@ -260,9 +294,9 @@ function ReviseComponents(desiredObj, components)
 end
 ```
 
-`components` 是一个 `TargetCluster.Components` 的完整快照。调用方必须先确认目标资源已声明
-`ReviseComponents` hook。hook 未声明，或出现未知、缺失、重复 name 时，整个 operation 失败，
-不返回或应用 partial patch，也不回退到 `ReviseReplica`。
+`components` 是一个 `TargetCluster.Components` 的完整 producer 结果。Draft 允许只有一个 component
+时 fallback 到现有 `ReviseReplica`；多组件必须调用 `ReviseComponents`。hook 未声明、解释器发生错误
+或返回 partial mutation 时如何回滚，Draft 没有明确原子性合同，仍需在 PR3 设计与测试中收敛。
 
 ## Day44 补充合同：校验
 
@@ -276,13 +310,15 @@ end
 
 ### 跨字段校验
 
-对 `v1alpha2` 中带有 `spec.clusters[].components` 的 component-based binding：
+维护者 Draft 已指定 RB validating webhook 检查：
 
-- `spec.components` 必须非空。
-- 每个目标集群的 component name 集合必须与 `spec.components` 相同。
-- `spec.clusters[].replicas` 必须保持未设置的零值。
+- result component name 必须存在于 request `spec.components`；
+- 同一 `TargetCluster` 内不允许重复 name；
+- Gate 关闭时拒绝携带 `TargetCluster.Components`。
 
-`ResourceBinding` 与 `ClusterResourceBinding` 使用相同规则。
+Draft 没有要求 scalar 与 components 互斥；相反，single-component 迁移期需要双写。它也没有明确
+partial result 的 admission 规则、ClusterResourceBinding 的 validator 或 RB/CRB 共享校验方式，
+这些仍是实现边界问题。
 
 ## Day44 补充合同：版本与 Feature Gate
 
@@ -308,11 +344,12 @@ end
 
 - Gate 开启：component-based producer 可以新增或更新 `TargetCluster.Components`，consumer 可以调用
   `ReviseComponents`。
-- Gate 关闭：拒绝新增、修改或删除非空 `TargetCluster.Components`；允许语义不变的
-  grandfathered value 随对象更新继续保留。相等性按 name -> replicas map 判断，单纯调整
-  列表顺序不算修改。
+- Gate 关闭：按维护者 Draft 的明确方向，validating webhook 拒绝携带
+  `TargetCluster.Components` 的 ResourceBinding。
 - Gate 关闭时，consumer 不执行 `ReviseComponents`。
-- absent、`null` 与 `[]` 的相互规范化不视为语义变更。
+
+Draft 没有展开滚动降级时已有对象如何清理或完成无关字段更新；当前不能用 Day44 原先提出的
+grandfathering 规则覆盖维护者给出的 strict-reject 方向。
 
 ## 兼容性矩阵
 
@@ -320,41 +357,37 @@ end
 | --- | --- | --- |
 | Existing scalar workload，`spec.components` 为空 | 既有值 | 缺失 |
 | Existing object without component result | 既有值或 0 | 缺失 |
-| Single-component binding under gate | 待 maintainer 确认 | 待 maintainer 确认：一个 entry、缺失或迁移期双写 |
+| Single-component binding under gate | 组件副本数 | 同名的一个 entry；迁移期双写 |
 | Multi-component binding under gate | 0 / omitted | 完整调度结果快照 |
 
-本版不要求 legacy scalar path 双写 `Components`，也不标记 `Replicas` deprecated。单模板资源
-一旦已经由 `spec.components` 表示，结果侧应使用哪种编码仍待确认；producer 和 consumer 在答案
-明确前不能各自选择。
+Draft 的迁移路线是 request/result 两侧逐步改用 `Components`，传统 single-template workload 在
+过渡期双写 scalar 与单元素 component。何时完成迁移并标记 scalar deprecated 尚未定义。
 
 ## API 验收用例
 
 在 `v1alpha2` 且 Gate 开启时，以下对象必须被接受：
 
 - 完整且 name 唯一的组件结果。
-- 若 maintainer 选择 component 编码：`spec.components` 只有一个 entry 时，对应一个结果 entry。
+- `spec.components` 只有一个 entry 时，同时接受 scalar 与对应的一个结果 entry。
 - 组件顺序与请求不同、但 name 集合相同的结果。
 - 带显式 `replicas: 0` 的完整结果。
 - 不含 `components` 的 legacy object。
 
-Gate 关闭时，必须接受语义不变的 grandfathered component result。`v1alpha1` status
-subresource update 在 storage spec 不变时也必须接受。
+Gate 关闭时，按 Draft 方向拒绝携带 component result 的 RB。`v1alpha1` status subresource update
+是否能保留 storage spec 仍需真实 API server 证明。
 
 以下对象必须被拒绝：
 
 - 空 name、重复 name 或负 replicas。
-- 缺少请求组件的 partial result。
 - 包含请求中不存在 name 的结果。
-- component-based result 同时写入非零 scalar `replicas`。
-- `ReviseComponents` 请求缺少完整组件快照。
 - `ReviseComponents` 与 `DesiredReplicas` 同时出现，或其他 operation 携带
   `DesiredComponents`。
-- Gate 关闭时新增、修改或删除非空 component result。
+- Gate 关闭时携带非空 component result。
 - 通过 `v1alpha1` main resource 更新已有 component-aware storage object。
-- `spec.requiredBy[*].clusters[*].components` 非空。
 
-本文只固定上述 API 合同。Scheduler estimation、Work 下发时序、quota accounting 和
-controller 实现另行设计。
+partial-result rejection、scalar/component mismatch、v1alpha1 preservation 与 interpreter 原子性不在
+Draft 的已回答集合中。Scheduler producer、snapshot merge、Work 下发和 FRQ accounting 的方向已有
+设计，但当前 feature branch 尚未实现。
 
 ## 特性分支实测：API 基础可编译，但合同尚未闭合
 
@@ -368,8 +401,10 @@ controller 实现另行设计。
 这个分支已经把 `TargetCluster.Components`、`TargetComponent`、CRD、OpenAPI、deepcopy、
 apply configuration 和 v1alpha1 legacy projection 放进代码，仓库标准单测、静态检查和生成检查
 都能通过。
-但它还不是 Day44 合同的完整实现：11 个可直接执行的 CRD 用例中，7 个符合合同，4 个应拒绝
-对象被 schema 接受；测试 helper 还把 component 顺序变化误判成结果变化。
+但它还没有覆盖维护者 Draft 建议的 PR1 范围：缺 result-side webhook validation 及其测试，也没有
+`GracefulEvictionTask.Components`。最初按 Day44 本地候选合同执行的 11 个 CRD 用例中有 4 个被
+schema 接受；对照维护者 Draft 后，只有 unknown-name rejection 是明确缺口，partial、scalar 共存和
+`requiredBy` 三项不能再标成 schema 合同失败。测试 helper 当时还把 component 顺序变化误判成结果变化。
 
 更直观地说，若请求声明 `worker` 和 `master` 两个组件，下面这个结果缺少 `master`：
 
@@ -387,9 +422,10 @@ spec:
       replicas: 2
 ```
 
-Day44 要求拒绝这个 partial result，但当前 CRD 校验返回 `errors=[]`。相同原因也会放过未知组件、
-scalar/component 双写和 `requiredBy` 中的 component result。`make verify` 全绿只能证明代码和生成物
-一致，不能证明这些跨字段 API 合同已经实现。
+当前 CRD 校验对这个 partial result 返回 `errors=[]`。维护者 Draft 要求 producer 输出 full set，
+但没有明确要求 admission 拒绝 partial input，因此该观察只能说明校验边界待定。unknown component
+则已明确应由 RB webhook 拒绝；scalar/component 双写和 `requiredBy` component result 都是 Draft
+允许或要求的路径。`make verify` 全绿只能证明代码和生成物一致，不能证明 webhook 与运行时合同已实现。
 
 ### 实际运行过程
 
@@ -418,12 +454,14 @@ ResourceBinding CRD，调用 Kubernetes `ValidateCustomResource` 和
 
 ### Day44 可执行验收矩阵
 
-`合同结果` 表示上文“API 验收用例”固定的期望；`分支实际` 来自临时 schema 测试的直接观察。
+`Draft/候选结果` 区分维护者 Draft 的明确方向与 Day44 当时的本地候选；`分支实际` 来自临时 schema
+测试的直接观察。
 临时夹具执行命令为
-`go test -mod=mod ./_scratch -run '^TestDay44SchemaContract$' -count=1 -v`；测试按 Day44
-合同断言，因此在下面 4 个错误接受项上退出失败。夹具已删除，命令仅作为本轮执行记录。
+`go test -mod=mod ./_scratch -run '^TestDay44SchemaContract$' -count=1 -v`；测试按 Day44 当时的本地
+候选合同断言，因此在 4 个接受项上退出失败。维护者 Draft 提供后，下面已按新的证据层级重分类；
+原始失败不能继续整体当作 maintainer contract failure。夹具已删除，命令仅作为本轮执行记录。
 
-| 用例 | 合同结果 | 分支实际 | 判定 |
+| 用例 | Draft/候选结果 | 分支实际 | 判定 |
 | --- | --- | --- | --- |
 | 完整且 name 唯一 | 接受 | 接受 | 符合 |
 | 组件顺序不同、name 集合相同 | 接受 | CRD 接受 | schema 符合 |
@@ -432,10 +470,10 @@ ResourceBinding CRD，调用 Kubernetes `ValidateCustomResource` 和
 | 空 name | 拒绝 | `minLength: 1` 拒绝 | 符合 |
 | 重复 name | 拒绝 | list-map 唯一性校验拒绝 | 符合 |
 | 负 replicas | 拒绝 | `minimum: 0` 拒绝 | 符合 |
-| partial result | 拒绝 | 接受，`errors=[]` | **合同失败** |
-| unknown component name | 拒绝 | 接受，`errors=[]` | **合同失败** |
-| 非零 scalar `replicas` 与 `components` 共存 | 拒绝 | 接受，`errors=[]` | **合同失败** |
-| `requiredBy[*].clusters[*].components` 非空 | 拒绝 | 接受，`errors=[]` | **合同失败** |
+| partial result | producer 不应产生；admission 未定义 | 接受，`errors=[]` | **仍需明确 validation 边界** |
+| unknown component name | Draft 要求 RB webhook 拒绝 | 接受，`errors=[]` | **PR1 实现缺口** |
+| 非零 scalar `replicas` 与 `components` 共存 | single component 迁移期必须接受 | 接受，`errors=[]` | **不能作为通用拒绝用例** |
+| `requiredBy[*].clusters[*].components` 非空 | Draft 有意复用并定义 max merge | 接受，`errors=[]` | **schema 符合；merge 尚未实现** |
 
 此外，针对 [`test/helper/scheduler.go`](https://github.com/ranxi2001/karmada/blob/b0501d9b2ae036b956e1ea815cd0d75899f4bcb3/test/helper/scheduler.go#L27-L39)
 补的临时回归用例失败：两份结果只有 component 顺序不同，`IsScheduleResultEqual` 仍返回
@@ -448,16 +486,16 @@ ResourceBinding CRD，调用 Kubernetes `ValidateCustomResource` 和
 - `ReviseComponents`、`DesiredComponents` 和 `ComponentRevision` 在该分支中不存在，因此相关
   接受/拒绝用例无法执行。
 - 现有 validating webhook 只在 Gate 开启时检查请求侧 `spec.components` 的空名和重复名，
-  不检查 `spec.clusters[*].components`，也没有 Gate 关闭时的 grandfathered/mutation 保护。
+  不检查 `spec.clusters[*].components`，也没有实现 Draft 要求的 Gate-off rejection。
 - `ClusterResourceBinding` 没有对应 validating webhook；两份 CRD 都复用 `TargetCluster`，
-  因而都把 `components` 暴露给 `requiredBy`。
+  因而都把 `components` 暴露给 `requiredBy`，但 snapshot component max-merge 尚未实现或测试。
 - v1alpha1 conversion 单测已证明 component result 会被投影掉，但该分支没有用于阻止 v1alpha1
   main-resource update 的 admission 保护。真实 API server 上的数据丢失路径本轮未复现，当前结论
   是源码确认的兼容性风险，不是已观察事故。
 - 仓库没有现成 envtest/kube-apiserver fixture，本轮没有实测 v1alpha1 status update、Gate 切换
   update 或完整 admission/conversion 链路。
-- 分支没有 scheduler、estimator、binding controller 或 Work 下发逻辑；#7492 正文三项行为均
-  不在这两个 commit 的测试范围内。
+- 分支没有 Draft PR2 的 scheduler producer、PR3 的 interpreter/binding controller、snapshot merge
+  或 FRQ/eviction consumer；#7492 正文三项行为均不在这两个 commit 的测试范围内。
 
 ## 第三方 review 复核
 
@@ -469,7 +507,7 @@ ResourceBinding CRD，调用 Kubernetes `ValidateCustomResource` 和
 | 意见 | 复核结论 | 影响边界 |
 | --- | --- | --- |
 | `IsScheduleResultEqual` 不应直接 `reflect.DeepEqual` | **成立** | P2 测试语义错误；7 个调用方都在 `_test.go`，不是生产调度回归 |
-| 新注释排除了 single-component | **指出了真实歧义，但不能据 #7287 单独定案** | scheduling path 已覆盖单 component；结果编码未定义，PR 前需 maintainer 明确 |
+| 新注释排除了 single-component | **指出了真实冲突；维护者 Draft 已给出双写方向** | scheduling path 已覆盖单 component；producer 章节要求迁移期双写，公开注释需在 PR review 对齐 |
 | `Component.Name` 与 `TargetComponent.Name` 的 `MinLength` 不一致 | **事实成立，影响需补充上下文** | ResourceBinding webhook 已拒绝空 name；ClusterResourceBinding 没有 validating webhook，结构层不一致仍然存在 |
 | v1alpha1 round-trip 丢结果 | **风险成立，且不只需检查 main PUT** | typed conversion 已有单测；main/status 的真实 API server 用例未跑，maintainer 兼容策略尚未确认 |
 
@@ -499,15 +537,15 @@ component 规范化为 `map[name]TargetComponent`，检测重复 name，并比�
 - component replicas 不同不相等；
 - missing、unknown 或 duplicate component 不相等。
 
-### Single-component 意见暴露了结果编码缺口
+### Single-component 意见找到冲突，Draft 已给出实现方向
 
 [#7287](https://github.com/karmada-io/karmada/pull/7287/files) 已在 2026-03-18 合入：
 `isMultiTemplateSchedulingApplicable` 从 `len(spec.Components) < 2` 改为
 `len(spec.Components) == 0`，`IsBindingReplicasChanged` 也从 `> 1` 改为 `> 0`，并添加单 component
 用例。该 PR 是当前 master 的已接受实现；#7492 中“only for workloads with multiple pod
-templates”的新 snippet 则是结果 API proposal。前者证明单 component 会进入调度路径，却没有说明
-后者应写 component result、scalar result 还是双写。因此第三方 review 找到的冲突值得阻断，但其
-建议编码仍需要 maintainer 确认。
+templates”的新 snippet 则是结果 API proposal。单看 #7287 确实无法推出结果编码；但用户随后提供的
+维护者 Draft 明确要求 single-component + `Divided` 双写 scalar 与单元素 component。第三方 review
+找到的冲突成立，答案不再是三选一，而是按 Draft 双写，并在 PR review 修正或解释公开注释。
 
 建议将新字段注释改为：
 
@@ -518,8 +556,8 @@ templates”的新 snippet 则是结果 API proposal。前者证明单 component
 // Each entry corresponds to an entry in spec.Components by Name.
 ```
 
-该候选文案先删除未经解释的 “only multiple” 限定，又不宣称所有非空 `spec.components` 都已确定
-使用新结果。single component 的精确编码、是否双写及 consumer 迁移策略放入 maintainer 问题。
+该候选文案删除未经解释的 “only multiple” 限定，并与 Draft 的双写路线兼容。feature branch 保持
+中性注释没有问题；scheduler producer 的具体行为已有维护者资料，不再放入待确认问题。
 
 `MinLength` 观察也属实，但不应简单删除结果侧约束。请求侧 `Component.Name` 的 CRD 只有
 `MaxLength=32`；ResourceBinding 在 Gate 开启时由 webhook 拒绝空 name 和重复 name，
@@ -570,11 +608,12 @@ API server 上创建带 component request/result 的 v1alpha2 对象，先观察
 
 本轮不是继续实现 #7492 的 scheduler 主流程，而是先修掉当前 API groundwork 中已经有充分证据的
 两处 review 问题：测试 helper 必须按 map-list 语义比较 component result；公开 API 注释不应继续用
-“only multiple” 掩盖 single-component 已进入 scheduling path、但结果编码尚未确认的事实。
+“only multiple” 掩盖 single-component 已进入 scheduling path 的事实。当时 feature 修复保持中性注释；
+本次回读维护者 Draft 后，producer 结果已固定为迁移期双写。
 
 具体例子是：`worker=2, master=1` 与 `master=1, worker=2` 应视为同一结果；当
-`spec.components` 只有一个 `worker` 时，scheduler 已走 component path，但结果究竟写哪种字段必须
-由 API 合同统一决定，不能由 producer 和 consumer 分别猜测。
+`spec.components` 只有一个 `worker` 时，scheduler 已走 component path；维护者 Draft 要求结果同时写
+scalar `Replicas` 与一个 `worker` component entry。
 
 ### 文件范围
 
@@ -582,7 +621,7 @@ API server 上创建带 component request/result 的 v1alpha2 对象，先观察
 | --- | --- | --- |
 | `test/helper/scheduler.go` | 对每个 cluster 的 component 按 `name` 做无序、完整字段比较；外层 cluster 继续无序比较，但每个元素只能匹配一次 | 对齐 map-list 语义，并避免重复 cluster 复用同一个匹配项 |
 | `test/helper/scheduler_test.go` | 新增反序、nil/empty、replicas 差异、集合差异、重复 name 和 cluster 基础字段用例 | 把 review 指出的语义变成稳定回归测试 |
-| `pkg/apis/work/v1alpha2/binding_types.go` | 删除 “only multiple” 的过强限定，改为中性的 component-based result 描述 | 暴露但不擅自回答 single-component 编码问题 |
+| `pkg/apis/work/v1alpha2/binding_types.go` | 删除 “only multiple” 的过强限定，改为中性的 component-based result 描述 | 与维护者 Draft 的 single-component 双写路线兼容 |
 | OpenAPI、CRD 等生成文件 | 只接受由仓库生成脚本带出的注释同步 | 保证发布 schema 与 Go API 文档一致 |
 
 ### 本轮明确不改
@@ -593,8 +632,9 @@ API server 上创建带 component request/result 的 v1alpha2 对象，先观察
   API 行为，必须先由 maintainer 选定。
 - 不给既有 `Component.Name` 直接增加 `MinLength=1`，也不新增 ClusterResourceBinding validating
   webhook；两项都会改变既有对象的可接受集合。
-- 不把临时 CRD harness 的 4 个失败合同直接写成 CEL 或 webhook：partial result、unknown name、
-  scalar/components 共存和 `requiredBy` 禁用都还没有上游确认的合同依据。
+- 不把临时 CRD harness 的 4 个本地候选一次性写成 CEL 或 webhook。维护者 Draft 后来明确了 unknown
+  name 的 RB webhook 校验，同时要求 single-component 双写并允许 `requiredBy` 复用；partial admission
+  仍未定义，因此四项不能作为同一组 rejection 实现。
 - 不改外层 `TargetCluster` 的 API list 类型。helper 保留原有“不关心 cluster 顺序”的测试语义，
   只把匹配改为一对一。
 
@@ -618,7 +658,7 @@ API server 上创建带 component request/result 的 v1alpha2 对象，先观察
   missing/unknown/duplicate component，以及 cluster name/scalar replicas 差异。
 - `TargetCluster.Components` 注释已改为中性的 component-based scheduling result 描述；apply
   configuration、Go OpenAPI、两份 CRD 和 swagger 均由仓库脚本同步。精确旧文案在源码和生成产物中
-  已无残留，single-component 的具体编码没有被注释抢先定案。
+  已无残留；该注释与维护者 Draft 后续固定的 single-component 双写方向兼容。
 
 最终将该 feature 相对 `upstream/master@1c278577e` 的 4 个提交压缩为 1 个 DCO commit：
 `a3547a3a8 feat(api): add component scheduling results`。squash 前后的 tree hash 均为
@@ -650,42 +690,26 @@ issue comment；squash 前历史保存在本地
 - `openapi-gen` 输出仓库已有的 `list_type_missing`/`names_match` API rule warnings；生成脚本退出成功，
   `verify-codegen` 确认产物 up to date，本次没有新增对应 schema finding。
 
-这些修复闭合了可以独立判断的判等问题，并把 single-component 注释冲突收敛成不抢答的中性文案；
-后者的结果编码仍需 maintainer 决策。分支仍未生产或消费 component scheduling result，不能宣称已经
+这些修复闭合了可以独立判断的判等问题，并把公开注释改成与维护者 Draft 双写路线兼容的中性文案。
+分支仍未生产或消费 component scheduling result，也没有完成 Draft 的 PR1 validation，不能宣称已经
 解决 #7492 的 scale rescheduling。
 
-## 需要询问 maintainer 的问题
+## 仍需确认或在 PR 中收敛的问题
 
-以下问题会改变 API 兼容性或跨组件责任，当前证据不足以代替 maintainer 做决定：
+以下只保留维护者 Draft 没有回答完整的边界；single-component 双写、full-set producer、
+`BindingSnapshot` max merge、Gate-off reject、`ReviseComponents` 所属阶段和五段 PR 切分不再重复询问。
 
-1. **single-component binding 的结果究竟写什么？** #7287 已让 `spec.components` 非空时进入
-   component scheduling path，但没有定义结果编码。选项是只写一个 `TargetComponent`、继续写 scalar
-   `TargetCluster.Replicas`，或迁移期双写。倾向只写 component result，以避免数量变化时切换编码；但
-   在 maintainer 回答前，producer、consumer 和 API 注释都不应把该倾向当成既定合同。
-2. **结果字段保存哪个时点、是否必须是完整快照？** Day44 暂按“最近一次成功调度的完整结果；每个
-   已请求 component 恰好出现一次；unknown、partial、duplicate 都拒绝；调度失败保留旧结果”验收。
-   若它只是 desired mirror、增量或允许渐进写入，validation、失败回滚和 scale comparison 都会不同。
-   倾向保存最近一次成功调度的完整快照，因为后续 rescheduling 需要可靠比较基线。
-3. **请求侧与结果侧的 scalar/component 合同分别是什么？** 请求侧需要确认
-   `spec.replicas` 与 `spec.components` 能否为迁移而共存、谁是权威；结果侧需要另行确认
-   `clusters[*].replicas` 与 `clusters[*].components` 是互斥还是双写组件总和，以及两者不一致时如何
-   处理。倾向 component-aware 对象两侧都以 `components` 为权威，但这不是当前 schema/admission
-   已强制的规则。
-4. **请求侧 name 的两种 schema 收紧是否接受？** 第一项是给既有 `Component.Name` 增加
-   `MinLength=1`，它会拒绝过去结构上允许的空字符串；第二项是把 `spec.components` 改成 name-keyed
-   map-list，它还会改变 SSA/strategic merge 语义并拒绝重复 key。两项需要分别评估兼容性，不能作为
-   一个 marker 变更处理。当前 RB webhook 仅在 Gate 开启时补空名/重复校验，CRB 没有对应 validator；
-   倾向最终统一 RB/CRB，但需明确 grandfathering。
-5. **`BindingSnapshot.requiredBy` 是否应该复用新增结果字段？** 当前它复用 `TargetCluster`，因此 schema
-   自动暴露 `requiredBy[*].clusters[*].components`。是允许并定义语义、通过校验禁止，还是拆分专用类型？
-   倾向先禁止非空值；若未来确有消费方，再单独设计。
-6. **跨字段校验由谁负责？** RB 有 Gate-aware validating webhook，CRB 没有；完整性检查又需要读取
-   `spec.components`。需要先确认哪些不变量必须在 API 边界对 RB/CRB 一致拒绝，再决定由 schema/CEL、
-   共享 webhook 和 producer defensive check 如何分层；这些层可以互补，但不能只依赖 producer 生成
-   正确对象。
-7. **v1alpha1 的读写合同分别是什么？** conversion 无法表达 `spec.components` 和
+1. **失败重调度的状态合同是什么？** Draft 没有说明 component scale 后无可行集群时，scheduler 是否
+   保留旧 `Clusters/Components`、旧 Work 是否继续运行、谁阻止带新 replicas 的 source template 被
+   binding controller 下发，以及用什么 condition 表达 pending/failed reschedule。当前通用 `FitError`
+   会清空 `Clusters`，不能直接假定符合 #7492 的“失败时不传播新配置”。
+2. **full-set producer 之外，API 是否拒绝 partial/mismatch？** Draft 要求 producer 写完整集合，并让
+   RB webhook 拒绝 unknown/duplicate；它没有要求 admission 拒绝 missing component，也没有定义
+   scalar 与 component 不一致时谁是权威。还需确认 CRB 是否需要同等 validator，以及 schema/CEL、
+   webhook 与 producer defensive check 的分层。
+3. **v1alpha1 的读写合同分别是什么？** conversion 无法表达 `spec.components` 和
    `clusters[*].components`，不能把 lossy GET、main update 和 status update 混成一个“兼容性限制”。
-   请分别确认下表策略，并用真实 API server 建立 baseline：
+   维护者 Draft 没有讨论版本转换；需分别确认下表策略，并用真实 API server 建立 baseline：
 
 | 操作 | 需要确认的合同 | 当前倾向 |
 | --- | --- | --- |
@@ -694,19 +718,23 @@ issue comment；squash 前历史保存在本地
 | CRB main update | 明确拒绝还是保留；当前无 validating webhook，源码链路支持静默丢失 | 在有 preservation 方案前显式拒绝 |
 | RB/CRB `/status` update | 必须保留 storage spec，还是也拒绝 legacy status write | 优先证明 spec 可保留；证明不了就拒绝，不能静默丢字段 |
 
-8. **Feature Gate 关闭后如何处理已有 component result？** 是拒绝一切非空值、继续允许任意写入，
-   还是允许 grandfathered value 保持语义不变但拒绝新增、删除和修改？倾向第三种，并停止调用相关
-   producer/consumer；否则滚动升级或降级期间可能让既有对象无法完成无关字段更新。
-9. **`ReviseComponents` 是否属于首期，且是否必须原子执行？** 当前 maintainer 回复只明确了结果字段，
-   详细 Draft 才提出新 operation。倾向先确认“完整快照、原子执行、失败不回退为多次
-   `ReviseReplica`”的合同，再放到后续 PR；不在这次 API groundwork 中顺带扩张 interpreter API。
+4. **scale trigger 与 estimator 的 delta 合同是什么？** Draft 说明 producer 和 dispatch，没有说明
+   `IsBindingReplicasChanged` 如何比较 desired/result、scale-up delta 由谁计算并交给 estimator、scale-down
+   跳过 estimate 时还要执行哪些 placement/eligibility 检查。
+5. **`ReviseComponents` 的失败原子性是什么？** Draft 已把 operation 放在 PR3，并允许单 component
+   fallback `ReviseReplica`；仍需在实现中明确多组件 hook 发生 partial mutation/error 时是否 all-or-nothing、
+   如何回滚，以及第三方 interpreter 的错误合同。
+
+以下不是当前 API PR blocker，但应单独跟踪：request-side `Component.Name`/map-list 的兼容收紧、
+Gate strict-reject 下的滚动降级操作体验、scalar 字段最终弃用，以及跨集群迁移时应用状态连续性。
 
 ## 修正后的下一步
 
-1. 请 maintainer 先回答上面的 single-component 编码、结果快照、scalar 双写、name schema、
-   `requiredBy`、RB/CRB validation、Feature Gate、v1alpha1 和 `ReviseComponents` 边界。
+1. 先按维护者 Draft 对齐 PR1：在现有 API/codegen 基础上补
+   `GracefulEvictionTask.Components`、RB result membership/duplicate/Gate validation 和测试；若要提交更窄
+   的 API-only PR，必须在 PR 文案中明确与 Draft 切分的差异。
 2. 根据版本策略建立真实 API server baseline，覆盖 v1alpha1 main/status read-modify-write。
-3. 把临时 CRD 矩阵落成正式 admission/version tests，闭合 partial/unknown/scalar/`requiredBy`、
-   Gate 和 v1alpha1 main/status update 边界。
-4. 再实现 scheduler producer、`IsBindingReplicasChanged` consumer 和 `ReviseComponents`；这些路径
-   闭合前，不把该分支描述为 #7492 功能实现完成。
+3. 按 Draft PR2 实现 scheduler full-set/dual-write producer，并补 `BindingSnapshot` component max-merge；
+   同时单独收敛 scale trigger、delta 与失败状态机。
+4. 按 Draft PR3 实现 `ReviseComponents` 和 ensureWork，再推进 third-party/Flink E2E 与 downstream。
+5. PR1-3 的生产链路闭合前，只写 `Part of #7492`，不宣称 issue 三项行为已经完成。
