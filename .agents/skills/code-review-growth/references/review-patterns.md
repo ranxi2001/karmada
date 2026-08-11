@@ -299,6 +299,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Root-cause comment, competing proposals and tradeoffs, closing comment/PR, merged versus abandoned changes, current caller event order, and the latest linked issue and PR replies.
 - Test or fix cue: Cite prior art with one relevance sentence that states both support and limit, then prove the current caller-specific convergence edge independently.
 
+## Served Legacy Versions Can Erase Hub-Only Fields On Main And Status Writes
+
+- Pattern: When a still-served legacy API version cannot represent fields in the storage version, lossy conversion can erase those fields during legacy read-modify-write; a status subresource is not automatically safe if storage decodes the existing object into the request version before copying its old spec.
+- Seen in: Karmada #7492 API branch review, where `v1alpha1` remains served, `v1alpha2` is storage, and the legacy projection omits both `spec.components` and `spec.clusters[].components`.
+- Miss symptom: A conversion unit test intentionally proves round-trip loss but is treated as harmless legacy projection, or reviewers assume `/status` preserves hub-only spec merely because the status strategy copies the old object.
+- Review check: Inspect the final installed CRD, including kustomize/Helm patches; enumerate served/storage versions, conversion strategy, old-version schemas and clients, main/subresource admission rules, and the storage codec's decoder/encoder versions.
+- Evidence to gather: Rendered CRD, conversion functions and tests, generated legacy clients, webhook routes, API-server update/status strategy source, and a real API-server main/status round-trip.
+- Test or fix cue: Create a storage-version object with hub-only fields, then exercise legacy main and status updates. Require an explicit preservation or rejection contract at admission/storage boundaries; do not infer safety from typed conversion tests or status strategy in isolation.
+
 ## Cache Timing Evidence Does Not Assign Freshness Ownership
 
 - Pattern: A test can expose a real cross-informer ordering window without proving that the consumer where the symptom appears must bypass its cache or guarantee one-attempt convergence.
