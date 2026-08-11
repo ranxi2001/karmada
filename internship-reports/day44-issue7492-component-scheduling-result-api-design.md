@@ -620,10 +620,13 @@ API server 上创建带 component request/result 的 v1alpha2 对象，先观察
   configuration、Go OpenAPI、两份 CRD 和 swagger 均由仓库脚本同步。精确旧文案在源码和生成产物中
   已无残留，single-component 的具体编码没有被注释抢先定案。
 
-修改已整理为两个本地 DCO 提交：`7c345a997 fix(api): align component result documentation` 和
-`5f0ae9b24 test: compare component results by name`。feature 分支当前相对
-`origin/feature/multi-component-scale-rescheduling` ahead 2，工作树干净；本轮没有推送，也没有创建
-PR、issue comment 或其他 upstream 可见动作。
+最终将该 feature 相对 `upstream/master@1c278577e` 的 4 个提交压缩为 1 个 DCO commit：
+`a3547a3a8 feat(api): add component scheduling results`。squash 前后的 tree hash 均为
+`df4abb15440d89e465286b7e3c2e6362bcc204c6`，因此只改写历史，没有改变 15 个文件的最终内容。
+远端原 head `b0501d9b2` 经精确 `--force-with-lease` 更新为 `a3547a3a8`，回读后本地与
+`origin/feature/multi-component-scale-rescheduling` 一致。仓库仍无关联 upstream PR，也没有发布
+issue comment；squash 前历史保存在本地
+`backup/feature-multi-component-scale-rescheduling-pre-squash-20260811`。
 
 最终验证结果：
 
