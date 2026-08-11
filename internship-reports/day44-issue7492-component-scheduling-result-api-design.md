@@ -2,10 +2,11 @@
 
 - 日期：2026-08-11
 - Maintainer API proposal：[`RainbowMango` 在 #7492 的 API 回复](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5248383498)
+- 最新 API 讨论：[`TargetComponent.Replicas` 保持 `int32`](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5252661190)
 - 详细 Draft：[`RainbowMango/pr_multi_component_next_move@c14af2f1119a66d4672a814cc80f7612943d35d3`](https://github.com/RainbowMango/karmada/blob/c14af2f1119a66d4672a814cc80f7612943d35d3/docs/proposals/scheduling/multi-podtemplate-support/scheduling-result-for-components.md)
 - 源码基线：[`upstream/master@1c278577e7892b6ea44f86a4317c1eb1e013bb93`](https://github.com/karmada-io/karmada/commit/1c278577e7892b6ea44f86a4317c1eb1e013bb93)
-- 状态复核：2026-08-11T10:59:50+08:00
-- 上游状态：issue 回复使用 `Proposing the API`；详细文档仍标记为 `Draft (design discussion, not yet a formal proposal)`
+- 状态复核：2026-08-11T20:59:10+08:00
+- 上游状态：issue 正文三项仍未勾选，无关联 PR；详细文档仍标记为 `Draft (design discussion, not yet a formal proposal)`
 - 本文范围：只定义 API 合同，不包含源码差距、方案对比、实现路径和风险分析
 
 ## 先说人话
@@ -94,6 +95,17 @@ type TargetComponent struct {
 
 该回复还明确 `Components` 只在多 Pod template 工作负载且 feature gate 开启时填充，并保留
 现有 `Replicas` 字段。本版不增加 deprecated 标记属于 Day44 的范围约束。
+
+### `Replicas` 类型讨论
+
+`zhzhuang-zju` 曾询问 `TargetComponent.Replicas` 是否应从 `int32` 改为 `*int32`，以便未来
+区分零值和未指定；`RainbowMango` 要求给出必须使用指针的具体场景。提问者随后
+[撤回该疑问](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5252661190)：
+对于 `ConfigMap` 等非 workload 资源，整个 `TargetCluster.Components` 为 `nil` 已能表达
+“不适用”，结果项内部不再需要用指针区分未指定和显式零值。
+
+因此当前 API snippet 继续使用 `Replicas int32`。这只表示该局部类型疑问已经收敛，
+不表示完整 API 或 Day44 补充合同已经获得 upstream approval。
 
 ## Day44 补充合同：结果字段
 
