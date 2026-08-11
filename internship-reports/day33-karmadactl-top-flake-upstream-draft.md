@@ -1,12 +1,13 @@
-# Day 33 `karmadactl top` Flake Upstream Draft
+# Day 33 `karmadactl top` Flake Upstream Record
 
 ## Target
 
 - Repository: `karmada-io/karmada`
 - Base: `master`
 - Head: `ranxi2001:test/karmadactl-top-stable-pod`
-- Local commit: `14b24b90db739a3091f6d1877c598a9f7f696e3d`
-- Status: published as [`karmada-io/karmada#7795`](https://github.com/karmada-io/karmada/pull/7795)
+- Final head: `aaf1dc24c8c95a5bdd8fca799450ae1502260eab`
+- Merge commit: [`1c278577e7892b6ea44f86a4317c1eb1e013bb93`](https://github.com/karmada-io/karmada/commit/1c278577e7892b6ea44f86a4317c1eb1e013bb93)
+- Status: [`karmada-io/karmada#7795`](https://github.com/karmada-io/karmada/pull/7795) merged by Tide on `2026-08-10T12:02:27Z`
 
 ## Title
 
@@ -373,7 +374,7 @@ The second reply [`discussion_r3747135768`](https://github.com/karmada-io/karmad
 ### 证据等级与边界
 
 - `E0`：已观察到原始失败 job、首个失败 spec、完整时间线和错误文本。
-- `E1`：尚未达到。v1.34/v1.36.1 通过是有用的差分证据，但没有同 SHA、同 v1.35 的重跑，不能据此严格证明非确定性。
+- `E1`：已达到。相同 head `aaf1dc24c` 的 v1.35 matrix 在 attempt 1 失败、attempt 2 通过，足以确认该环境红项具有非确定性；这一级证据不解释物理原因。
 - `E2`：动态节点失败与底层 runner 原因分析停在这里。三套 etcd 同时出现 WAL `fdatasync` 延迟，并伴随宿主 kind 内部 containerd 超时，支持共享宿主 I/O 或运行时抖动；缺少关键宿主证据，不能闭合到具体资源项。
 - `E3`：只覆盖同一次运行内可由日志和源码闭合的链条：多 etcd WAL 同步变慢，继而发生读/健康检查超时、API 失联和清理失败；以及 kind 节点没有产生 cgroup-ready 日志、`clusterProvider.Create` 返回错误、测试在 `BeforeEach` 退出。两条链之间仍只有 `E2` 关联。
 - `E4`：未达到，没有做针对该 CI 环境故障的可控修复实验。
@@ -382,8 +383,15 @@ artifact 没有 `ENOSPC`、`no space left`、`too many open files`、OOM kill �
 
 ### 发布与重跑状态
 
-已按确认发布 [`/retest`](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5238860103)，但 [karmada-bot 拒绝执行](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5238862855)：当前作者还没有 `/ok-to-test` 信任标记。更关键的是，红项来自只监听 `push` / `pull_request` 的 GitHub Actions `CI Workflow`，Prow 的 `/ok-to-test` 或 `/retest` 不会重跑这个 job。
+作者按确认发布的第一条 [`/retest`](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5238860103) 被 [karmada-bot 拒绝](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5238862855)，原因是作者账号尚未取得触发测试所需的信任。维护者 `zhzhuang-zju` 随后于 `2026-08-10T11:06:34Z` 发布第二条 [`/retest`](https://github.com/karmada-io/karmada/pull/7795#issuecomment-5239305794)。
 
-截至回读，run `31367565125` 仍为 `run_attempt: 1`。正确入口是由具有仓库写权限的维护者在该 run 上点击 **Re-run failed jobs**；成功触发后同一 run 的 attempt 应由 `1` 变为 `2`。不通过空提交制造新 CI。
+这条维护者命令被接受后，`karmada-bot` 在 4 秒内通过 GitHub Actions rerun 接口把同一 [run `31367565125`](https://github.com/karmada-io/karmada/actions/runs/31367565125) 从 `run_attempt: 1` 提升为 `2`；API 中 `triggering_actor` 为 `karmada-bot`。实际重新执行的是原先失败的 [`e2e test (v1.35.0)` job `93434207291`](https://github.com/karmada-io/karmada/actions/runs/31367565125/job/93434207291)，它于 `11:06:43Z` 开始、`12:02:11Z` 成功完成，其余已通过 job 沿用原结果。
 
-结论：这是高置信度与 #7795 无关的 kind 创建/runner 环境失败，不需要修改 PR 代码。终端机制可定位到 kind 没有观察到 cgroup-ready 日志；现场同时存在广泛的 etcd、API 和运行时退化，最深层假设只能谨慎写成“共享 runner I/O 或运行时抖动（E2）”。等维护者完成同 SHA、同 v1.35 重跑并通过后，才能把它正式归为已验证 flake。
+> 纠偏：上一轮仅根据 workflow 的 `on: push/pull_request` 推断“`/retest` 不能重跑 GitHub Actions”是错误的。该配置只能说明评论不会直接创建一个新 workflow run；它不能排除外部 Prow/Karmada bot 接受命令后调用 GitHub Actions rerun API。今后应同时检查 `run_attempt`、`triggering_actor`、命令与 `run_started_at` 的时间关系，不能只读 workflow 触发器。
+
+### 最终合并结论
+
+- 同一 head `aaf1dc24c`、同一 v1.35 matrix 在 attempt 1 失败、attempt 2 成功，环境红项的非确定性由 `E0` 升级为 `E1`。
+- 该绿重跑只证明“失败不是这份代码每次都会触发”，不会把共享 runner I/O/运行时抖动假设从 `E2` 升级为物理根因，也不会补齐失败节点或宿主 Docker/I/O 证据。
+- Tide 于 `12:02:24Z` 成功，PR 于 `12:02:27Z` 自动合并为 `1c278577e789`。最终 18 个 checks 全部通过，不是带红、`neutral` 或 `skipped` 合并。
+- 这次无关环境红项不需要修改 #7795 代码。最终 patch 保持 2 files、`+5/-4`：`helper.NewPod` 默认让 BusyBox `sleep 3600`，top 用例等待 `PodReady=True`。

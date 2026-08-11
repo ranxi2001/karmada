@@ -10,7 +10,7 @@
 
 ## Current Snapshot
 
-状态核对时间：2026-08-10。
+状态核对时间：2026-08-11。
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
@@ -22,8 +22,7 @@
 ## Last Run
 
 - 2026-08-10：将 [#7492 Day 42](internship-reports/day42-issue7492-multi-component-scale-rescheduling-intake.md) 收敛为独立可读的上下文与等待基线：保留 ownership、#5115 四期、#6486 scalar precedent、维护者候选字段和待确认清单；实现推演继续留在 [Day 43](internship-reports/day43-issue5115-evolution-and-7492-implementation-plan.md)。等待 `RainbowMango` 详细 API；无源码 worktree 或上游动作。
-- 2026-08-10：#7795 已发布 `/retest`，但 bot 因缺 `/ok-to-test` 拒绝，且该命令不能重跑 GitHub Actions。[深入 RCA](internship-reports/day33-karmadactl-top-flake-upstream-draft.md#upstream-ci-红项分类2026-08-10)确认 top 用例通过；红项终止于无关 kind cgroup-ready 失败，现场三套 etcd 同时慢盘，runner I/O/运行时假设为 E2；等待维护者重跑 failed jobs。
-- 2026-08-10：#7795 发布 `8d2148606` 后重新审计 [`NewPod` 契约](internship-reports/day33-karmadactl-top-flake-upstream-draft.md)：无 command 的 BusyBox 在默认 `RestartPolicyAlways` 下不是一次性任务，而是持续重启；最终 `aaf1dc24c` 恢复两参数 API 并默认 `sleep 3600`，8 个 E2E 均有 cleanup；测试、force-push、194-word body 和第一条回复修订均完成并回读。
+- 2026-08-11：[#7795](https://github.com/karmada-io/karmada/pull/7795) 在维护者 `/retest` 触发同 SHA v1.35 attempt 2 转绿后由 Tide 合并为 `1c278577e789`；环境红项升级为非确定性 `E1`，runner I/O/运行时物理原因仍为 `E2` 假设。[最终 RCA 与合并证据](internship-reports/day33-karmadactl-top-flake-upstream-draft.md#最终合并结论)已归档，并纠正“workflow 事件列表可否定 bot rerun API”的误判。
 - 2026-08-04：完成 [Day 41 PR #7810 代码与系统 review](internship-reports/day41-pr7810-binding-update-coalescing-review.md) 和 [delayed-key 时序](internship-reports/day41-pr7810-delayed-key-race.mmd)：确认 `AddAfter` 保留最早 deadline 且可被 fast path 绕过，并发现 delayed key 可越过 ownership / suspension；全局延迟还覆盖 failover、Descheduler 与 WR，priority queue 不生效。[英文 review](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994)已发布并回读验证。
 - 2026-08-04：新增 [Day 40 #7662 API/代码开发基准](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) 和 [流程图](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-flow.mmd)：确认当前 WR 写请求即成功、V1 estimator freshness 与 `FitError` retry 均有缺口；一期范围及 source generation、pinned capacity、commit recovery、ack/consume/abandon 等 stop gates 已定。
 

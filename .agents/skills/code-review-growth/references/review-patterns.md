@@ -406,3 +406,12 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Expand the provider path through rollback, compare the first environmental degradation timestamp with the alleged trigger, and separate the proven terminal mechanism from any physical infrastructure cause.
 - Evidence to gather: Per-phase provider timestamps, failed-node journal and inspect output, host dockerd/container-runtime logs, disk and inode state, I/O/PSI metrics, kernel OOM/block events, and synchronized symptoms from independent control-plane stores.
 - Test or fix cue: Keep the physical cause at `E2` when failed-node or host evidence is absent. A same-SHA green rerun upgrades nondeterminism to `E1` only; it does not justify changing unrelated PR code or naming a root cause.
+
+## Workflow Event Filters Do Not Bound Bot Rerun Capabilities
+
+- Pattern: A workflow that listens only to `push` and `pull_request` cannot be started directly by an issue comment, but a trusted project bot may still accept `/retest` and call the GitHub Actions rerun API for the existing run.
+- Seen in: `karmada-io/karmada#7795`, where the author's untrusted `/retest` was rejected, while maintainer `zhzhuang-zju` posted the same command and `karmada-bot` started `run_attempt: 2` four seconds later with only the failed v1.35 job executing again.
+- Miss symptom: An RCA reads only the workflow `on:` block and concludes that `/retest` cannot affect a GitHub Actions check, then recommends a manual Actions click as the only valid path.
+- Review check: Separate direct workflow event creation from an integration's rerun permission. Correlate the accepted command with the existing run's attempt, `triggering_actor`, start time, and new failed-job ID.
+- Evidence to gather: Exact comment actor/time and bot response, run `run_attempt`/`run_started_at`/`triggering_actor`, per-attempt job IDs and timestamps, and whether successful jobs were retained or actually rerun.
+- Test or fix cue: Do not infer bot capability from workflow YAML alone. State account trust, command acceptance, and rerun mechanics as separate claims; verify the resulting Actions state before prescribing a trigger path.
