@@ -19,7 +19,7 @@ The following commands are unavailable directly on the record-only `intern` bran
 - `hack/local-up-karmada.sh`: creates a local Karmada environment with a host cluster, control plane, and member clusters.
 - `make clean`: removes `_tmp` and `_output`.
 
-This repository currently uses Go `1.26.4`, as declared in `go.mod` and `.go-version`.
+This repository currently uses Go `1.26.5`, as declared in `go.mod` and `.go-version`.
 
 ## Coding Style and Tests
 
