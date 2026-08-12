@@ -14,7 +14,7 @@
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
-| [#7492 / Day 46](internship-reports/day46-issue7492-mszacillo-state-reproduction.md) | Draft PR1 仍为 `cf59527e2`；针对 `mszacillo` 评论在 current master 完成三段条件复现：纯 `Components` scale 不触发调度，第二触发器进入调度后容量可换集群，普通 target switch 不构造或转移 `PreservedLabelState`；真实 Flink 状态丢失未复现 | 用户确认 exact comment 后询问版本、YAML、触发器和 state 定义；PR2 前决定保留原集群、显式状态迁移或普通无状态迁移合同 |
+| [#7492 / Day 46](internship-reports/day46-issue7492-mszacillo-state-reproduction.md) | Draft PR1 仍为 `cf59527e2`；源码级条件复现完成：纯 `Components` scale 不触发调度，第二触发器进入调度后容量可换集群，普通 target switch 不构造或转移 `PreservedLabelState`；真实 Flink 状态丢失未复现 | 暂不发布重复性 comment；等待 `mszacillo` 的版本、YAML、触发器和 state 定义，再决定是否有新增事实值得回复；PR2 前决定跨集群状态合同 |
 | [Day 39 Descheduler 代码专项](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 已纠偏为整任务调度模型：`ResourceBinding` 是一级队列的 `SchedulingUnit`，Descheduler 只撤回 `Assigned + NotStarted + SchedulerUnschedulable`；五个代码合同为状态、证据、执行前 fence、接管完成、持久重试。A 为逐 GVK 试点，B 为 ResourceInterpreter 主线，C 为 member Pod 观察 fallback，D 仅借 ApplicationFailover 模式；[16 页 Style A 汇报稿](internship-reports/day39-karmada-descheduler-code-research-presentation.html)同步更新 | 周一前拿千问真实 YAML 核对生命周期、不可调度诊断、单目标 Placement、执行前 lock、接管回执和 cooldown，并用 HTML 试讲 |
 | [PR #7662 / Day 40](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) | Open，head `586f6fc3508e`；partial 一期为 Deployment：source generation/V2 freshness、pinned delta、strict capacity、原子 commit、ack/consume/abandon；Full 保持通用路径 | `@zhy76` / `@RainbowMango` 回复或 proposal commit；逐项确认 10 个 stop gates |
 | [PR #7810 / Day 41](internship-reports/day41-pr7810-binding-update-coalescing-review.md) | Open，reviewed head `31bef8d37`；fixed window 仅是 best-effort。P1 delayed key 可越过 ownership / suspension；delay 还覆盖 failover、Descheduler 和 WR，priority queue 忽略参数；[review 已发布](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994) | 作者回复或 push 新 head 后复查 dequeue guard、作用域、两类 queue、fake-clock tests 和 docs CI |
@@ -43,7 +43,7 @@
 
 ## Next
 
-- #7492 先由用户确认 Day 46 exact comment，再询问 `mszacillo` 的版本、YAML、第二触发器和 state 定义；PR1 准备 exact title/body，PR2 前明确跨集群 scale 的状态合同，再实现 producer、snapshot merge、trigger/delta、`ReviseComponents` 和失败保护。
+- #7492 暂不发布当前重复性 comment；等 `mszacillo` 补版本、YAML、第二触发器和 state 定义后，只在出现新增事实时追加短回复。PR1 准备 exact title/body，PR2 前明确跨集群 scale 的状态合同，再实现 producer、snapshot merge、trigger/delta、`ReviseComponents` 和失败保护。
 - 周一前用 Day 39 HTML 稿试讲；拿千问真实 YAML 确认 `Queued/Assigned/Running/Terminal` 映射、`NotStarted + SchedulerUnschedulable` 证据、单目标 Placement、pre-start lock、handoff completion 和 cooldown，不把公开的 offline / long-running Pending story 自动写成具体产品合同。
 - #7662 等 `@zhy76` / `@RainbowMango` 回复或 proposal commit；更新后逐项核对 Day 40 的 10 个 stop gates，只在准确 target/text 获用户确认后起草或发布 upstream review。
 - #7810 等作者回复或新 head；更新后复查 dequeue guard、delay 作用域、legacy/priority queue、fake-clock 与 failover/Descheduler tests，不在无新信号时重复催促。

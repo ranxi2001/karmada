@@ -36,30 +36,17 @@
 本轮没有真实 Flink Operator、共享 checkpoint 存储和恢复结果，所以尚不能把“没有携带状态交接信息”
 升级为“已经证明 Flink checkpoint 或业务数据丢失”。
 
-## 拟发布 Comment
+## Comment 决策：暂不发布
 
-以下文本面向 `mszacillo`，当前仅为草稿，尚未发布：
+当前不建议在 issue 里追加 comment。`RainbowMango` 的最新回复已经说明：他认为 `mszacillo` 看到的更可能是
+单模板 `Deployment`，而多模板 `FlinkDeployment` 的扩容重调度尚未支持。我们的复现与这个判断一致，但没有
+提供新的端到端证据：容量是受控输入，测试没有运行 Flink Operator、共享 checkpoint 存储或恢复流程。
 
-```markdown
-Thanks for pointing this out, @mszacillo!
+此时再发一条“我也验证了”的长回复，只会重复维护者刚说过的结论，并把内部条件实验包装成社区需要处理的
+新事实。保留本报告作为代码证据即可；等 `mszacillo` 补充版本、workload、触发器和具体 state 后，再决定
+是否需要一条简短的增量回复。
 
-I checked current `upstream/master`. For `FlinkDeployment`, changing only `spec.components` does not trigger rescheduling today, so I could not reproduce an automatic move caused by the scale-up itself. This matches @RainbowMango's comment above.
-
-The state-handoff gap still exists if another event triggers rescheduling. When the current cluster cannot fit the workload, the scheduler can select another cluster, but the ordinary rescheduling path does not carry `PreservedLabelState` to the new `Work`. State handoff is currently wired only into application failover.
-
-Our test used controlled capacity and did not run a Flink operator or checkpoint recovery, so this does not prove actual Flink state loss.
-
-Could you share the Karmada version or commit, the workload and policy, what triggered rescheduling, and what state was missing? Then we can reproduce the exact path and decide whether this belongs in the scale API or in failover behavior.
-```
-
-## Comment 在说什么
-
-第一段只做简短回应。#7492 现有讨论普遍先用 `Thanks...`、`Good point!` 或 `No problem!` 建立上下文，
-再进入技术内容；这里采用一句 `Thanks for pointing this out`，不附加夸张评价。
-
-第二段接住 `RainbowMango` 最新回复中的判断：对当前主干而言，`FlinkDeployment` 的纯多组件扩容不会
-像 Deployment 一样直接进入重调度。这里不展开 `SchedulerObservedGeneration` 等实现细节，只保留对方需要
-知道的行为结论。
+后续只有在获得版本、触发器和具体 state 这些新事实后，才重新考虑是否需要一条只补充新证据的短回复。
 
 三条结果分别回答三个不同问题：
 
@@ -187,9 +174,8 @@ PASS
 
 ## 下一步
 
-1. 用户确认上面的 exact English comment 后，再回复 #7492；发布前不修改技术强度。
-2. 拿到 `mszacillo` 的版本、YAML、触发器和 state 定义后，决定复现路径。
-3. 若其场景确为 Flink checkpoint 恢复，搭建 Flink Operator + shared checkpoint storage + 两个容量不对称
+1. 等 `mszacillo` 补充 Karmada 版本、workload、policy、触发器和 state 定义，再决定复现路径。
+2. 若其场景确为 Flink checkpoint 恢复，搭建 Flink Operator + shared checkpoint storage + 两个容量不对称
    member clusters，分别验证纯 scale、显式 reschedule 和 application failover。
-4. 在 #7492 的 scale API 设计中明确选择“保留原集群”“显式状态迁移”或“普通无状态迁移”，不要让行为
+3. 在 #7492 的 scale API 设计中明确选择“保留原集群”“显式状态迁移”或“普通无状态迁移”，不要让行为
    由现有 controller 的偶然组合决定。
