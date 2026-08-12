@@ -43,13 +43,13 @@
 ```markdown
 Thanks for pointing this out, @mszacillo!
 
-I checked the relevant paths on current `upstream/master` (`1c278577e`). @RainbowMango is right that scaling a multi-template workload alone cannot trigger this today: with `MultiplePodTemplatesScheduling` enabled, a `Components`-only update does not call the scheduling algorithm when the binding already has a target cluster. It only advances `SchedulerObservedGeneration`, so another rescheduling trigger would be needed.
+I checked current `upstream/master`. For `FlinkDeployment`, changing only `spec.components` does not trigger rescheduling today, so I could not reproduce an automatic move caused by the scale-up itself. This matches @RainbowMango's comment above.
 
-However, if another trigger starts a scheduling cycle, I can reproduce the concern at the controller level. With `member1=0` and `member2=1` available component sets, the single-cluster `Divided/Aggregated` path selects `member2`. This target change does not create a `GracefulEvictionTask`, so no `PreservedLabelState` is passed to the new `Work`. State preservation is currently tied to the failover path rather than ordinary rescheduling.
+The state-handoff gap still exists if another event triggers rescheduling. When the current cluster cannot fit the workload, the scheduler can select another cluster, but the ordinary rescheduling path does not carry `PreservedLabelState` to the new `Work`. State handoff is currently wired only into application failover.
 
-This does not reproduce Flink state loss end to end: the capacity result was mocked, and no Flink operator or checkpoint recovery was involved.
+Our test used controlled capacity and did not run a Flink operator or checkpoint recovery, so this does not prove actual Flink state loss.
 
-@mszacillo, could you share the Karmada version or commit, the workload and propagation policy, what triggered the rescheduling, and what state was not conserved (for example, job ID, checkpoint/savepoint, or application data)? That would help us determine whether state preservation belongs in the scale contract or remains an explicit failover behavior.
+Could you share the Karmada version or commit, the workload and policy, what triggered rescheduling, and what state was missing? Then we can reproduce the exact path and decide whether this belongs in the scale API or in failover behavior.
 ```
 
 ## Comment 在说什么
@@ -58,7 +58,8 @@ This does not reproduce Flink state loss end to end: the capacity result was moc
 再进入技术内容；这里采用一句 `Thanks for pointing this out`，不附加夸张评价。
 
 第二段接住 `RainbowMango` 最新回复中的判断：对当前主干而言，`FlinkDeployment` 的纯多组件扩容不会
-像 Deployment 一样直接进入重调度。这里同时给出我们已经验证的源码边界，不重复解释完整 issue 背景。
+像 Deployment 一样直接进入重调度。这里不展开 `SchedulerObservedGeneration` 等实现细节，只保留对方需要
+知道的行为结论。
 
 三条结果分别回答三个不同问题：
 
