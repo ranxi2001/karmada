@@ -21,7 +21,7 @@
 
 ## Last Run
 
-- 2026-08-12：同步 `/home/humanizer-cs` `v0.4.5`（`db2fc3d`）到 repo-local skill；逐文件一致，`quick_validate.py` 通过。
+- 2026-08-12：发布 `humanizer-cs v0.4.6`（`a0db303`）：新增按调用触发的 Release 检查、完整 release 元组确认、manifest/本地漂移校验和备份回滚；43 项测试、真实 Release 压缩包和 Latest API 验证通过，全局与 repo-local skill 已升级，旧全局副本保留在 `/root/.codex/skill-backups/humanizer-cs-pre-v0.4.6-20260812`。
 - 2026-08-12：在独立 `upstream/master@1c278577e` worktree 以本地提交 `a649fe5c1` 完成 #7492 三段源码级复现，focused 与三个完整包测试通过；结论、边界和待确认英文 comment 见 [Day 46](internship-reports/day46-issue7492-mszacillo-state-reproduction.md)，未发布 upstream comment、未推送验证分支。
 - 2026-08-12：将 Draft PR1 压成并推送单提交 `cf59527e2`：新增 `GracefulEvictionTask.Components`、RB result validation 与 downgrade grandfathering；相关 race tests 和 `make verify` 通过，`make test` 唯一红项为既有公网 `TestInternetIP`，其余范围补跑通过；[Day 45](internship-reports/day45-issue7492-progress-completeness-and-open-contracts.md)已记录。
 - 2026-08-11：[#7795](https://github.com/karmada-io/karmada/pull/7795) 在维护者 `/retest` 触发同 SHA v1.35 attempt 2 转绿后由 Tide 合并为 `1c278577e789`；环境红项升级为非确定性 `E1`，runner I/O/运行时物理原因仍为 `E2` 假设。[最终 RCA 与合并证据](internship-reports/day33-karmadactl-top-flake-upstream-draft.md#最终合并结论)已归档，并纠正“workflow 事件列表可否定 bot rerun API”的误判。

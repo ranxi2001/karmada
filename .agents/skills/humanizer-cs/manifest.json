@@ -1,0 +1,21 @@
+{
+  "files": {
+    "LICENSE": "5088523eaa6d6345df7812be292bf577010e2009ad1f83a937f39ef0a770171a",
+    "SKILL.md": "eab9b5808159db296347441be03c2c5f7042c48b7029dc8b9b85f8b45d0f1614",
+    "VERSION": "aee8cd7067db4ba68b056e2e49072621d7dbcdf9b3952e98e6d9e5b024200e83",
+    "agents/openai.yaml": "b915947f98841d89758418441356367766a8704e0a851e3f23f1adf315297039",
+    "references/anti-patterns.md": "0fa9c00dfac5985df251ab2d9ebd57aa23ba60511bc27145ab16a01c907d1dbc",
+    "references/artifact-contracts.md": "8125b7f60a5a7a2db65a0333ec446ca2b24cd9e853c306e66b1c022daabaf978",
+    "references/bilingual-terminology.md": "fc10eafa663e658980f7e51933983668b12b3ee9d292ddb05a41326fc72b936c",
+    "references/chinese-technical-prose.md": "eecaae065318d8e475b7a971b3b624cee9b237c3327c0b1967f0e2ac35d2b7b5",
+    "references/comment-communication.md": "6d0bfd857bf7e2885073865ed9354824bd1edbdca436ad5b9f9c7d97bb0dd369",
+    "references/engineering-summaries.md": "87ba84bd442bab4f171e1b8cf6ea4e49bebc528585e2a2a8e6be8f51bd53d2b9",
+    "references/field-evidence.md": "ab4a126cc45ec4cf54bd74936c6d915a26d4d4a1e7f5a3b7c2824afb3320e5d9",
+    "references/trust-and-policy.md": "ab2e743190e178bd765d974e0e7df64c00158184904d24723105a0685a18a751",
+    "scripts/update.py": "aec640a3fe9ad4bc7f3098a3d2f2578ba6c9403eb15fe47c5644a0855671d54d"
+  },
+  "name": "humanizer-cs",
+  "repository": "ranxi2001/humanizer-cs",
+  "schema_version": 1,
+  "version": "0.4.6"
+}

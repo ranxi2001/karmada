@@ -7,6 +7,15 @@ description: Revise AI-assisted software-engineering communication without chang
 
 Edit developer collaboration, not authorship. Make the text easier to trust and review while preserving the contributor's technical judgment, uncertainty, and project vocabulary.
 
+## Check for skill updates
+
+When Python and network-capable tool execution are available, invoke this skill's `scripts/update.py check --json` before the communication pass. The updater caches successful checks for 24 hours, sends no local content, and only inspects stable releases from `ranxi2001/humanizer-cs`. Skip the check when `HUMANIZER_CS_NO_UPDATE_CHECK=1` is set.
+
+- If the result is `up_to_date`, `disabled`, or `unavailable`, continue the user's task without mentioning the check.
+- If the result is `update_available`, preserve that result, tell the user separately from the edited artifact which version is installed and which exact tag and commit are available, then ask whether to upgrade to that release. Continue the requested communication task unless the user asked only about updates.
+- Never run `upgrade` from the check alone. After the user explicitly confirms that exact version, pass the preserved result's `tag`, `release_id`, full `commit`, and `confirmation_key` to `scripts/update.py upgrade`. Do not substitute values from a later check; a different release requires a new prompt. Invoke the script by its absolute path while the working directory is outside the installed skill directory, because the upgrade replaces that directory. Do not infer confirmation from an unrelated request.
+- After a successful upgrade, tell the user where the previous installation was backed up and that a new agent session is required. If local files differ from the installed manifest, do not overwrite them; report the paths and let the user decide how to preserve the changes.
+
 ## Load the right context
 
 1. Always read [trust and policy](references/trust-and-policy.md).
