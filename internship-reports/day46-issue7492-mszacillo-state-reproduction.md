@@ -3,6 +3,7 @@
 - 日期：2026-08-12
 - Issue：[`karmada-io/karmada#7492`](https://github.com/karmada-io/karmada/issues/7492)
 - 待核查评论：[`mszacillo` 的状态保留问题](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5254150877)
+- 后续回复：[`RainbowMango` 对 Deployment / FlinkDeployment 行为的区分](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5261211769)
 - 复现基线：`upstream/master@1c278577e7892b6ea44f86a4317c1eb1e013bb93`
 - 本地验证分支：`verify/issue-7492-mszacillo-state-loss`
 - 本地验证提交：`a649fe5c128b387b22fe4af583a810ea6d4193d6`
@@ -40,21 +41,24 @@
 以下文本面向 `mszacillo`，当前仅为草稿，尚未发布：
 
 ```markdown
-I checked this on current `upstream/master` (`1c278577e`). The concern is valid at the code-path level, but I could not reproduce the exact end-to-end Flink behavior from a `Components`-only scale update.
+Thanks for pointing this out, @mszacillo!
 
-- With `MultiplePodTemplatesScheduling` enabled, an update that only changes `Components` does not call the scheduling algorithm when the binding already has a target cluster and no other rescheduling trigger is present. The scheduler only advances `SchedulerObservedGeneration`, so current master needs a second trigger before capacity can move the workload.
-- Once multi-component scheduling runs, a controlled result of `member1=0` and `member2=1` available component sets causes a single-cluster `Divided/Aggregated` placement to select `member2`.
-- A normal target change does not create a `GracefulEvictionTask`. Without such a task, the binding controller creates the new `Work` without `PreservedLabelState`; a pre-populated `Directly` failover task does inject that state as a control.
+I checked the relevant paths on current `upstream/master` (`1c278577e`). @RainbowMango is right that scaling a multi-template workload alone cannot trigger this today: with `MultiplePodTemplatesScheduling` enabled, a `Components`-only update does not call the scheduling algorithm when the binding already has a target cluster. It only advances `SchedulerObservedGeneration`, so another rescheduling trigger would be needed.
 
-This is a controller-level reproduction with mocked capacity and a label as the state-handoff proxy. It does not establish Flink state loss because no Flink operator or shared checkpoint recovery was exercised.
+However, if another trigger starts a scheduling cycle, I can reproduce the concern at the controller level. With `member1=0` and `member2=1` available component sets, the single-cluster `Divided/Aggregated` path selects `member2`. This target change does not create a `GracefulEvictionTask`, so no `PreservedLabelState` is passed to the new `Work`. State preservation is currently tied to the failover path rather than ordinary rescheduling.
 
-Could you share the Karmada version or commit, workload and propagation policy, the rescheduling trigger, and what state was not conserved (for example, job ID, checkpoint/savepoint, or application data)? That would let us reproduce the same path and decide whether state preservation belongs in the scale contract or remains an explicit failover behavior.
+This does not reproduce Flink state loss end to end: the capacity result was mocked, and no Flink operator or checkpoint recovery was involved.
+
+@mszacillo, could you share the Karmada version or commit, the workload and propagation policy, what triggered the rescheduling, and what state was not conserved (for example, job ID, checkpoint/savepoint, or application data)? That would help us determine whether state preservation belongs in the scale contract or remains an explicit failover behavior.
 ```
 
 ## Comment 在说什么
 
-第一段先限定证据：我们检查的是当前主干的 scheduler 和 binding controller，不声称复现了完整 Flink
-环境。
+第一段只做简短回应。#7492 现有讨论普遍先用 `Thanks...`、`Good point!` 或 `No problem!` 建立上下文，
+再进入技术内容；这里采用一句 `Thanks for pointing this out`，不附加夸张评价。
+
+第二段接住 `RainbowMango` 最新回复中的判断：对当前主干而言，`FlinkDeployment` 的纯多组件扩容不会
+像 Deployment 一样直接进入重调度。这里同时给出我们已经验证的源码边界，不重复解释完整 issue 背景。
 
 三条结果分别回答三个不同问题：
 
