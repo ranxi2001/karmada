@@ -112,16 +112,17 @@ carry that context.
 
 First verify that project policy permits AI assistance for replies.
 
-Answer the actual request before thanking or summarizing:
+Treat the reply as an increment to the visible thread. A direct reply may start with one brief, context-specific acknowledgment; answer the actual request immediately after it. The following slots are optional and should not become a checklist:
 
 ```text
+Optional acknowledgment
 Decision or direct answer
 What changed and where, if applicable
 Validation evidence
 Remaining disagreement or question
 ```
 
-Treat the reply as an increment to the visible thread. Do not restate the original finding or surrounding code unless the reference is needed to disambiguate the new state.
+Do not restate the original finding or surrounding code unless the reference is needed to disambiguate the new state.
 
 Example:
 
@@ -129,20 +130,19 @@ Example:
 Fixed in `abc1234`: `Reconcile` now returns the transient error, and `TestReconcileRetriesUpdateTimeout` covers the queue retry path. `go test ./pkg/controller/...` passes.
 ```
 
-Do not write generic replies such as "Thank you for the insightful feedback. I have carefully addressed your concern." If no change was made, explain the technical reason and invite a decision on the specific disagreement.
+Do not write generic replies such as "Thank you for the insightful feedback. I have carefully addressed your concern." If no change was made, explain the technical reason and invite a decision on the specific disagreement. See [comment communication](comment-communication.md) for the no-post gate and thread-specific cadence.
 
 ## Discussion comment
 
-For issue or proposal discussion, state:
+For issue or proposal discussion, use only the parts that move the decision:
 
 ```text
 Current conclusion or disagreement
 Evidence that changes the decision
-One unresolved question
-Suggested next step
+One focused unresolved question or next action by default
 ```
 
-Do not recap the full thread unless the user explicitly needs a synthesis.
+Do not recap the full thread unless the user explicitly needs a synthesis. A new discussion starts with the behavior or decision; a follow-up mentions only the new state. See [comment communication](comment-communication.md) for direct-reply versus inline guidance.
 
 When referencing prior art, classify the relationship instead of flattening it:
 same symptom, same root cause, partial overlap, superseded, already fixed, or

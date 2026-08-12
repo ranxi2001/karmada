@@ -41,7 +41,7 @@ Preserve prior-art relationships. If another issue, PR, or discussion partially
 overlaps the current work, name the relationship and next useful action instead
 of rewriting it as either duplicate or unrelated.
 
-Courtesy is compatible with directness, but greetings and thanks are not required wrappers. Keep them when they carry relationship or acknowledgment value; remove them when they delay the only technical update.
+Courtesy is compatible with directness, but it is not a required wrapper. In a direct reply, retain or add at most one natural acknowledgment when it recognizes the preceding contribution; remove it when it delays the technical update. A new finding can start with the behavior or question.
 
 ## Traceability
 

@@ -21,11 +21,11 @@
 
 ## Last Run
 
+- 2026-08-12：同步 `/home/humanizer-cs` `v0.4.5`（`db2fc3d`）到 repo-local skill；逐文件一致，`quick_validate.py` 通过。
 - 2026-08-12：在独立 `upstream/master@1c278577e` worktree 以本地提交 `a649fe5c1` 完成 #7492 三段源码级复现，focused 与三个完整包测试通过；结论、边界和待确认英文 comment 见 [Day 46](internship-reports/day46-issue7492-mszacillo-state-reproduction.md)，未发布 upstream comment、未推送验证分支。
 - 2026-08-12：将 Draft PR1 压成并推送单提交 `cf59527e2`：新增 `GracefulEvictionTask.Components`、RB result validation 与 downgrade grandfathering；相关 race tests 和 `make verify` 通过，`make test` 唯一红项为既有公网 `TestInternetIP`，其余范围补跑通过；[Day 45](internship-reports/day45-issue7492-progress-completeness-and-open-contracts.md)已记录。
 - 2026-08-11：[#7795](https://github.com/karmada-io/karmada/pull/7795) 在维护者 `/retest` 触发同 SHA v1.35 attempt 2 转绿后由 Tide 合并为 `1c278577e789`；环境红项升级为非确定性 `E1`，runner I/O/运行时物理原因仍为 `E2` 假设。[最终 RCA 与合并证据](internship-reports/day33-karmadactl-top-flake-upstream-draft.md#最终合并结论)已归档，并纠正“workflow 事件列表可否定 bot rerun API”的误判。
 - 2026-08-04：完成 [Day 41 PR #7810 代码与系统 review](internship-reports/day41-pr7810-binding-update-coalescing-review.md) 和 [delayed-key 时序](internship-reports/day41-pr7810-delayed-key-race.mmd)：确认 `AddAfter` 保留最早 deadline 且可被 fast path 绕过，并发现 delayed key 可越过 ownership / suspension；全局延迟还覆盖 failover、Descheduler 与 WR，priority queue 不生效。[英文 review](https://github.com/karmada-io/karmada/pull/7810#issuecomment-5178016994)已发布并回读验证。
-- 2026-08-04：新增 [Day 40 #7662 API/代码开发基准](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) 和 [流程图](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-flow.mmd)：确认当前 WR 写请求即成功、V1 estimator freshness 与 `FitError` retry 均有缺口；一期范围及 source generation、pinned capacity、commit recovery、ack/consume/abandon 等 stop gates 已定。
 
 ## Current Blockers
 

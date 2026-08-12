@@ -1,4 +1,4 @@
 interface:
   display_name: "Humanizer CS"
   short_description: "Humanize dev collaboration drafts"
-  default_prompt: "Use $humanizer-cs to revise this issue, PR, review comment, or status summary without changing its technical claims."
+  default_prompt: "Use $humanizer-cs to revise this issue, PR, discussion comment, review reply, or status summary. Keep the message concise and incremental without changing its technical claims."
