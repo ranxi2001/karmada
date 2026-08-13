@@ -129,8 +129,8 @@ probe 变为 `Scheduled=True`，最终 `07:22:24.642` 断言超时。
 按该合同生成的五泳道带时间正文已写入
 [`day48-issue7826-revised-body-draft.md`](day48-issue7826-revised-body-draft.md)。两张 exact Mermaid 图已用
 Mermaid CLI 11.16.0 和现有 Chromium 渲染检查通过；正文 SHA-256 为
-`f0c8a4855de6dde08a74ac2595ac26a6087a1e370c14f2c964c5f4593e08f328`。该英文正文在用户提出替换意图后
-才生成，因此仍需 exact-text 确认，当前尚未再次修改 upstream #7826。
+`f0c8a4855de6dde08a74ac2595ac26a6087a1e370c14f2c964c5f4593e08f328`。该英文正文已于 2026-08-13
+获得用户 exact-text 确认并替换到 upstream #7826；发布后逐字 diff 为空，线上与本地 SHA-256 一致。
 
 本轮还发现两条适合补入 `$e2e-root-cause-analysis` 的通用规则，但按 skill 的 Step 5 只提出、不直接修改：
 
@@ -199,9 +199,9 @@ PASS
 
 ## Issue 与 PR 状态
 
-- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日先后将正文替换为对象时序版和测试用例
-  因果版，当前线上为后者。创建时模板 metadata 没有自动添加 `kind/flake`；后续添加 label 因上游权限
-  不足而失败。
+- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日经复盘将正文最终替换为五泳道带时间版，
+  同时表达 producer/consumer spec、cleanup 代码、残留对象/状态和 UTC 时间。创建时模板 metadata 没有
+  自动添加 `kind/flake`；后续添加 label 因上游权限不足而失败。
 - PR #7827 于 2026-08-13 创建，base 为 `master`，head 为
   `ranxi2001:test/estimator-assumption-isolation@ba531a9a1`，状态为 Open、非 Draft、Mergeable。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
