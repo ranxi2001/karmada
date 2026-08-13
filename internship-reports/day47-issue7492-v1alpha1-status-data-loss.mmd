@@ -1,0 +1,31 @@
+sequenceDiagram
+    title Legacy status update can erase v1alpha2-only component data
+    actor Legacy as v1alpha1 client
+    participant API as Karmada API server
+    participant Convert as Conversion webhook
+    participant Admission as Validating webhook
+    participant Store as etcd (v1alpha2 storage)
+
+    Legacy->>API: PUT or PATCH ResourceBinding/status (v1alpha1)
+    API->>Store: Read current object
+    Store-->>API: v1alpha2 spec with Components
+    API->>Convert: Convert stored object to v1alpha1
+    Convert-->>API: Legacy projection without Components
+    API->>API: Copy legacy old spec and replace status
+
+    alt Current configuration
+        Note over API,Admission: Main-resource rule does not match /status
+        API->>Convert: Convert updated object to storage version
+        Convert-->>API: v1alpha2 object without Components
+        API->>Store: Persist status update
+        Note over Store: Component scheduling data is erased
+    else Proposed PR1 guard
+        API->>Admission: Exact v1alpha1 legacy-write admission
+        Admission->>API: GET current object as v1alpha2
+        API->>Store: Read authoritative storage state
+        Store-->>API: Component-aware spec
+        API-->>Admission: Current v1alpha2 object
+        Admission--xAPI: Deny and require v1alpha2 writer
+        API--xLegacy: Return Forbidden
+        Note over Store: Existing spec remains unchanged
+    end
