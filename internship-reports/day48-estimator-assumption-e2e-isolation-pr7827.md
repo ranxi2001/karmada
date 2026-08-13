@@ -132,14 +132,63 @@ Mermaid CLI 11.16.0 和现有 Chromium 渲染检查通过；正文 SHA-256 为
 `f0c8a4855de6dde08a74ac2595ac26a6087a1e370c14f2c964c5f4593e08f328`。该英文正文已于 2026-08-13
 获得用户 exact-text 确认并替换到 upstream #7826；发布后逐字 diff 为空，线上与本地 SHA-256 一致。
 
-本轮还发现两条适合补入 `$e2e-root-cause-analysis` 的通用规则，但按 skill 的 Step 5 只提出、不直接修改：
+## Skills 优化提案
 
-1. 下载 artifact 前先读取 job 的 `run_attempt`，并核对 artifact `created_at`。GitHub rerun 后，run-level
-   同名 artifact 可能只对应最新 attempt；如果与失败 job attempt 不一致，应停止拼接证据，并在 rerun 前
-   固化失败 attempt 的 job/component logs。
-2. 当一个 issue 合并多个 CI run 或多个 producer 时，报告必须先列出
-   `failing spec -> assertion -> producer spec -> residual object/state -> causal effect` 映射，再分别画每个 run
-   的五泳道时间线；不能只按全局时间顺序叙述，也不能为了突出测试关系而删掉时间证据。
+这次连续经历“只有对象时序 -> 只有测试关系 -> 补时间 -> 合并代码/对象/测试/时间”和多次 upstream body
+替换，说明缺口不是某一句话，而是 workflow 没有在发布前冻结四类视图和 approval 状态。按
+`$e2e-root-cause-analysis` 的 Step 5，本轮只提出、不直接修改 skill。
+
+### P0：`e2e-root-cause-analysis`（主归属）
+
+1. 在收集 artifact 前强制读取 job/run 的 `run_attempt`，并核对 artifact `created_at`。GitHub rerun 后，
+   run-level 同名 artifact 可能只对应最新 attempt；如果与失败 job attempt 不一致，应停止拼接证据，并在
+   rerun 前固化失败 attempt 的 job/component logs。
+2. 对跨 spec 污染先生成一行 causal tuple，再写叙述：
+   `producer spec + source -> cleanup hook + source -> residual object/state -> consumer spec + source -> assertion + source`。
+   必须明确“producer 自身是否通过”和“最终哪个 consumer 报红”。
+3. 多个 CI run 必须分别画五泳道时间线：producer spec、cleanup code、residual object/state、consumer spec、
+   assertion。时间写在事件箭头上，而不是单独做时间泳道；不能为了突出对象而丢测试，也不能为了突出测试
+   而删时间。
+4. 图中每条物质性边标证据类型：`[OBS]` 为 job/component log，`[CODE]` 为 exact-SHA 源码，
+   `[INFERENCE]` 为尚未闭合的连接。只有 `[OBS] + [CODE]` 闭合主链时才继续使用 root cause/E3 表述。
+
+建议新增 `scripts/audit_run_attempt.py <job-url>`，一次输出 repository、run ID、job ID、`run_attempt`、job
+timestamps、artifact name/ID/`created_at`/expiry，以及“artifact 是否可归属该 attempt”的结论。验收用例至少
+覆盖普通 run、失败 job rerun 后同名 artifact 覆盖、artifact 已过期三种情况。
+
+### P1：`karmada-issue-discussion`（发布状态机）
+
+1. 把 exact-text gate 明确成内容哈希状态机：`drafted -> rendered -> approved(hash) -> published ->
+   remote hash verified`。用户的批准只绑定批准时展示的 target 和 hash；批准后正文再变更，必须重新确认。
+2. 编辑已有 issue 前记录 title/body hash/`updatedAt`，发布后验证 title 不变、正文逐字一致、remote hash 与
+   approved hash 一致。只有尾部换行差异时用不自动补换行的模板输出复核。
+3. 在请求确认时一次性给出 target、正文文件链接、visible words、长文例外原因、hash 和 Mermaid 校验结果，
+   避免用户只能确认抽象方向却没有确认 exact body。
+
+该规则不应复制到所有 GitHub skills；`karmada-issue-discussion` 负责 issue/comment，PR body 的同类状态机继续由
+`karmada-pr-management` 按自身 gate 管理。
+
+### P1：`project-mermaid`（最终正文校验工具）
+
+1. 新增 `scripts/render_markdown_mermaid.py <draft.md> --output-dir <dir>`：按出现顺序抽取最终 Markdown 中所有
+   `mermaid` fence，生成临时 `.mmd`，逐块调用现有 renderer，并返回 fence index、行号、尺寸和失败原因。
+   这能避免手工复制“相似草图”通过、最终正文却未验证。
+2. 在 sequence reference 增加 RCA 五泳道模式，但作为条件模板而非通用强制：当问题同时涉及跨测试污染、
+   cleanup 代码、残留状态和超时时采用五泳道；普通组件调用仍保持 3-8 participant 的现有规则。
+3. 明确 Mermaid sequence message 中的 `;` 可能被解析为语句分隔符，发布前必须用目标 Mermaid 版本渲染
+   exact fence；render success 之后仍要做语义审计，检查测试、代码、对象、时间和证据标签是否齐全。
+
+### 不建议修改
+
+- `code-review-growth`：现有 Flake Root-Cause Gate 已定义 E0-E4、`OBS/CODE/INFERENCE` 和时间/代码表，
+  这次只需由 RCA skill 调用，不应重复五泳道模板或发布状态机。
+- `humanizer-cs`：它负责 claim strength 和 exact literal，不负责 RCA 证据收集、Mermaid 渲染或 GitHub 发布授权。
+- 不创建新 skill：三项缺口分别属于现有 RCA、issue publishing 和 Mermaid validation 边界；新建 skill 会增加
+  触发冲突和上下文成本。
+
+建议实施顺序为：先改 `e2e-root-cause-analysis` 的 causal tuple/五泳道合同和 attempt 审计，再补
+`project-mermaid` 的 Markdown fence renderer，最后补 `karmada-issue-discussion` 的 hash approval 状态机。
+前两项阻止错误正文形成，最后一项阻止未确认的新版本被发布。
 
 ## 为什么是三文件 test-only cleanup
 
