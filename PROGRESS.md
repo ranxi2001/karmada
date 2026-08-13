@@ -29,7 +29,7 @@
 
 ## Current Blockers
 
-- #7492：PR1 尚不能正式提交；必须先阻断 component-aware RB/CRB 的 `v1alpha1 /status` 有损写入，并用真实 API Server 证明完整 spec 保留。A2 只修 component state；完整 legacy conversion 或停止 serving 需另行决策。
+- #7492：PR1 尚不能正式提交；必须先阻断 component-aware RB/CRB 的 `v1alpha1 /status` 有损写入，并用真实 API Server 证明完整 spec 保留；混合升级结论还需旧 binary + 新 configuration 回归。A2 只修 component state；完整 legacy conversion 或停止 serving 需另行决策。
 - Day 39：尚缺千问真实 YAML 来证明 `NotStarted`、长期 `SchedulerUnschedulable`、单目标 Placement、执行前 admission lock 和新目标 Running/Completed 回执；无 fence 时只能承诺 best-effort。
 - #7662：Deployment signal/owner-chain 可复用，但 V1 estimator 缺 source freshness；public mode、threshold、V2 观测合同、requestID/ack、pinned selection、Descheduler 仲裁和旧 WR controller 降级为 Full 的风险均待确认；详见 Day 40 stop gates。
 

@@ -161,7 +161,11 @@ binary；此时旧 RB handler 收到带 GVK 的 `v1alpha1` raw object，decoder 
 `v1alpha2.ResourceBinding`”，旧 CRB binary 则还没有 validating route。两者在 `failurePolicy: Fail`
 下都会拒绝请求，因此 rollout 期间可能出现短暂的 legacy status 写失败，但不会静默擦除数据。本轮用
 真实 controller-runtime decoder 做了最小实验，分别验证了“带 GVK 时类型不匹配报错”和“不带 GVK
-时可直接解码”；真实 AdmissionReview 的 versioned object 会携带 GVK。
+时可直接解码”；Kubernetes 在 AdmissionReview 中序列化的是带目标版本 GVK 的 versioned object。
+
+> 未决验证：上述 mixed-version 结论目前是 API Server 源码 + decoder 最小实验的组合证据。提交前仍应
+> 增加“旧 webhook binary + 新 configuration”的升级回归，或至少在支持的 Helm 升级路径实测一次；
+> 不能只凭 handler unit test 把 rollout 兼容写成最终事实。
 
 ### Handler 顺序
 
@@ -185,6 +189,9 @@ if originalSubResource(req) == "status" {
 3. 使用 uncached `APIReader` 以 `v1alpha2` 读取当前存储对象。
 4. `isComponentAwareBindingSpec` 为真时拒绝 main 或 status update。
 5. 当前对象不含 component data 时返回 `nil`；status 随后由入口直接允许，主资源继续普通校验。
+
+这里的早退条件必须严格等于 `status`，不能写成 `subResource != ""`。后者会让未来新增的任意
+Binding subresource 无条件跳过 validator，形成新的校验绕过。
 
 `RequestKind` 不能换成 `Kind`：main-resource rule 使用 `Equivalent` 时，`Kind` 是 webhook 匹配后的
 `v1alpha2`，而 `RequestKind` 才是用户真正调用的 `v1alpha1`。
@@ -211,13 +218,13 @@ legacy safety guard -> ordinary status early return -> main-resource validation
 
 | 文件 / 区域 | 改动 | 原因 | 风险 | 验证 |
 | --- | --- | --- | --- | --- |
-| `pkg/webhook/resourcebinding/validating.go` | 调整 legacy guard 和 status early return | 切断危险写路径 | handler 顺序错误可能触发 FRQ 副作用 | table-driven unit tests |
+| `pkg/webhook/resourcebinding/validating.go` | 调整 legacy guard，并只对 `status` early return | 切断危险写路径 | 放行任意 subresource 会绕过未来校验 | table-driven unit tests |
 | `pkg/webhook/resourcebinding/validating_test.go` | 补 RB/CRB、main/status、版本矩阵 | 固定分支行为 | fake test 不能证明 rule 可达 | unit + live E2E |
 | `artifacts/deploy/webhook-configuration.yaml` | 新增两个 exact status entries | raw install 生效 | 四份配置漂移 | manifest parse/render |
 | `charts/karmada/templates/_karmada_webhook_configuration.tpl` | 同步 Helm entry | Helm install 生效 | 模板缩进/渲染 | `helm template` / chart CI |
 | `operator/pkg/karmadaresource/webhookconfiguration/manifests.go` | 同步 operator entry | operator install 生效 | embedded YAML 漂移 | operator package test |
 | `pkg/karmadactl/cmdinit/karmada/webhook_configuration.go` | 同步 init entry | `karmadactl init` 生效 | embedded YAML 漂移 | karmadactl package test |
-| 两个 webhook configuration test | 校验 name、URL、version、resource、operation、scope、match policy | 防止入口只改一半 | 断言过弱会漏规则 | focused package tests |
+| `pkg/karmadactl/.../webhook_configuration_test.go` 和 `operator/.../webhookconfiguration_test.go` | 校验 name、URL、version、resource、operation、scope、match policy | 防止入口只改一半 | operator 现有测试只验 URL/CA，会漏 rule 漂移 | focused package tests |
 | `test/e2e/suites/base/binding_version_compatibility_test.go`（建议新增） | 真实 API Server + webhook 回归 | 证明 conversion、rule matching 和 status strategy 的组合 | 环境成本高于 unit | focused Ginkgo + upstream CI |
 
 ### 明确不改
@@ -244,6 +251,7 @@ legacy safety guard -> ordinary status early return -> main-resource validation
 | RB/CRB `v1alpha2 /status` | component-aware | Allowed，且不调用 legacy `APIReader` |
 | `RequestSubResource=status` | 任意 | 使用原始 subresource |
 | 仅 `SubResource=status` | 任意 | fallback 正常 |
+| 未知 subresource | 任意 | 不得命中 status early return |
 | legacy guard 的 `APIReader.Get` 失败 | 任意 | 500 / fail closed |
 
 `isComponentAwareBindingSpec` 继续分别覆盖：top-level request、target result、eviction result 和
@@ -260,6 +268,8 @@ RB 和 CRB 都要走完整链路：
 5. 创建只含 legacy-representable fields 的对象，验证 A2 下 `v1alpha1 UpdateStatus` 仍成功，并再次
    对比完整 `Spec`。
 6. RB/CRB 至少各覆盖一种 PUT 或 PATCH status 入口，因为两者最终都必须命中 UPDATE admission rule。
+7. Helm 升级路径用旧 webhook binary + 新 configuration 重放 legacy status，断言请求失败且完整 `Spec`
+   不变；新 binary ready 后再断言 A2 的 allow/deny 矩阵恢复。
 
 纯 handler unit test 不能替代该回归：它无法证明 `resource/status` rule、`matchPolicy`、conversion
 webhook、`RequestKind` 和 CRD status strategy 在真实 API Server 中按预期组合。
@@ -275,6 +285,16 @@ git diff --check
 ```
 
 随后在实际 Karmada control plane 上运行新增的 focused E2E，并以 rebase 后的新 SHA 为最终证据。
+
+当前工作树中的初稿已通过上述三个 focused package tests 和 `git diff --check`，但还不能作为完成证据：
+
+- status early return 目前是“任意非空 subresource”，需要收紧为 `== "status"` 并补 unknown-subresource test；
+- operator 配置测试仍只校验 URL/CA，尚未固定新增 rules；
+- 尚无真实 API Server + conversion webhook 回归，也没有 mixed-version Helm upgrade 回归；
+- 四份静态配置虽然已同步，但 Helm render 尚未完成。本轮运行 `helm template karmada charts/karmada
+  --namespace karmada-system` 在渲染前失败：`Chart.yaml` 声明的 `common` dependency 不在本地
+  `charts/`；应先按仓库流程补齐 dependency，再重跑 render 和 manifest 一致性检查，不能把该错误归因
+  于本次模板内容。
 
 ## 不应采用的短路修法
 
