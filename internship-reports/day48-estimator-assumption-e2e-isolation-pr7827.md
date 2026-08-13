@@ -84,7 +84,7 @@ fit。原始分析时 component log 显示该 fixture 进入后续 estimator 观
 `deploy-wbch9`、PDB fixture、Flink 和 probe 混在连续段落里，容易误以为它们属于同一次执行，或者误以为
 两个残留分别导致两个不同测试失败。
 
-修订稿改为以下顺序：
+第一版修订稿改为以下顺序：
 
 1. 先声明两个 job 都失败在同一个 NodeResource spec 和同一个 420 秒断言。
 2. 用 producer/残留/consumer/result 四列把两个 run 一一对应。
@@ -93,8 +93,15 @@ fit。原始分析时 component log 显示该 fixture 进入后续 estimator 观
    覆盖的 artifact 扩大 cache/TTL 结论。
 5. 最后才给统一 cleanup contract 与明确 non-goals。
 
-英文定稿见 [`day48-issue7826-revised-body-draft.md`](day48-issue7826-revised-body-draft.md)，已于
-2026-08-13 按用户确认替换到 upstream Issue #7826。发布后逐字校验线上正文与本地定稿一致。
+该版本于 2026-08-13 按用户确认替换到 upstream Issue #7826，发布后逐字校验一致。但第二次复盘确认，
+它虽然补全了对象和状态链，图的主角仍是对象与组件，没有让 reviewer 第一眼看到“哪个 E2E spec 的
+cleanup 出错，哪个 E2E spec 被影响并报红”。
+
+因此当前 [`day48-issue7826-revised-body-draft.md`](day48-issue7826-revised-body-draft.md) 已进一步改为
+测试用例因果版：两张图都直接使用 producer spec、producer cleanup hook、failing consumer spec 和 failed
+assertion 作为参与者。它明确指出 producer spec 自身可以通过，缺陷发生在随后 cleanup；真正报红的是
+`estimator_test.go` 中的 NodeResource spec。两张 exact Mermaid 图已用 Mermaid CLI 11.16.0 渲染通过，
+但该版尚未再次发布，等待用户确认 exact replacement body。
 
 本轮还发现两条适合补入 `$e2e-root-cause-analysis` 的通用规则，但按 skill 的 Step 5 只提出、不直接修改：
 
@@ -163,8 +170,9 @@ PASS
 
 ## Issue 与 PR 状态
 
-- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日将正文替换为两个 run 分图的时序表述。
-  创建时模板 metadata 没有自动添加 `kind/flake`；后续添加 label 因上游权限不足而失败。
+- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日将正文替换为两个 run 分图的对象时序表述。
+  测试用例因果版已在本地完成，尚待确认后再次替换。创建时模板 metadata 没有自动添加 `kind/flake`；
+  后续添加 label 因上游权限不足而失败。
 - PR #7827 于 2026-08-13 创建，base 为 `master`，head 为
   `ranxi2001:test/estimator-assumption-isolation@ba531a9a1`，状态为 Open、非 Draft、Mergeable。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
