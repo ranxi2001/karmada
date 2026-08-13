@@ -93,8 +93,8 @@ fit。原始分析时 component log 显示该 fixture 进入后续 estimator 观
    覆盖的 artifact 扩大 cache/TTL 结论。
 5. 最后才给统一 cleanup contract 与明确 non-goals。
 
-可直接替换 issue body、但尚未发布的英文稿见
-[`day48-issue7826-revised-body-draft.md`](day48-issue7826-revised-body-draft.md)。
+英文定稿见 [`day48-issue7826-revised-body-draft.md`](day48-issue7826-revised-body-draft.md)，已于
+2026-08-13 按用户确认替换到 upstream Issue #7826。发布后逐字校验线上正文与本地定稿一致。
 
 本轮还发现两条适合补入 `$e2e-root-cause-analysis` 的通用规则，但按 skill 的 Step 5 只提出、不直接修改：
 
@@ -163,8 +163,8 @@ PASS
 
 ## Issue 与 PR 状态
 
-- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`。创建时模板 metadata 没有自动添加
-  `kind/flake`；后续添加 label 因上游权限不足而失败，issue 内容未因此改变。
+- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日将正文替换为两个 run 分图的时序表述。
+  创建时模板 metadata 没有自动添加 `kind/flake`；后续添加 label 因上游权限不足而失败。
 - PR #7827 于 2026-08-13 创建，base 为 `master`，head 为
   `ranxi2001:test/estimator-assumption-isolation@ba531a9a1`，状态为 Open、非 Draft、Mergeable。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
