@@ -286,12 +286,14 @@ git diff --check
 
 随后在实际 Karmada control plane 上运行新增的 focused E2E，并以 rebase 后的新 SHA 为最终证据。
 
-当前工作树中的初稿已通过上述三个 focused package tests 和 `git diff --check`，但还不能作为完成证据：
+本轮曾审查一份未提交的七文件初稿；它通过了上述三个 focused package tests 和 `git diff --check`，但
+随后被并发 rebase 清除，**不在当前 topic HEAD `492ba86de` 中**，也没有推送到 fork。该短暂结果只能
+证明实现方向能通过现有单测，不能作为当前分支的完成证据。重做时仍需闭合：
 
 - status early return 目前是“任意非空 subresource”，需要收紧为 `== "status"` 并补 unknown-subresource test；
 - operator 配置测试仍只校验 URL/CA，尚未固定新增 rules；
 - 尚无真实 API Server + conversion webhook 回归，也没有 mixed-version Helm upgrade 回归；
-- 四份静态配置虽然已同步，但 Helm render 尚未完成。本轮运行 `helm template karmada charts/karmada
+- 四份静态配置在短暂初稿中曾同步，但 Helm render 尚未完成。本轮运行 `helm template karmada charts/karmada
   --namespace karmada-system` 在渲染前失败：`Chart.yaml` 声明的 `common` dependency 不在本地
   `charts/`；应先按仓库流程补齐 dependency，再重跑 render 和 manifest 一致性检查，不能把该错误归因
   于本次模板内容。
