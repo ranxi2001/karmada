@@ -20,6 +20,19 @@ python3 <this-skill-dir>/scripts/render_mermaid.py diagram.mmd -o diagram.png
 
 The wrapper searches `PATH` and `./node_modules/.bin/mmdc`. It defaults to a white background, the CLI's default theme, 2000px page width, and scale 1. Templates may still select Mermaid's `base` theme in their source frontmatter for custom theme variables.
 
+## Render Exact Markdown Fences
+
+For an issue, PR, discussion, or report draft containing Mermaid fences, render the final Markdown file directly:
+
+```bash
+python3 <this-skill-dir>/scripts/render_markdown_mermaid.py \
+  draft.md --output-dir /tmp/draft-mermaid --backend npx
+```
+
+The command renders each fence independently and prints a JSON manifest containing fence indexes, Markdown line numbers, output paths, byte sizes, and image dimensions. Treat this as syntax/render validation; still compare actors, edges, labels, and timestamps with the evidence.
+
+Do not validate a hand-copied Mermaid snippet and assume the later Markdown draft is identical. Any diagram edit invalidates the previous render result.
+
 ## Explicit Npx Fallback
 
 When `mmdc` is unavailable but `npx` is installed, announce the network/package download and run:
@@ -67,6 +80,7 @@ Do not upload source, topology, service names, or internal flows to a public ren
 - Chrome refuses to run as root: use the wrapper or pass a Puppeteer config with `--no-sandbox`.
 - Blank image: verify the first Mermaid keyword (`flowchart`, `sequenceDiagram`, or `stateDiagram-v2`) and render again.
 - Parse failure around `end`: quote or bracket labels containing the reserved word `end`.
+- Sequence message labels containing semicolons may parse differently across renderer versions. Prefer commas, parentheses, or separate messages, then inspect every rendered label for semantic truncation.
 - Tiny text: reduce participants/nodes before increasing scale. Split the diagram when the canvas is the real problem.
 - Dark or transparent PNG: keep `--background white`; avoid relying only on an SVG viewer's background behavior.
 - Layout differs after a CLI upgrade: record the CLI version and visually review regenerated assets before committing them.

@@ -25,13 +25,21 @@ Pick the failing e2e job (e.g. `e2e test (v1.34.0)`) and take its `.../actions/r
 
 Given a GitHub Actions run/job URL (e.g. `.../actions/runs/<run_id>/job/<job_id>`):
 
-1. Download the job log (the ginkgo output):
+1. Audit the run attempt before downloading artifacts:
+
+   ```bash
+   python3 <this-skill-dir>/scripts/audit_run_attempt.py <job-url>
+   ```
+
+   GitHub exposes artifacts at run scope, and a rerun can replace or obscure the artifacts from the failed attempt. Record the job's `run_attempt`, the run's current attempt, every artifact's `created_at`, and the script's attribution result. Do not use a current-attempt artifact as evidence for an older failed job. Read [references/cross-spec-pollution.md](references/cross-spec-pollution.md) when reruns, shared state, or more than one spec may be involved.
+
+2. Download the job log (the ginkgo output):
 
    ```bash
    gh api repos/karmada-io/karmada/actions/jobs/<job_id>/logs > job.log
    ```
 
-2. List and download the component-log artifact for the failing job's Kubernetes version. This is the most valuable evidence — it holds the logs of every Karmada component and member cluster:
+3. List and download an attempt-compatible, job-matched component-log artifact for the failing job's Kubernetes version. This is the most valuable evidence — it holds the logs of every Karmada component and member cluster:
 
    ```bash
    gh api repos/karmada-io/karmada/actions/runs/<run_id>/artifacts \
@@ -59,6 +67,18 @@ Warning signs to look for in the timeline:
 
 - A readiness wait (a `framework.Wait*` helper) that passes much faster than normal (milliseconds instead of seconds). This usually means the check read **stale state** left over from the previous case.
 - Cleanup steps of the previous case that only wait for the control plane, while changes on the member clusters are still in flight.
+
+When more than one spec may be involved, do not report only object-to-object interactions. Build and prove this causal tuple:
+
+```text
+producer spec + source
+  -> cleanup hook + source
+  -> residual state
+  -> consumer spec + source
+  -> failed assertion + source
+```
+
+Name the exact Ginkgo spec for both producer and consumer. A shared object name, adjacent execution, or plausible lifecycle is not enough to prove cross-spec pollution.
 
 ## Step 3: Trace backwards through component logs
 
@@ -92,6 +112,8 @@ Write the conclusion as an evidence chain, from the error backwards:
 6. Why it did not self-heal, if relevant (checked against component code).
 
 Quote exact log lines with timestamps and file names. Check every claim about runtime behavior against the code in the repository (e.g. `pkg/scheduler/`, `pkg/controllers/`) before stating it. Clean up downloaded logs afterwards.
+
+For cross-spec pollution, make the main visual a five-lane timed sequence: producer spec, cleanup code, shared/authoritative state, consumer spec, and assertion. Put timestamps on messages or notes, and label every statement as `[OBS]` (direct log/test evidence), `[CODE]` (source-proven behavior), or `[INFERENCE]` (the causal interpretation). The diagram must answer which test left what state, through which cleanup path, and which later test/assertion observed it. Object-only diagrams may be included as supporting detail, but they are not the primary RCA.
 
 ## Step 5: Improve this skill
 

@@ -21,7 +21,7 @@
 
 ## Last Run
 
-- 2026-08-13：完成 #7826 后复盘 skill 缺口，提出 3 项更新但未修改 skill：RCA causal tuple/五泳道 + artifact attempt 审计、issue body hash approval 状态机、最终 Markdown Mermaid fence 自动抽取渲染；`code-review-growth`/`humanizer-cs` 不重复扩展，详见 [Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md)。
+- 2026-08-13：完成 #7826 后的 3 项 skill 更新：RCA causal tuple/五泳道 + attempt 审计、最终 Markdown Mermaid fence 自动渲染、issue body target/hash approval 状态机；10 项脚本测试、3 项 skill 校验和 #7826 两图/两个真实 run 正向验证通过，未再次编辑上游 issue，详见 [Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md)。
 - 2026-08-13：创建 [#7492 PR1 #7830](https://github.com/karmada-io/karmada/pull/7830)，head `be8c7c3f7` 的 17/17 upstream checks 首次运行全绿；自动 review 指出的 nested component validation 经源码复核确认为合并前 P1，修复需区分 eviction 与 `RequiredBy` 所有权，详见 [Day 49](internship-reports/day49-issue7492-pr1-api-compat-pr7830.md)。
 - 2026-08-13：创建 [#7826](https://github.com/karmada-io/karmada/issues/7826) 和 test-only [PR #7827](https://github.com/karmada-io/karmada/pull/7827)：官方与 fork CI 证明两个跨 spec workload producer，3 文件 cleanup 补丁等待 source/RB NotFound；证据保持 E3，详见 [Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md)。
 - 2026-08-13：完成 [#7492 PR1 legacy status 数据丢失与修复设计](internship-reports/day47-issue7492-v1alpha1-status-data-loss-fix-design.md)：确认 RB/CRB `v1alpha1 /status` 的 request-version old object 会丢 component data，当前 main-resource rule 又不匹配 status；推荐 A2 exact status rule + storage-state guard，并验证混合升级期旧 handler 会 fail closed；未修改或推送 topic branch。

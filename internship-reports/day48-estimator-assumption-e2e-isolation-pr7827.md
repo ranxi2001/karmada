@@ -190,6 +190,52 @@ timestamps、artifact name/ID/`created_at`/expiry，以及“artifact 是否可�
 `project-mermaid` 的 Markdown fence renderer，最后补 `karmada-issue-discussion` 的 hash approval 状态机。
 前两项阻止错误正文形成，最后一项阻止未确认的新版本被发布。
 
+## Skills 更新实施结果
+
+### 先说人话
+
+这次绕圈不是单纯的画图问题，而是三个检查点彼此脱节：RCA 只说明对象如何变化，没有强制写清哪条 E2E
+留下状态、哪条 E2E 失败；Mermaid 校验的是复制出来的片段，不一定是最终 issue 正文；发布确认没有绑定
+正文版本，用户确认后正文仍可能继续变化。
+
+现在三个检查点已经连成一条链：先证明
+`producer spec -> cleanup code -> residual state -> consumer spec -> failed assertion`，再从最终 Markdown 原文
+渲染所有 Mermaid，最后用 `target + SHA-256` 请求确认并核对远端正文。对象交互仍然保留，但只作为五段因果链
+中的状态证据，不再作为主叙事。
+
+### 实际改动
+
+1. `e2e-root-cause-analysis`
+   - 新增跨 spec 污染证据合同，要求 producer、cleanup、残留状态、consumer 和 assertion 都有精确 spec/源码位置；
+   - 主图固定为五泳道带时间时序，并用 `[OBS]`、`[CODE]`、`[INFERENCE]` 区分证据强度；
+   - 新增 `scripts/audit_run_attempt.py`，读取 job/run/artifact API，区分 `attempt_compatible`、
+     `not_attributable` 和 `ambiguous`，同时单列 expired 可用性；attempt 兼容只证明时间不冲突，仍需按 artifact
+     名称和 upload step 复核 matrix job 所有权。
+2. `project-mermaid`
+   - 新增 `scripts/render_markdown_mermaid.py`，直接从最终 Markdown 抽取所有 `mermaid` fence，逐图调用现有
+     renderer，并返回行号、输出路径、字节数和尺寸；
+   - sequence reference 增加条件式五泳道 RCA 模板，普通 sequence diagram 不受影响；
+   - rendering reference 增加 exact-draft 校验和分号解析风险，render success 后仍必须检查标签是否被截断。
+3. `karmada-issue-discussion`
+   - 新增 `drafted -> exact Mermaid rendered -> approved(target + SHA-256) -> published -> remote SHA-256 verified`
+     状态机；
+   - target、title action、正文或 Mermaid 任一变化都会让旧确认失效；
+   - 发布前记录 title/body hash/`updatedAt`，发布后验证 title、目标和正文 bytes，避免 shell 尾部换行造成假一致。
+
+### 验证证据
+
+- 两组脚本单测共 10 项通过，包括普通 attempt、旧 attempt、缺失 attempt、expired artifact、URL/API ID
+  不一致、两种 Markdown fence、未闭合 fence 和 PNG 尺寸读取。
+- `skill-creator` 的 `quick_validate.py` 对三个 skill 均返回 `Skill is valid!`，`git diff --check` 通过。
+- 使用 #7826 最终正文直接渲染出 2 张图：Markdown `28-49` 行为 `1584x641`，`55-75` 行为
+  `1584x563`；逐图目检确认五条泳道、spec、源码位置和时间标签可读。
+- 官方 job `86054168911` 与 run 均为 attempt 1，对应 `karmada_e2e_log_v1.34.0` 判为
+  `attempt_compatible`；fork 失败 job `94042457609` 为 attempt 1，而 run 当前为 attempt 2，同名 artifact 判为
+  `not_attributable`。这与 #7826 正文中“官方链承担 E3、fork 链只作支持证据”的边界一致。
+
+本轮没有再次编辑 #7826 或发布上游内容。远端发布状态机已经写入 skill，但本轮只验证规则和既有正文，没有
+为了测试发布 gate 而制造新的 upstream edit。
+
 ## 为什么是三文件 test-only cleanup
 
 补丁只修改三个 E2E 文件，共 `+53/-23`：

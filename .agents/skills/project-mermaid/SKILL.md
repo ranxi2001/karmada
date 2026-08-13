@@ -38,6 +38,15 @@ python3 <this-skill-dir>/scripts/render_mermaid.py \
 
 The script uses an installed official `mmdc` by default. If it is unavailable and `npx` is available, announce that the official package will be downloaded, then use `--backend npx`. Read [references/rendering.md](references/rendering.md) for installation, root/CI handling, SVG, and troubleshooting.
 
+When Mermaid is embedded in a Markdown draft, validate the exact final draft rather than a copied block:
+
+```bash
+python3 <this-skill-dir>/scripts/render_markdown_mermaid.py \
+  <draft.md> --output-dir <temporary-output-dir>
+```
+
+The script extracts every fenced `mermaid` block, reports its source lines and output dimensions, and delegates rendering to `render_mermaid.py`. Use `--backend npx` under the same download/disclosure rule when local `mmdc` is unavailable. Re-run it after any draft change that touches a diagram.
+
 7. Inspect the PNG with image vision. Check reading order, clipped text, tiny labels, excessive canvas, ambiguous arrows, and whether the image still communicates at chat/README width.
 8. Make targeted `.mmd` edits and re-render. Do not patch the PNG.
 9. Deliver the `.mmd` and PNG together. State the renderer/backend and any unverified or inferred relationship.
@@ -58,6 +67,8 @@ Keep inline review diagrams to one question and usually 4-10 nodes. Use `flowcha
 Do not use a diagram for a single local condition that is clearer in one or two sentences. Do not paste a large architecture view into a line comment. A diagram supplements rather than replaces evidence: label inferred edges, cite source/log support in nearby prose, and preserve a text summary because not every rendered chart is equally accessible.
 
 Validate the exact Mermaid source before posting. Prefer the bundled renderer when practical; if local rendering is unavailable, keep syntax conservative and disclose that only GitHub rendering remains unverified.
+
+For E2E root-cause analysis involving more than one spec, use the five-lane timed pattern in [references/sequence.md](references/sequence.md). The primary lanes are producer spec, cleanup code, shared state, consumer spec, and failed assertion; component/object interactions are supporting detail.
 
 ## Quality Gates
 

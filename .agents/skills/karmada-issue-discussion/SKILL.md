@@ -46,7 +46,7 @@ Use this skill for Karmada upstream issue/discussion work: reading full thread c
 8. If an issue has an active assignee or linked open PR, recommend review/testing feedback instead of duplicate implementation.
 9. Produce Chinese internal summary first when planning or learning.
 10. Produce English upstream comment only when asked to draft or post.
-11. Run the concise-first publishing gate below before presenting exact text for approval.
+11. Run the concise-first gate and exact-text publishing gate below before presenting exact text for approval.
 12. Include GitHub cross-links with short relevance notes.
 13. If repeated issue/PR analysis requires API calls, filtering, or timeline summarization, improve scripts under this skill before repeating manual work.
 
@@ -115,6 +115,58 @@ Use soft review triggers, not hard correctness limits:
 - Ordinary comment/review: 40-180 visible words; review again above 250.
 
 Long form is justified only for source-backed RCA, necessary reproduction material, proposal/API contracts, or an umbrella tracker. Put the conclusion and requested action first, then link or collapse supporting detail. When asking for posting approval, include the visible word count and name the long-form reason if the draft exceeds the relevant trigger.
+
+## Exact-Text Publishing Gate
+
+For an upstream issue-body replacement, track this state machine explicitly:
+
+```text
+drafted -> exact Mermaid rendered -> approved(target + SHA-256) -> published -> remote SHA-256 verified
+```
+
+An approval of the direction, an earlier draft, or a diagram alone is not approval of a later body. Any change to the target, title action, body bytes, or Mermaid source invalidates the approval and returns the draft to `drafted`.
+
+Before requesting approval:
+
+1. Save the complete proposed body in a stable local draft file.
+2. Render Mermaid from that exact Markdown file with `project-mermaid/scripts/render_markdown_mermaid.py`; do not validate a copied fence.
+3. Compute the exact body hash with `sha256sum <draft.md>`.
+4. Present the repository and issue number, the intended action (`replace body`, `edit title and body`, or `post comment`), a link to the local draft, visible word count, any long-form justification, the SHA-256, and the exact-draft Mermaid result.
+5. Ask for explicit confirmation of that target and hash. Do not edit upstream until it is received.
+
+Immediately before replacing an issue body, capture the remote pre-edit state:
+
+```bash
+gh issue view <number> --repo karmada-io/karmada \
+  --json title,body,updatedAt,url > <temporary-pre-edit.json>
+```
+
+Record the pre-edit title, `updatedAt`, and body SHA-256. Recompute the local draft hash and stop if it differs from the approved hash. Use a body-file option for publication so shell interpolation cannot alter Markdown:
+
+```bash
+gh issue edit <number> --repo karmada-io/karmada --body-file <draft.md>
+```
+
+After publication, fetch the issue again and verify all of the following:
+
+- the title is unchanged unless the approved action explicitly included a title edit;
+- the remote body bytes exactly equal the approved draft bytes;
+- the remote body SHA-256 equals the approved SHA-256;
+- `updatedAt` moved forward and the issue URL/number is still the approved target.
+
+`gh issue view --template '{{.body}}'` may add a terminal newline through command output. For byte-exact verification, fetch JSON and hash the decoded `body` without adding bytes, or compare through a short structured-data script. Report success only after exact equality; a visually similar preview is insufficient.
+
+One exact comparison pattern is:
+
+```bash
+gh issue view <number> --repo karmada-io/karmada --json body > <temporary-post-edit.json>
+python3 -c 'import json,sys; sys.stdout.write(json.load(open(sys.argv[1]))["body"])' \
+  <temporary-post-edit.json> | sha256sum
+cmp <draft.md> <(python3 -c 'import json,sys; sys.stdout.write(json.load(open(sys.argv[1]))["body"])' \
+  <temporary-post-edit.json>)
+```
+
+For a new issue comment, apply the same target-and-hash approval rule and verify the created comment through its returned URL/API object. If the platform does not provide a reliable exact-body check, disclose that verification gap instead of claiming exact publication.
 
 ## Fetching Thread Context
 
