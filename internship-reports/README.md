@@ -71,6 +71,7 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - [Day 46：#7492 跨集群重调度状态问题复现](day46-issue7492-mszacillo-state-reproduction.md)
 - [Day 47：#7492 PR1 旧版本状态写入的数据保护设计](day47-issue7492-v1alpha1-status-data-loss-fix-design.md)（[时序 Mermaid](day47-issue7492-v1alpha1-status-data-loss.mmd)）
 - [Day 48：EstimatorAssumption 跨用例清理隔离与 PR #7827](day48-estimator-assumption-e2e-isolation-pr7827.md)
+- [Day 49：#7492 PR1 API、旧版本写入保护与 PR #7830 CI](day49-issue7492-pr1-api-compat-pr7830.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
