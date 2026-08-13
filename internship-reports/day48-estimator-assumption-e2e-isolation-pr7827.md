@@ -100,8 +100,9 @@ cleanup 出错，哪个 E2E spec 被影响并报红”。
 因此当前 [`day48-issue7826-revised-body-draft.md`](day48-issue7826-revised-body-draft.md) 已进一步改为
 测试用例因果版：两张图都直接使用 producer spec、producer cleanup hook、failing consumer spec 和 failed
 assertion 作为参与者。它明确指出 producer spec 自身可以通过，缺陷发生在随后 cleanup；真正报红的是
-`estimator_test.go` 中的 NodeResource spec。两张 exact Mermaid 图已用 Mermaid CLI 11.16.0 渲染通过，
-但该版尚未再次发布，等待用户确认 exact replacement body。
+`estimator_test.go` 中的 NodeResource spec。两张 exact Mermaid 图已用 Mermaid CLI 11.16.0 渲染通过。
+该版已于 2026-08-13 按用户确认再次替换到 #7826，线上正文与本地定稿 SHA-256 均为
+`af91232173404d5604308da604c3714db73d9bd74c1fe59627a3297e2ea5fa09`。
 
 本轮还发现两条适合补入 `$e2e-root-cause-analysis` 的通用规则，但按 skill 的 Step 5 只提出、不直接修改：
 
@@ -170,9 +171,9 @@ PASS
 
 ## Issue 与 PR 状态
 
-- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日将正文替换为两个 run 分图的对象时序表述。
-  测试用例因果版已在本地完成，尚待确认后再次替换。创建时模板 metadata 没有自动添加 `kind/flake`；
-  后续添加 label 因上游权限不足而失败。
+- Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日先后将正文替换为对象时序版和测试用例
+  因果版，当前线上为后者。创建时模板 metadata 没有自动添加 `kind/flake`；后续添加 label 因上游权限
+  不足而失败。
 - PR #7827 于 2026-08-13 创建，base 为 `master`，head 为
   `ranxi2001:test/estimator-assumption-isolation@ba531a9a1`，状态为 Open、非 Draft、Mergeable。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
