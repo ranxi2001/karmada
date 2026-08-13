@@ -104,6 +104,28 @@ assertion 作为参与者。它明确指出 producer spec 自身可以通过，�
 该版已于 2026-08-13 按用户确认再次替换到 #7826，线上正文与本地定稿 SHA-256 均为
 `af91232173404d5604308da604c3714db73d9bd74c1fe59627a3297e2ea5fa09`。
 
+第三次复盘发现，测试用例因果版又丢掉了时间证据。正确做法不是在“对象时序”和“测试关系”之间二选一，
+而是用一张图同时表达四层关系：
+
+| 泳道 | 回答的问题 | #7826 中的实例 |
+| --- | --- | --- |
+| Producer E2E spec | 哪个用例产生了污染 | `tainttoleration_test.go:140` / `resource_test.go:606` |
+| Cleanup code | 哪段清理代码有缺口 | `AfterEach:104 + DeferCleanup:134` / `DeferCleanup:601-603` |
+| Residual object/state | 缺口通过什么状态传播 | Deployment -> ResourceBinding -> assumption / retained Deployment -> available capacity |
+| Consumer E2E spec | 哪个后续用例读取了污染状态 | `estimator_test.go:419` / `estimator_test.go:425` |
+| Failed assertion | 最终哪个检查报红 | `assertSingleTemplateDeploymentUnschedulable` |
+
+时间不是第六条泳道，而应写在每条事件箭头上。纵向顺序证明先后关系，横向泳道证明责任和传播边界。例如
+official run 的主链应同时显示：`07:10:24.030` producer cleanup 先恢复 taint，`07:10:24.239`
+旧 binding patch 刷新 assumption，`07:15:22.998` consumer 的 Flink no-fit 仍读到它，`07:15:24.668`
+probe 变为 `Scheduled=True`，最终 `07:22:24.642` 断言超时。
+
+图中的证据也要分层：`[OBS]` 只用于 job/component log 的时间戳事件，`[CODE]` 用于源码证明但无独立
+运行时间的事实。fork attempt-1 可画创建、cleanup、consumer start 和 timeout 的 `[OBS]` 时间，但
+“没有注册 Deployment cleanup”必须标 `[CODE]`；artifact 被 rerun 覆盖后，不再补完整 cache transition。
+两个 run 必须分图，避免把不同日期、不同 namespace 和不同 producer 拼成一条伪时间线。Issue 第一屏继续
+保留 producer/consumer 索引表，让 reviewer 先知道谁影响谁，再沿图核对代码、对象和时间证据。
+
 本轮还发现两条适合补入 `$e2e-root-cause-analysis` 的通用规则，但按 skill 的 Step 5 只提出、不直接修改：
 
 1. 下载 artifact 前先读取 job 的 `run_attempt`，并核对 artifact `created_at`。GitHub rerun 后，run-level
@@ -111,7 +133,7 @@ assertion 作为参与者。它明确指出 producer spec 自身可以通过，�
    固化失败 attempt 的 job/component logs。
 2. 当一个 issue 合并多个 CI run 或多个 producer 时，报告必须先列出
    `failing spec -> assertion -> producer spec -> residual object/state -> causal effect` 映射，再分别画每个 run
-   的时间线；不能只按全局时间顺序叙述。
+   的五泳道时间线；不能只按全局时间顺序叙述，也不能为了突出测试关系而删掉时间证据。
 
 ## 为什么是三文件 test-only cleanup
 
