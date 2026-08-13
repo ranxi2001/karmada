@@ -126,6 +126,12 @@ probe 变为 `Scheduled=True`，最终 `07:22:24.642` 断言超时。
 两个 run 必须分图，避免把不同日期、不同 namespace 和不同 producer 拼成一条伪时间线。Issue 第一屏继续
 保留 producer/consumer 索引表，让 reviewer 先知道谁影响谁，再沿图核对代码、对象和时间证据。
 
+按该合同生成的五泳道带时间正文已写入
+[`day48-issue7826-revised-body-draft.md`](day48-issue7826-revised-body-draft.md)。两张 exact Mermaid 图已用
+Mermaid CLI 11.16.0 和现有 Chromium 渲染检查通过；正文 SHA-256 为
+`f0c8a4855de6dde08a74ac2595ac26a6087a1e370c14f2c964c5f4593e08f328`。该英文正文在用户提出替换意图后
+才生成，因此仍需 exact-text 确认，当前尚未再次修改 upstream #7826。
+
 本轮还发现两条适合补入 `$e2e-root-cause-analysis` 的通用规则，但按 skill 的 Step 5 只提出、不直接修改：
 
 1. 下载 artifact 前先读取 job 的 `run_attempt`，并核对 artifact `created_at`。GitHub rerun 后，run-level
