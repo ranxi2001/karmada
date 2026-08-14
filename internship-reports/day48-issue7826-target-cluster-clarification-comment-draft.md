@@ -1,0 +1,7 @@
+One clarification on why `member2` and `member3` appear in the RCA even though the test initially expects only `member1`.
+
+The assertion checks the current `ResourceBinding` result after taint filtering; it does not restrict the policy candidates to one cluster. The policy sets [`ClusterAffinity.ClusterNames` to `framework.ClusterNames()`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/test/e2e/suites/base/tainttoleration_test.go#L47-L77), while its only toleration matches member1's taint. This makes the initial result `{member1:3}`.
+
+The cleanup then removes all three taints before deleting the Deployment and policy. In the [official job](https://github.com/karmada-io/karmada/actions/runs/28998390044/job/86054168911), the same `deploy-wbch9-deployment` was requeued by `ClusterChanged` at `07:10:24.146`; all three clusters became feasible at `.170`; the result changed to `{member1:3, member2:3, member3:3}` at `.195`; and the patch succeeded at `.239`. After that successful patch, [`patchScheduleResultForResourceBinding`](https://github.com/karmada-io/karmada/blob/3d4d14d746de507164abf40c1017b1f2b0e47e3a/pkg/scheduler/scheduler.go#L683-L775) records an assumption for every cluster in the new result.
+
+This does not mean that the Deployment finished propagating or ran on member2/member3. The bug is that cleanup ordering allowed the old binding to be rescheduled and its in-flight assumptions to be refreshed before deletion; later estimator requests then consumed those residual assumptions.
