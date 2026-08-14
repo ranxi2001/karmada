@@ -380,10 +380,14 @@ PASS
   NodeResource assumption spec 改用临时独立集群并单独部署 scheduler-estimator，PDB cleanup 移出主隔离机制。
   随后按用户授权实施并推送 commit `6ebc4b459`；GitHub 回读确认 PR 最终只改
   `test/e2e/suites/base/estimator_test.go`。
-- 当前 PR 标题和 body 仍描述已被替换的跨 spec ResourceBinding cleanup，尚未发布新文案。精确英文标题与正文
-  已保存到 [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md)，等待
-  用户按 exact-text gate 确认后替换并回读校验。建议标题为
-  `test(e2e): isolate estimator assumption cluster`；链接文件只包含可直接传给 `gh pr edit --body-file` 的正文。
+- 用户确认后，PR 标题已替换为 `test(e2e): isolate estimator assumption cluster`，正文已替换为
+  [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md) 的精确内容。发布后用
+  raw REST JSON 和 `jq -j` 做字节级比较，远端 body SHA-256 为
+  `2200fe0e9896add60a6a11f016b110b297c0910c3b432c5ac58e386952c4183e`，与确认稿一致；head 仍为
+  `6ebc4b459611c4e5bde92ea88e2f314c56f65377`，files 回读仍只有 `estimator_test.go`。
+- 第一次尝试 `gh pr edit` 因 CLI GraphQL 查询额外读取组织字段、token 不含无关的 `read:org` scope 而失败，
+  PR 当时未修改。随后改用同一 GitHub token 已授权的 REST `PATCH /repos/karmada-io/karmada/pulls/7827`，按
+  用户确认的 target/title/body 完成更新；没有扩大 token scope。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/L`。
 - commit `6ebc4b459` 推送后，current-SHA upstream CI 已自动启动；2026-08-14 首次回读时 DCO 通过，lint、
   codegen、CLI、Chart 和 Operator 检查仍在运行。旧 head 的全绿状态不作为新实现的验证结果，本轮也不等待
@@ -405,8 +409,8 @@ PASS
 
 ## 下一步
 
-1. 用户确认 [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md) 的
-   exact title/body 后，替换 #7827 的陈旧标题和正文，并逐字回读校验。
+1. 等 commit `6ebc4b459` 的 current-SHA upstream CI；若真实 E2E 失败，按具体 Kubernetes matrix job 对齐
+   spec、临时 Kind 生命周期、estimator Deployment/连接和 cleanup 日志后再判断，不先加 timeout/retry。
 2. 若需要把证据升级为 E4，在同一可控多集群环境复现污染，再对同一场景应用补丁并验证失败消失；普通
    绿色 rerun 不足以升级证据等级。
 3. PDB fixture cleanup 作为独立 cleanup 问题处理，不再作为 `EstimatorAssumption` 的隔离机制；若保留在同一
