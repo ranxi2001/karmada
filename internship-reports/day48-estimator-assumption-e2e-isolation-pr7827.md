@@ -142,7 +142,9 @@ Mermaid CLI 11.16.0 和现有 Chromium 渲染检查通过；正文 SHA-256 为
 patch 再次调用 member1 的 `Assume`，覆盖同一 binding/cluster entry 并重置五分钟 TTL；member2/3 的
 assumptions 不会进入该测试。2026-08-14 已发布的第一条 comment 把用户指出的 hard-coded target 误读成
 taint 用例的 `targetClusterNames` 断言，第二条虽限定 member1 为相关 30m，却仍把三集群 90m 放在开头。
-两条本地草稿现已改为 member1-only 解释，等待新的 exact-text 确认后原位编辑远端 comments。
+两条 comments 已按新的 exact-text 确认原位替换为 member1-only 解释，远端正文与本地草稿逐字一致；
+最终 SHA-256 分别为 `9b6cd18259091bfae25001c282fd80a7df7a0a49e8fca22e72053a6139bb7c6b` 与
+`af711b11d816aa4f0b6ac27f84564af5db2b6be93aaa737130a913118f8ed52b`。
 
 ## Skills 优化提案
 
@@ -310,10 +312,11 @@ PASS
   同时表达 producer/consumer spec、cleanup 代码、残留对象/状态和 UTC 时间。创建时模板 metadata 没有
   自动添加 `kind/flake`；后续添加 label 因上游权限不足而失败。
 - 2026-08-14 在 #7826 发布 [target 语义澄清](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290948445)
-  与 [taint 规模说明](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290950443)：前者说明 `member1`
-  是当前 RB 结果断言而非 Policy 固定目标，后者量化三集群 assumption 总量为 `90m`、Flink 用例实际受
-  member1 外来 `30m` 影响。两条远端正文 SHA-256 分别为 `9a9d4b5f5693270bb657c5d2c1a83c86f7a296c07744ab9f5eac95f8d82443d5`
-  与 `6374615e61b7e485f4c43248294538ff53c99e5ce95eb3c85ca905c10be98995`，均与用户确认草稿逐字一致。
+  与 [taint 规模说明](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290950443)，随后按复核结果
+  原位替换：前者说明 `estimator_test` 的 CRD、Flink workload 和 probe 都固定到 member1；后者只量化
+  member1 estimator 实际消费的外来 30m，不再用三集群 90m 解释失败。最终远端 SHA-256 分别为
+  `9b6cd18259091bfae25001c282fd80a7df7a0a49e8fca22e72053a6139bb7c6b` 与
+  `af711b11d816aa4f0b6ac27f84564af5db2b6be93aaa737130a913118f8ed52b`，均与用户确认草稿逐字一致。
 - PR #7827 于 2026-08-13 创建，base 为 `master`，head 为
   `ranxi2001:test/estimator-assumption-isolation@ba531a9a1`，状态为 Open、非 Draft、Mergeable。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
