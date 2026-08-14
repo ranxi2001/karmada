@@ -132,6 +132,18 @@ Mermaid CLI 11.16.0 和现有 Chromium 渲染检查通过；正文 SHA-256 为
 `f0c8a4855de6dde08a74ac2595ac26a6087a1e370c14f2c964c5f4593e08f328`。该英文正文已于 2026-08-13
 获得用户 exact-text 确认并替换到 upstream #7826；发布后逐字 diff 为空，线上与本地 SHA-256 一致。
 
+第四次复盘定位到 target 语义仍写偏了。真正固定目标的是 `estimator_test.go`：`targetCluster` 为
+`member1`，Flink CRD 的 `ClusterPropagationPolicy`、每个 Flink workload 的 `PropagationPolicy` 和最后
+200m probe 都复用该值。官方 scheduler 日志在 `07:15:22.996` 明确因 `ClusterAffinity` 排除 member2/3，
+只有 member1 进入 estimator；member1 estimator 请求在 `07:15:22.997` 含 5 项 assumptions，其中
+`deploy-wbch9` 为 3 副本 x 10m，`07:15:24.665` probe 请求只剩 4 项且不再含该 workload。
+
+因此三集群重排的意义只是证明 cleanup 触发了新一轮 schedule。它对 consumer 的因果作用是同一次成功
+patch 再次调用 member1 的 `Assume`，覆盖同一 binding/cluster entry 并重置五分钟 TTL；member2/3 的
+assumptions 不会进入该测试。2026-08-14 已发布的第一条 comment 把用户指出的 hard-coded target 误读成
+taint 用例的 `targetClusterNames` 断言，第二条虽限定 member1 为相关 30m，却仍把三集群 90m 放在开头。
+两条本地草稿现已改为 member1-only 解释，等待新的 exact-text 确认后原位编辑远端 comments。
+
 ## Skills 优化提案
 
 这次连续经历“只有对象时序 -> 只有测试关系 -> 补时间 -> 合并代码/对象/测试/时间”和多次 upstream body

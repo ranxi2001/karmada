@@ -15,13 +15,13 @@
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
 | [PR #7830 / Day 49](internship-reports/day49-issue7492-pr1-api-compat-pr7830.md) | #7492 PR1 Open、非 Draft、mergeable，head `be8c7c3f7`；17/17 upstream checks 全绿。Tide 等 `lgtm/approved`；nested component validation 经复核确认为合并前 P1 | 在两个现有 webhook 文件补 ownership-aware gate-off/membership validation 和测试；本地验证后再申请开放 PR branch push/回复授权；PR1 稳定后再推进 PR2 |
-| [PR #7827 / Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md) | Open、mergeable，head `ba531a9a1`；3 文件 test-only cleanup，official run 保持 E3；[#7826](https://github.com/karmada-io/karmada/issues/7826) 已发布五泳道带时间正文及 [target 语义](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290948445)、[taint 规模](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290950443)两条补充 comment | PR 其余只按新 CI 或 reviewer 信号处理 |
+| [PR #7827 / Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md) | Open、mergeable，head `ba531a9a1`；3 文件 test-only cleanup，official run 保持 E3；#7826 已发布正文和两条 comment，但首条误读了 hard-coded target，修订稿已收敛到 `estimator_test` 固定 member1 与外来 30m | 等用户确认两个已发布 comment 的 replacement target/hash 后编辑并逐字校验；PR 其余只按新信号处理 |
 | [Day 39 Descheduler 代码专项](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 已纠偏为整任务调度模型：`ResourceBinding` 是一级队列的 `SchedulingUnit`，Descheduler 只撤回 `Assigned + NotStarted + SchedulerUnschedulable`；五个代码合同为状态、证据、执行前 fence、接管完成、持久重试。A 为逐 GVK 试点，B 为 ResourceInterpreter 主线，C 为 member Pod 观察 fallback，D 仅借 ApplicationFailover 模式；[16 页 Style A 汇报稿](internship-reports/day39-karmada-descheduler-code-research-presentation.html)同步更新 | 周一前拿千问真实 YAML 核对生命周期、不可调度诊断、单目标 Placement、执行前 lock、接管回执和 cooldown，并用 HTML 试讲 |
 | [PR #7662 / Day 40](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) | Open，head `586f6fc3508e`；partial 一期为 Deployment：source generation/V2 freshness、pinned delta、strict capacity、原子 commit、ack/consume/abandon；Full 保持通用路径 | `@zhy76` / `@RainbowMango` 回复或 proposal commit；逐项确认 10 个 stop gates |
 
 ## Last Run
 
-- 2026-08-14：#7826 已发布两条补充 comment：[target 语义](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290948445)说明 Policy 候选仍是全部成员，[taint 规模](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290950443)量化为 3 副本 x 10m、member1 实际受外来 30m 影响；两条远端正文均与用户确认 SHA-256 逐字一致。
+- 2026-08-14：复核 #7826 已发布 comments 后确认首条答错代码位置：真正 hard-coded target 是 `estimator_test` 的 member1，scheduler 日志也只让 member1 进入 estimator；已改写两条本地 replacement，删除三集群 90m 主叙事，聚焦 member1 外来 30m 与 TTL refresh，待 exact-text 确认后编辑远端。
 - 2026-08-13：完成 #7826 后的 3 项 skill 更新：RCA causal tuple/五泳道 + attempt 审计、最终 Markdown Mermaid fence 自动渲染、issue body target/hash approval 状态机；10 项脚本测试、3 项 skill 校验和 #7826 两图/两个真实 run 正向验证通过，未再次编辑上游 issue，详见 [Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md)。
 - 2026-08-13：创建 [#7492 PR1 #7830](https://github.com/karmada-io/karmada/pull/7830)，head `be8c7c3f7` 的 17/17 upstream checks 首次运行全绿；自动 review 指出的 nested component validation 经源码复核确认为合并前 P1，修复需区分 eviction 与 `RequiredBy` 所有权，详见 [Day 49](internship-reports/day49-issue7492-pr1-api-compat-pr7830.md)。
 - 2026-08-13：创建 [#7826](https://github.com/karmada-io/karmada/issues/7826) 和 test-only [PR #7827](https://github.com/karmada-io/karmada/pull/7827)：官方与 fork CI 证明两个跨 spec workload producer，3 文件 cleanup 补丁等待 source/RB NotFound；证据保持 E3，详见 [Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md)。
@@ -46,7 +46,7 @@
 - #7492 在现有 webhook 两文件补 PR #7830 nested result 的 ownership-aware validation 与测试，跑 focused tests 和 `make verify`；完成本地 review 后，再经 exact-action gate 更新开放 PR branch/回复 thread。PR1 稳定后再 rebase PR2。
 - 周一前用 Day 39 HTML 稿试讲；拿千问真实 YAML 确认 `Queued/Assigned/Running/Terminal` 映射、`NotStarted + SchedulerUnschedulable` 证据、单目标 Placement、pre-start lock、handoff completion 和 cooldown，不把公开的 offline / long-running Pending story 自动写成具体产品合同。
 - #7662 等 `@zhy76` / `@RainbowMango` 回复或 proposal commit；更新后逐项核对 Day 40 的 10 个 stop gates，只在准确 target/text 获用户确认后起草或发布 upstream review。
-- #7826 补充说明已发布；#7827 current-SHA CI 已全绿，单次绿灯不升级为 E4，其余只按新信号处理。
+- #7826 等用户确认两个已发布 comment 的 replacement hashes 后原位编辑；#7827 current-SHA CI 已全绿，单次绿灯不升级为 E4，其余只按新信号处理。
 
 ## Stop Conditions
 
