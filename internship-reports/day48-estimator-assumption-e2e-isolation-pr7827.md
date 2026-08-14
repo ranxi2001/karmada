@@ -271,6 +271,64 @@ timestamps、artifact name/ID/`created_at`/expiry，以及“artifact 是否可�
 因此，PR #7827 修复的是两条已确认的跨 spec 隔离路径，不宣称解决 production 中所有 delete/reschedule
 竞态，也不扫描并同步化全部 E2E cleanup。
 
+## 2026-08-14：专用 Kind 集群方案
+
+### 先说人话
+
+#7827 当前补丁要求每个已知 producer 在退出前完成 cleanup，但 `EstimatorAssumption` 仍使用共享的
+`member1`。新的方案把 NodeResource assumption spec 放到测试期间临时创建的真实 Kind 集群中：该集群只有
+这一个 serial spec 使用，测试结束后执行 unjoin 并删除。这样后续再出现新的共享集群残留，也不会改变该
+spec 的 node allocatable、Pod 用量或 estimator assumption。
+
+Karmada base E2E 已有这种生命周期，不需要新增 framework 文件：
+
+- [`suite_test.go`](https://github.com/karmada-io/karmada/blob/a957f64d50213729b4d34f3c298ca3630e1c9127/test/e2e/suites/base/suite_test.go#L238-L273)
+  已提供同包可复用的 `createCluster` 和 `deleteCluster`，底层通过 Kind provider 创建、删除真实集群，并把
+  kubeconfig server 改为 Docker 网络内可访问的地址。
+- [`rescheduling_test.go`](https://github.com/karmada-io/karmada/blob/a957f64d50213729b4d34f3c298ca3630e1c9127/test/e2e/suites/base/rescheduling_test.go#L43-L152)
+  已使用 `member-e2e-*` 随机名执行 `create -> join -> wait Ready -> test -> unjoin -> delete`。
+- [`federatedresourcequota_test.go`](https://github.com/karmada-io/karmada/blob/a957f64d50213729b4d34f3c298ca3630e1c9127/test/e2e/suites/base/federatedresourcequota_test.go#L112-L190)
+  一次创建两个临时成员集群，并在 policy 中只显式使用需要的集群，证明动态集群可以不加入
+  `framework.ClusterNames()` 的默认列表。
+- [`framework.SerialDescribe`](https://github.com/karmada-io/karmada/blob/a957f64d50213729b4d34f3c298ca3630e1c9127/test/e2e/framework/ginkgo_decorator.go#L21-L24)
+  给该 spec 添加 Ginkgo `Serial`。Ginkgo 在并行 specs 完成后才运行 serial specs，因此临时 `Cluster` 对象
+  存在期间不会有并行 spec 向它调度；只依赖 `framework.ClusterNames()` 的启动时缓存不能提供这个保证。
+
+### 为什么主修复只需一个测试文件
+
+NodeResource spec 与 `suite_test.go` 同属 `base` package，可以直接调用已有的未导出 helper。建议只修改
+`test/e2e/suites/base/estimator_test.go`，在该文件内完成以下生命周期：
+
+1. 生成 `member-e2e-*` 名称，调用 `createCluster`，并取得该集群的独立 kubeconfig。
+2. 为 Kind 生成的 `kind-member-e2e-*` context 添加一个与 Karmada cluster name 同名的 alias。现有
+   [`deploy-scheduler-estimator.sh`](https://github.com/karmada-io/karmada/blob/a957f64d50213729b4d34f3c298ca3630e1c9127/hack/deploy-scheduler-estimator.sh#L24-L93)
+   同时把第四个参数当作 kubeconfig context 和 estimator cluster name；alias 可避免修改脚本接口。
+3. 从该测试文件调用现有部署脚本，在 host cluster 创建 `<cluster>-kubeconfig` Secret、estimator Deployment
+   和 Service，并等待 Deployment available。
+4. 使用现有 `karmadactl join` 代码路径注册集群，等待 `ClusterConditionReady=True`。scheduler 的
+   [cluster add/update handler](https://github.com/karmada-io/karmada/blob/a957f64d50213729b4d34f3c298ca3630e1c9127/pkg/scheduler/event_handler.go#L314-L341)
+   会为新集群排队建立 estimator 连接。随后通过该 spec 的 kube client 调用
+   `WaitNamespacePresentOnClusterByClient`，确认 suite 的 `testNamespace` 已同步到新集群。
+5. 把 NodeResource spec 的 `targetCluster` 从常量 `member1` 改为该随机集群名。CRD present wait 可继续读取
+   `Cluster.status.apiEnablements`；CRD delete wait 需使用本 spec 通过 `util.NewClusterClientSet` 创建的 dynamic
+   client，因为 framework 的 member client cache 只在 suite 启动时初始化。
+6. 依赖 `DeferCleanup` 的 LIFO 顺序，先清理 workload、policy 和 CRD，再 unjoin，随后删除 estimator 的
+   Deployment、Service、Secret，最后删除 Kind 集群和 kubeconfig。
+
+这个设计不要求改 `suite_test.go`、framework 或 `hack/deploy-scheduler-estimator.sh`。它是基于现有源码可达
+路径形成的实现方案，尚未在本地多集群环境运行，因此不能写成 E4 验证结果。
+
+### PR 范围边界
+
+专用集群只解决 `EstimatorAssumption` 的隔离，主修复最终可以只有
+`test/e2e/suites/base/estimator_test.go` 一个文件。PDB spec 遗漏 Deployment cleanup 是另一项真实缺口；若
+继续把它留在 #7827，最终 diff 至少还会包含 `resource_test.go`。2026-08-14 发布到 #7827 的新评论已明确
+建议将 PDB cleanup 单独处理，因此“一文件 PR”成立的前提是从 #7827 移出当前 PDB 改动。
+
+当前还需在真实 E2E 中验证两个连接边界：动态 estimator Pod available 后 scheduler 是否在测试 timeout 内
+完成 gRPC 连接，以及失败 cleanup 是否总能删除 host 侧 estimator 资源。未完成该验证前，不应删除旧分支
+改动或改写 PR body 的验证声明。
+
 ## 代码与验证状态
 
 分支 `test/estimator-assumption-isolation` 只有一个 DCO commit：
@@ -319,6 +377,10 @@ PASS
   `af711b11d816aa4f0b6ac27f84564af5db2b6be93aaa737130a913118f8ed52b`，均与用户确认草稿逐字一致。
 - PR #7827 于 2026-08-13 创建，base 为 `master`，head 为
   `ranxi2001:test/estimator-assumption-isolation@ba531a9a1`，状态为 Open、非 Draft、Mergeable。
+- 2026-08-14 已在 #7827 发布
+  [专用 member cluster 方案](https://github.com/karmada-io/karmada/pull/7827#issuecomment-5291634887)：
+  NodeResource assumption spec 改用临时独立集群并单独部署 scheduler-estimator，PDB cleanup 移出主隔离机制。
+  本轮只完成既有 E2E 先例与单文件可行性研究，尚未修改 PR head。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
 - 截至 2026-08-13 CI 复核，DCO、codegen、compile、lint、unit test、三组普通 Kubernetes test 和
   `e2e test (v1.34.0/v1.35.0/v1.36.1)` 均通过；Tide 仅等待 `lgtm` 和 `approved`。2026-08-14 只补充
@@ -340,9 +402,12 @@ PASS
 
 ## 下一步
 
-1. 等待 PR #7827 三组 upstream E2E 和 maintainer review；只有 current SHA 出现失败或 reviewer 提出新问题
-   时再做定向分析，不在无新信号时重复 retest 或 comment。
+1. 若决定实施新方案，只修改 `estimator_test.go`：先在当前 topic worktree 完成临时 Kind、estimator、join、
+   dynamic client 和 LIFO cleanup，再跑 compile/race-compile。更新开放 PR branch 和 PR body 前仍需单独确认
+   exact diff/action；本轮未获得该发布授权。
 2. 若需要把证据升级为 E4，在同一可控多集群环境复现污染，再对同一场景应用补丁并验证失败消失；普通
    绿色 rerun 不足以升级证据等级。
-3. #7827 进入外部等待后，工作主线回到 #7492 PR1：完成 legacy-write safety guard、RB/CRB 真实 API
+3. PDB fixture cleanup 作为独立 cleanup 问题处理，不再作为 `EstimatorAssumption` 的隔离机制；若保留在同一
+   PR，需明确接受最终 diff 不再是单文件。
+4. #7827 进入外部等待后，工作主线回到 #7492 PR1：完成 legacy-write safety guard、RB/CRB 真实 API
    Server 回归和 rebase 后验证，再准备正式 PR。
