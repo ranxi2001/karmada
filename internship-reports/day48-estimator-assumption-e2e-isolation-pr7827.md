@@ -3,7 +3,7 @@
 - 日期：2026-08-13
 - Issue：[`karmada-io/karmada#7826`](https://github.com/karmada-io/karmada/issues/7826)
 - Pull Request：[`karmada-io/karmada#7827`](https://github.com/karmada-io/karmada/pull/7827)
-- 修复提交：`ba531a9a1e57e164488c9ce84b8549273a844b11`
+- 当前提交：`6ebc4b459611c4e5bde92ea88e2f314c56f65377`
 - 基线：`upstream/master@09c08f405b2f0b53106b1947e08a82d4cc94de28`
 - 证据等级：E3；尚未达到 E4
 
@@ -331,35 +331,33 @@ NodeResource spec 与 `suite_test.go` 同属 `base` package，可以直接调用
 
 ## 代码与验证状态
 
-分支 `test/estimator-assumption-isolation` 只有一个 DCO commit：
-`ba531a9a1e57e164488c9ce84b8549273a844b11`。本地执行结果：
+2026-08-14 已按专用集群方案更新并推送分支 `test/estimator-assumption-isolation`。新提交
+`6ebc4b459611c4e5bde92ea88e2f314c56f65377` 保留旧提交历史，同时反向移除旧三文件 cleanup，再加入
+`estimator_test.go` 的独立 Kind 生命周期；因此该 commit 自身涉及四个文件，但 PR 相对 base
+`09c08f405` 的最终 diff 只有 `test/e2e/suites/base/estimator_test.go`，为 `+190/-8`。
+
+本轮本地执行结果：
 
 ```text
-go test -count=1 ./test/e2e/framework ./test/e2e/suites/base -run '^$'
+go test -count=1 ./test/e2e/suites/base -run '^$'
 PASS
 
-go test -race -count=1 ./test/e2e/framework ./test/e2e/suites/base -run '^$'
+go test -race -count=1 ./test/e2e/suites/base -run '^$'
 PASS
 
-golangci-lint run ./test/e2e/framework/... ./test/e2e/suites/base/...
-PASS (0 issues)
-
-go vet ./test/e2e/framework ./test/e2e/suites/base
+go vet ./test/e2e/suites/base
 PASS
 
 PATH=/root/go/bin:$PATH make verify
-PASS
-
-make test
 PASS
 
 git diff --check
 PASS
 ```
 
-第一次 `make verify` 在下载安装 `golangci-lint` 时因 curl error 28 退出。本机已经有项目要求的
-`/root/go/bin/golangci-lint v2.12.2`，把 `/root/go/bin` 加入 `PATH` 后完整 verifier 通过，失败尝试没有
-修改源码。
+前两次 `make verify` 的 staticcheck 均报 `G702`：先通过 `bash`、再直接执行脚本，都被 gosec 的跨函数污点
+分析标记为命令注入。最终调用固定仓库脚本，参数继续只通过 `exec.CommandContext` 的 argv 传递、不经 shell
+展开，并用带原因的单行 `//nolint:gosec` 处理误报；第三次完整 verifier 通过。
 
 本机没有 Karmada kubeconfig 或可用的多集群 control plane。尝试运行真实 suite 时失败在
 `SynchronizedBeforeSuite`，274 个 spec 中执行 0 个。因此 compile/race-compile 结果不能替代真实 E2E。
@@ -380,11 +378,16 @@ PASS
 - 2026-08-14 已在 #7827 发布
   [专用 member cluster 方案](https://github.com/karmada-io/karmada/pull/7827#issuecomment-5291634887)：
   NodeResource assumption spec 改用临时独立集群并单独部署 scheduler-estimator，PDB cleanup 移出主隔离机制。
-  本轮只完成既有 E2E 先例与单文件可行性研究，尚未修改 PR head。
-- PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
-- 截至 2026-08-13 CI 复核，DCO、codegen、compile、lint、unit test、三组普通 Kubernetes test 和
-  `e2e test (v1.34.0/v1.35.0/v1.36.1)` 均通过；Tide 仅等待 `lgtm` 和 `approved`。2026-08-14 只补充
-  上述 issue evidence comment，没有触发 retest。
+  随后按用户授权实施并推送 commit `6ebc4b459`；GitHub 回读确认 PR 最终只改
+  `test/e2e/suites/base/estimator_test.go`。
+- 当前 PR 标题和 body 仍描述已被替换的跨 spec ResourceBinding cleanup，尚未发布新文案。精确英文标题与正文
+  已保存到 [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md)，等待
+  用户按 exact-text gate 确认后替换并回读校验。建议标题为
+  `test(e2e): isolate estimator assumption cluster`；链接文件只包含可直接传给 `gh pr edit --body-file` 的正文。
+- PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/L`。
+- commit `6ebc4b459` 推送后，current-SHA upstream CI 已自动启动；2026-08-14 首次回读时 DCO 通过，lint、
+  codegen、CLI、Chart 和 Operator 检查仍在运行。旧 head 的全绿状态不作为新实现的验证结果，本轮也不等待
+  整套 CI 完成。
 
 这表示本地实现和大部分 upstream gate 已完成，外部 acceptance 仍由 E2E 结果和 maintainer review 决定。
 
@@ -402,9 +405,8 @@ PASS
 
 ## 下一步
 
-1. 若决定实施新方案，只修改 `estimator_test.go`：先在当前 topic worktree 完成临时 Kind、estimator、join、
-   dynamic client 和 LIFO cleanup，再跑 compile/race-compile。更新开放 PR branch 和 PR body 前仍需单独确认
-   exact diff/action；本轮未获得该发布授权。
+1. 用户确认 [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md) 的
+   exact title/body 后，替换 #7827 的陈旧标题和正文，并逐字回读校验。
 2. 若需要把证据升级为 E4，在同一可控多集群环境复现污染，再对同一场景应用补丁并验证失败消失；普通
    绿色 rerun 不足以升级证据等级。
 3. PDB fixture cleanup 作为独立 cleanup 问题处理，不再作为 `EstimatorAssumption` 的隔离机制；若保留在同一
