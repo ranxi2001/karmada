@@ -297,12 +297,17 @@ PASS
 - Issue #7826 已于 2026-08-13 创建并分配给 `ranxi2001`；同日经复盘将正文最终替换为五泳道带时间版，
   同时表达 producer/consumer spec、cleanup 代码、残留对象/状态和 UTC 时间。创建时模板 metadata 没有
   自动添加 `kind/flake`；后续添加 label 因上游权限不足而失败。
+- 2026-08-14 在 #7826 发布 [target 语义澄清](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290948445)
+  与 [taint 规模说明](https://github.com/karmada-io/karmada/issues/7826#issuecomment-5290950443)：前者说明 `member1`
+  是当前 RB 结果断言而非 Policy 固定目标，后者量化三集群 assumption 总量为 `90m`、Flink 用例实际受
+  member1 外来 `30m` 影响。两条远端正文 SHA-256 分别为 `9a9d4b5f5693270bb657c5d2c1a83c86f7a296c07744ab9f5eac95f8d82443d5`
+  与 `6374615e61b7e485f4c43248294538ff53c99e5ce95eb3c85ca905c10be98995`，均与用户确认草稿逐字一致。
 - PR #7827 于 2026-08-13 创建，base 为 `master`，head 为
   `ranxi2001:test/estimator-assumption-isolation@ba531a9a1`，状态为 Open、非 Draft、Mergeable。
 - PR body 包含 `/kind cleanup` 和 `/kind flake`，当前标签为 `kind/cleanup`、`kind/flake`、`size/M`。
-- 截至 2026-08-13 本轮复核，DCO、codegen、compile、lint、unit test、三组普通 Kubernetes test 和
-  `e2e test (v1.34.0/v1.35.0/v1.36.1)` 均通过；Tide 仅等待 `lgtm` 和 `approved`。没有发布额外
-  comment 或触发 retest。
+- 截至 2026-08-13 CI 复核，DCO、codegen、compile、lint、unit test、三组普通 Kubernetes test 和
+  `e2e test (v1.34.0/v1.35.0/v1.36.1)` 均通过；Tide 仅等待 `lgtm` 和 `approved`。2026-08-14 只补充
+  上述 issue evidence comment，没有触发 retest。
 
 这表示本地实现和大部分 upstream gate 已完成，外部 acceptance 仍由 E2E 结果和 maintainer review 决定。
 
