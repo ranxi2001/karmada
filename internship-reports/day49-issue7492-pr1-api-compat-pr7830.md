@@ -197,34 +197,91 @@ DCO commit `ce77a4cdf`（`test: compare non-comparable schedule results`）。
 这里没有把 #7830 的完整 name-indexed comparator 移入 #7837。完整版本还会忽略 component 顺序、把
 nil/empty 视为相等、拒绝 duplicate component name，并修复已有的 duplicate-cluster match reuse；这些
 都在重新定义 helper 语义，且依赖 #7830 曾提出但 #7837 current API 尚未声明的 list-map 语义。API-only
-PR 的 unblock patch 只恢复编译和原有整项相等模型。完整 comparator 是否保留，等 #7837 的最终 API
-markers 确定后再随 #7830 review。
+PR 的 unblock patch 只恢复编译和原有整项相等模型。独立 scope 审计后决定不在 PR1 保留完整 comparator：
+它还会引入 duplicate-cluster 修复、nil/empty 归一化和 component order-insensitive 语义，而 #7837
+current schema 仍是 atomic list。若这些语义需要成为 API 合同，应在 #7837 或后续专门变化中明确决定。
 
-### 待确认的 exact upstream action
+### Fork branch 与策略变更
 
-动作 1：把本地 `pr7837-helper-compile-fix` 以同名分支 push 到 `origin`，不 force、不创建新 PR。
+用户确认后，`pr7837-helper-compile-fix` 已以同名分支 push 到 `origin`，没有 force，也没有创建 PR。
+准备给 #7837 的评论没有发布。fork push CI 停止等待时，codegen、lint、compile、unit、CLI 3/3、
+Operator 3/3 和 Chart 3/3 已通过，base E2E 3 个仍在运行；这些结果只证明 `ce77a4cdf` 的 fork branch，
+不作为 PR1 body 或 upstream merge 证据。
 
-动作 2：在 [`karmada-io/karmada#7837`](https://github.com/karmada-io/karmada/pull/7837) 发布以下英文评论：
-
-````markdown
-The current head fails in the lint, unit, CLI, Operator, and base E2E jobs because adding `TargetCluster.Components` makes `TargetCluster` non-comparable, while `test/helper/scheduler.go` still calls `slices.Contains`:
+随后用户决定不再等待 #7837 merge 或 fork E2E，直接以这两个 exact commits 作为本地 stacked base 重建
+PR1：
 
 ```text
-test/helper/scheduler.go:31:27: "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2".TargetCluster does not satisfy comparable
+afecff517  #7837 API and generated artifacts
+  -> ce77a4cdf  minimal non-comparable helper adaptation
+     -> <new PR1 commit> validation and compatibility only
 ```
 
-I prepared the minimal one-file fix on top of `afecff517`: [ranxi2001/karmada@ce77a4cdf](https://github.com/ranxi2001/karmada/commit/ce77a4cdf651b14e7f14764ff94e767cad7db259). It replaces `slices.Contains` with `slices.ContainsFunc` and `reflect.DeepEqual`.
+这不是把 #7837 的开放 head 当作已合并的 upstream history；它是为尽快更新现有 PR #7830 而明确接受的
+临时 stacked history。后续 #7837 若修改或 squash，PR1 仍需按最终 merge SHA 再做一次 ancestry cleanup。
 
-Before the fix, `go test ./test/helper` reproduces the error above. After the fix, these commands pass:
+### 基于两个 commit 的 PR1 重建设计
 
-- `go test ./test/helper`
-- `go test ./pkg/scheduler/core ./pkg/util/helper ./pkg/util`
+#### `/status` 语义复核
 
-Could you cherry-pick this commit into #7837?
-````
+`statusStrategy.PrepareForUpdate` 确实会复制旧对象并只替换 status，但这里的旧对象不是 storage version。
+`apiextensions-apiserver/pkg/apiserver/customresource_handler.go` 会为每个 served version 创建独立 Store，
+其中 `decoderVersion` 是请求版本、`encoderVersion` 才是 CRD storage version；同文件还明确说明该 handler
+使用 served version 作为内存表示。因此，`v1alpha1 /status` 从 etcd 读取对象时会先经 conversion 丢失
+`Components`，`PrepareForUpdate` 复制的是已经有损的 `v1alpha1` 旧对象，再编码回 `v1alpha2` 时仍无法恢复。
 
-该文本只报告 exact-head CI 和本地 E4 证据，不宣称整套 CI 已通过，也不把 #7830 的 API markers、完整
-comparator 或 validation scope 混入这次 unblock 请求。
+结论是保留两条 `v1alpha1 */status` exact webhook rules，并继续在 status short-circuit 前执行 storage-state
+guard。现有 E2E 已覆盖 status 拒绝，但没有证明主资源 `v1alpha1 Update` 经 `matchPolicy: Equivalent` 被实际
+路由到 validator；重建时为 RB/CRB 补这个真实请求覆盖。
+
+#### 文件范围
+
+| 文件组 | 文件数 | PR1 保留行为 | 验证 |
+| --- | ---: | --- | --- |
+| webhook registration/configuration | 6 | 注册 RB/CRB 主资源 equivalent rules 与 `v1alpha1 /status` exact rules，并给 handler 注入 uncached `APIReader` | configuration unit test、`make verify` |
+| v1alpha1 compatibility | 1 | 覆盖旧客户端 main/status 写入保护和 legacy Binding 正常写入 | base E2E compile |
+| ResourceBinding validation | 2 | 保留 `TargetCluster`、`RequiredBy`、feature-gate rollback 和 v1alpha1 storage-state guard；删除全部 eviction component 逻辑 | focused unit/race tests |
+
+精确 9 个 residual 文件：
+
+```text
+artifacts/deploy/webhook-configuration.yaml
+charts/karmada/templates/_karmada_webhook_configuration.tpl
+cmd/webhook/app/webhook.go
+operator/pkg/karmadaresource/webhookconfiguration/manifests.go
+pkg/karmadactl/cmdinit/karmada/webhook_configuration.go
+pkg/karmadactl/cmdinit/karmada/webhook_configuration_test.go
+pkg/webhook/resourcebinding/validating.go
+pkg/webhook/resourcebinding/validating_test.go
+test/e2e/suites/base/binding_version_compatibility_test.go
+```
+
+#### 明确不改
+
+- 不修改 #7837 已拥有的 API types、conversion implementation、CRD、Swagger、OpenAPI、deepcopy 或
+  apply-configuration 生成物。
+- 不把 #7830 原有的 `listType=map`、`listMapKey=name`、`MinLength`、`MaxLength` 或 `Minimum` markers
+  静默带回。
+- 不添加 `GracefulEvictionTask.Components`，也不保留对应 legacy detection、validation helper 或 tests。
+- 不保留 `binding_types_conversion_test.go`；它测试 #7837 拥有的 conversion implementation，应单独补给
+  #7837，而不是让 runtime-validation PR 测试未修改的 base code。
+- 不保留完整 `test/helper` comparator；`ce77a4cdf` 已提供编译适配，额外的 name-indexed/multiset 语义
+  与当前 atomic-list API 合同不是同一项变化。
+- 不加入 scheduler producer、component scale planner、delivery、failed-rescheduling protection 或新 controller。
+- 不修改或 force-push #7837 helper branch；PR1 先在新的本地 rebuild branch 完成，更新开放 PR branch
+  仍需 exact-action gate。
+
+#### 实现与验证顺序
+
+1. 从 `ce77a4cdf` 创建全新 worktree，机械移植 #7830 的 9 个 runtime validation/compatibility 文件。
+2. 用源码级 patch 删除 `GracefulEvictionTask.Components` detection、validator 和专用测试。
+3. 保留 status 专用 webhook rules 与 guard 顺序，为 RB/CRB 增加真实 v1alpha1 主资源 UPDATE 拒绝 E2E。
+4. 确认相对 `ce77a4cdf` 只有上述 9 个文件，且相对旧 PR 的差异只来自 API/test ownership split、
+   eviction scope 删除及 E2E 证据补强。
+5. 运行 focused unit/race tests、E2E package compile、`make verify`；检查 DCO、range-diff、merge-base 和
+   force-with-lease lease target。
+6. 更新 PR title/body 草稿以删除 API ownership、Graceful 字段和过期 CI 描述；得到 exact user approval
+   后才更新 `origin/feature/multi-component-scale-rescheduling` 与 PR metadata。
 
 ### Rebase 后预期 diff
 
@@ -232,13 +289,12 @@ comparator 或 validation scope 混入这次 unblock 请求。
 | --- | ---: | --- |
 | #7837 API 与生成物 | 12 | 合并后成为 base，必须从 #7830 diff 消失 |
 | `GracefulEvictionTask` apply/API 产物 | 1 | #7837 从未增加该字段，#7830 不应重新引入 |
-| #7830 validation 与 compatibility | 12 | 保留并基于 #7837 最终 API 重新验证 |
+| #7830 validation 与 compatibility | 9 | 保留并基于 stacked API/helper base 重新验证 |
 
-预期保留的 12 个文件是四份 webhook configuration、karmadactl configuration test、
-`cmd/webhook/app/webhook.go`、v1alpha1 conversion test、
-`pkg/webhook/resourcebinding/{validating.go,validating_test.go}`、compatibility E2E，以及
-`test/helper/{scheduler.go,scheduler_test.go}`。最终文件数仍需以 #7837 merge SHA 上的真实 rebase 为准，
-不能把这份静态比较写成已完成结果。
+预期保留的 9 个文件是四份 webhook configuration、karmadactl configuration test、
+`cmd/webhook/app/webhook.go`、`pkg/webhook/resourcebinding/{validating.go,validating_test.go}` 和
+compatibility E2E。conversion test 与完整 result helper 已按 ownership 审计退出 PR1；最终合并历史仍需
+以 #7837 merge SHA 再做 ancestry cleanup。
 
 ### 未决 API 边界
 
@@ -259,11 +315,18 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 
 ## 当前状态与下一步
 
-- PR #7830：Open、非 Draft；Tide pending 的直接原因是缺少 `lgtm` 和 `approved`。
-- CI：current SHA `c0b68f728` 全绿；任何本地后续提交都不能继承这份 current-SHA 结论。
+- PR #7830：Open、非 Draft；远端仍是 `c0b68f728`，尚未更新或发布评论。
+- 本地重建：`pr7830-rebuilt-on-pr7837` 已在 `afecff517 -> ce77a4cdf` 上形成 DCO commit
+  `ac32f8671`（`feat: validate component scheduling results`）。完整临时 stack 相对 `a957f64d5` 为
+  22 文件 `+1791/-16`；PR1 residual 相对 `ce77a4cdf` 精确 9 文件 `+1472/-11`。
+- 验证：focused unit tests、两包 race tests、base E2E package compile 和完整 repository verify 通过。
+  第一次 bare `make verify` 只在清理临时 `_go/pkg/mod` 的只读 auto-toolchain cache 时失败；使用现有
+  `GOMODCACHE` 重跑后 codegen、staticcheck、vendor、Swagger、CRD 和 license 全部通过，worktree clean。
 - Review：Copilot nested validation finding 已在 current head 修复；`@RainbowMango` 创建 #7837 接管
-  API 变化，并明确要求 #7830 在其后 rebase。
-- PR1 下一步：#7837 helper 适配已形成并验证为本地 DCO commit `ce77a4cdf`；经 exact-action gate 后
-  push 到 fork 并把 commit 提供给 #7837。其合并后，以实际 merge SHA rebase #7830，确认 API/eviction
-  文件退出 diff，再验证 residual validation/compatibility 文件。
+  API 变化；本地重建已删除 `GracefulEvictionTask.Components` 与完整 helper comparator，并补 main-resource
+  v1alpha1 E2E、status guard 文案断言和 TargetCluster rollback identity/multiset 反例。
+- PR1 下一步：exact title/body 草稿见
+  [day49-pr7830-rebuilt-body-draft.md](day49-pr7830-rebuilt-body-draft.md)。用户确认 exact-action 后，按远端
+  old SHA `c0b68f728` force-with-lease 更新 PR head 到 `ac32f8671` 并同步 title/body，不发布评论；随后看
+  upstream PR CI。#7837 合并后再以实际 merge SHA 清理临时 stacked ancestry。
 - PR2 下一步：等待 PR1 API/validation 合同稳定后再 rebase 和提交，避免线性 stack 重复返工。
