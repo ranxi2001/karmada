@@ -167,7 +167,7 @@ E2E、conversion test 或 result helper test。
 
 ### #7837 当前 CI blocker 与立即动作
 
-2026-08-15 的 CLI 与 Operator matrix 已给出同一编译错误：
+2026-08-15 的 lint、unit、CLI、Operator 与 base E2E jobs 已给出同一编译错误：
 
 ```text
 # github.com/karmada-io/karmada/test/helper
@@ -207,7 +207,7 @@ markers 确定后再随 #7830 review。
 动作 2：在 [`karmada-io/karmada#7837`](https://github.com/karmada-io/karmada/pull/7837) 发布以下英文评论：
 
 ````markdown
-The current head fails in the lint, unit, CLI, and Operator jobs because adding `TargetCluster.Components` makes `TargetCluster` non-comparable, while `test/helper/scheduler.go` still calls `slices.Contains`:
+The current head fails in the lint, unit, CLI, Operator, and base E2E jobs because adding `TargetCluster.Components` makes `TargetCluster` non-comparable, while `test/helper/scheduler.go` still calls `slices.Contains`:
 
 ```text
 test/helper/scheduler.go:31:27: "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2".TargetCluster does not satisfy comparable
