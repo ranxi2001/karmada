@@ -17,6 +17,7 @@ limitations under the License.
 package helper
 
 import (
+	"reflect"
 	"slices"
 
 	workv1alpha2 "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2"
@@ -28,7 +29,9 @@ func IsScheduleResultEqual(tc1, tc2 []workv1alpha2.TargetCluster) bool {
 		return false
 	}
 	for _, c1 := range tc1 {
-		found := slices.Contains(tc2, c1)
+		found := slices.ContainsFunc(tc2, func(c2 workv1alpha2.TargetCluster) bool {
+			return reflect.DeepEqual(c1, c2)
+		})
 		if !found {
 			return false
 		}
