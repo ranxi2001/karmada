@@ -3,9 +3,10 @@
 - 日期：2026-08-13
 - Issue：[`karmada-io/karmada#7492`](https://github.com/karmada-io/karmada/issues/7492)
 - Pull Request：[`karmada-io/karmada#7830`](https://github.com/karmada-io/karmada/pull/7830)
-- Head：`c0b68f728efe9336ff0ea226726228e4ea868fe8`
+- 当前 Head：`ac32f86714425b7e2288ca75d7a15942655fec85`
+- 初始 Head：`c0b68f728efe9336ff0ea226726228e4ea868fe8`
 - Base：`09c08f405b2f0b53106b1947e08a82d4cc94de28`
-- 状态：Open、非 Draft；current-SHA upstream checks 全绿；maintainer 已用 #7837 接管 API 变化，但 #7837 current head 因 `TargetCluster` 不再 comparable 而编译失败，需先补最小适配；#7830 仍在其合并后 rebase
+- 状态：Open、非 Draft；stacked head 的 compile、unit、lint、codegen、CLI、Operator、Chart、DCO 和两个 base E2E matrix 已通过；仅 v1.35 base E2E 因临时 kind 集群创建失败为红，PR 新增的三个 compatibility specs 均已通过
 
 ## 先说人话
 
@@ -327,7 +328,47 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 - Review：Copilot nested validation finding 已在 current head 修复；`@RainbowMango` 创建 #7837 接管
   API 变化；本地重建已删除 `GracefulEvictionTask.Components` 与完整 helper comparator，并补 main-resource
   v1alpha1 E2E、status guard 文案断言和 TargetCluster rollback identity/multiset 反例。
-- PR1 下一步：DCO 已成功，codegen、lint、CLI、Operator 和 Chart 三版本矩阵已为 `ac32f8671` 启动。
-  先等 authoritative upstream PR CI，不发布评论；有结果后再决定是否需要给 #7837 提供 helper commit。
+- PR1 下一步：不为当前 v1.35 环境失败修改代码；经用户确认后只请求重跑失败 matrix。重跑前不发布评论；
+  有稳定结果后再决定是否需要给 #7837 提供 helper commit。
   #7837 合并后仍需以实际 merge SHA 清理临时 stacked ancestry。
 - PR2 下一步：等待 PR1 API/validation 合同稳定后再 rebase 和提交，避免线性 stack 重复返工。
+
+## `ac32f8671` Upstream CI 红灯复核
+
+### 先说人话
+
+这次红灯不是新 webhook 或 compatibility test 失败，而是现有
+`Aggregated Kubernetes API Endpoint` 用例在真正执行断言前，创建第五个临时 kind 集群失败。
+同一个 SHA 的 v1.34 和 v1.36 matrix 都通过；v1.35 中本 PR 新增的三个用例也全部通过。因此当前应重跑
+失败 matrix，不应为这个红灯继续修改 PR1。
+
+一个具体例子：v1.35 job 在 10:51:31 开始创建 `member-e2e-rlzt8`，但在 `BeforeEach` 卡了约 289 秒，
+最后由 `kubeadm init` 返回 `exit status 1`。这个 spec 的测试主体位于
+`aggregatedapi_test.go:210`，失败点却是准备集群的 `aggregatedapi_test.go:84`，说明业务断言尚未运行。
+
+### 运行过程与证据
+
+- 检查对象是 run `31879143221`、job `94999880311`、attempt 1；head 为 `ac32f8671`，没有 rerun
+  artifact 归因歧义。除 v1.35 base E2E 外，其余 16 个 check runs 均为 Success。
+- 本 PR 新增的 `ResourceBinding` 保护、`ClusterResourceBinding` 保护和 legacy status 更新用例分别在
+  10:37:33、10:39:10、10:41:44 通过，耗时 `0.061s`、`0.267s`、`0.302s`。
+- 首个硬失败是 10:56:20 的
+  `failed to init node with kubeadm: ... member-e2e-rlzt8-control-plane ... exit status 1`。之后
+  `172.18.0.5:5443` 和 `:6443` 的 `connection refused` 发生在 `AfterEach`、suite cleanup 和 CI 清理，
+  都是控制面已经不可用后的级联错误。
+- attempt-compatible component artifact `9245954402` 显示该窗口不是单个 webhook 进程失败：host
+  Kubernetes etcd 从 10:51:54 开始出现读延迟，并在 10:52:02 报 `slow fdatasync`；apiserver 在
+  10:51:59 至 10:52:03 进入 readiness/liveness failure；随后 containerd 操作连续
+  `context deadline exceeded`，host kube-apiserver 和 Karmada etcd 分别在 10:54:03、10:54:08 以
+  status 137 退出。
+- v1.34 和 v1.36 的同名 `Aggregated Kubernetes API Endpoint` spec 分别在约 49 秒和 46 秒内通过，
+  且临时集群创建通常只需约 12 至 16 秒。这与 v1.35 的 289 秒 setup failure 构成同 SHA 对照。
+
+### 证据边界与动作
+
+现有 artifact 足以把失败归类为 CI 环境整体失去响应，并排除 PR 新增断言的直接失败；但它没有 runner
+host 的 kernel OOM、PSI 或完整磁盘指标，因此不能把物理根因进一步写成已证实的 OOM 或磁盘故障。
+旧 issue #3667 记录过相同 `kubeadm init` 表象，但当时涉及不同 runner/kind 版本，不能直接套用其根因。
+
+当前不改代码、不追加空 commit、不重写 PR。唯一合理的下一验证是重跑 v1.35 failed job；任何 `/retest`
+comment 或其他 upstream 动作仍需用户确认 exact target/text。
