@@ -5,7 +5,7 @@
 - Pull Request：[`karmada-io/karmada#7830`](https://github.com/karmada-io/karmada/pull/7830)
 - Head：`c0b68f728efe9336ff0ea226726228e4ea868fe8`
 - Base：`09c08f405b2f0b53106b1947e08a82d4cc94de28`
-- 状态：Open、非 Draft；current-SHA upstream checks 全绿；maintainer 已用 #7837 接管 API 变化，#7830 等其合并后 rebase 并收窄为 validation 与 compatibility
+- 状态：Open、非 Draft；current-SHA upstream checks 全绿；maintainer 已用 #7837 接管 API 变化，但 #7837 current head 因 `TargetCluster` 不再 comparable 而编译失败，需先补最小适配；#7830 仍在其合并后 rebase
 
 ## 先说人话
 
@@ -151,8 +151,10 @@ controller 只按 `fromCluster=member1`、健康状态、超时和标量 `replic
 ### 先说人话
 
 #7837 先把“API 长什么样”单独落地；#7830 等它合并后，只保留“怎样阻止错误数据和旧客户端擦数据”。
-现在立即 rebase 没有稳定目标，因为 #7837 仍是 Open，且刚收到 4 条 bot review，head 可能继续修改。
-因此正确动作是等待 merge，而不是把 #7837 的开放分支临时当成新的 upstream base。
+但 #7837 增加 slice 字段后，`TargetCluster` 已不再是 Go 的 comparable type，现有
+`test/helper/scheduler.go` 仍调用要求元素 comparable 的 `slices.Contains`，所以 API-only patch 不能独立
+通过编译。此时不能只等 merge：应在 #7837 上补它直接引入的 helper 适配并验证；#7830 的正式 rebase
+仍等稳定 merge SHA，不能把开放 head 当成最终历史基线。
 
 #7837 current head 为 `afecff517`，base 为 `a957f64d5`，共 12 个文件、`+315/-4`。它只包含：
 
@@ -162,6 +164,67 @@ controller 只按 `fromCluster=member1`、健康状态、超时和标量 `replic
 
 它不包含 #7830 的 webhook validation、RB/CRB legacy main/status guard、webhook manifests、compatibility
 E2E、conversion test 或 result helper test。
+
+### #7837 当前 CI blocker 与立即动作
+
+2026-08-15 的 CLI 与 Operator matrix 已给出同一编译错误：
+
+```text
+# github.com/karmada-io/karmada/test/helper
+../../../helper/scheduler.go:31:27: "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2".TargetCluster does not satisfy comparable
+```
+
+直接因果链是：`TargetCluster.Components []TargetComponent` -> `TargetCluster` 不再 comparable ->
+`slices.Contains(tc2, c1)` 无法实例化。这个错误由 #7837 的 API change 直接触发，因此最小 helper 适配
+应由 #7837 一起吸收，而不是等待 #7830 rebase 后才修。当前执行路径是在 #7837 exact head 上先复现，
+再准备只涉及 `test/helper` 的本地 commit 和 targeted test 证据；任何 fork push 或 upstream comment 仍需
+用户确认 exact target/text。
+
+### 本地最小修复证据
+
+在独立 worktree `karmada-pr7837-helper-fix` 中，从 #7837 exact head `afecff517` 创建本地分支
+`pr7837-helper-compile-fix`。修复只改 `test/helper/scheduler.go`：用
+`slices.ContainsFunc` + `reflect.DeepEqual` 替代要求 `TargetCluster` comparable 的 `slices.Contains`，形成
+DCO commit `ce77a4cdf`（`test: compare non-comparable schedule results`）。
+
+| 阶段 | 命令 | 结果 |
+| --- | --- | --- |
+| 修复前 | `go test ./test/helper` | 按 CI 同样的 `TargetCluster does not satisfy comparable` 编译失败 |
+| 修复后 | `go test ./test/helper` | Pass；该包无独立 test files，结果证明 helper 自身可编译 |
+| 调用方 | `go test ./pkg/scheduler/core ./pkg/util/helper ./pkg/util` | 3/3 packages Pass |
+| 静态检查 | `gofmt`、`git diff --check` | Pass |
+
+这里没有把 #7830 的完整 name-indexed comparator 移入 #7837。完整版本还会忽略 component 顺序、把
+nil/empty 视为相等、拒绝 duplicate component name，并修复已有的 duplicate-cluster match reuse；这些
+都在重新定义 helper 语义，且依赖 #7830 曾提出但 #7837 current API 尚未声明的 list-map 语义。API-only
+PR 的 unblock patch 只恢复编译和原有整项相等模型。完整 comparator 是否保留，等 #7837 的最终 API
+markers 确定后再随 #7830 review。
+
+### 待确认的 exact upstream action
+
+动作 1：把本地 `pr7837-helper-compile-fix` 以同名分支 push 到 `origin`，不 force、不创建新 PR。
+
+动作 2：在 [`karmada-io/karmada#7837`](https://github.com/karmada-io/karmada/pull/7837) 发布以下英文评论：
+
+````markdown
+The current head fails in the lint, unit, CLI, and Operator jobs because adding `TargetCluster.Components` makes `TargetCluster` non-comparable, while `test/helper/scheduler.go` still calls `slices.Contains`:
+
+```text
+test/helper/scheduler.go:31:27: "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2".TargetCluster does not satisfy comparable
+```
+
+I prepared the minimal one-file fix on top of `afecff517`: [ranxi2001/karmada@ce77a4cdf](https://github.com/ranxi2001/karmada/commit/ce77a4cdf651b14e7f14764ff94e767cad7db259). It replaces `slices.Contains` with `slices.ContainsFunc` and `reflect.DeepEqual`.
+
+Before the fix, `go test ./test/helper` reproduces the error above. After the fix, these commands pass:
+
+- `go test ./test/helper`
+- `go test ./pkg/scheduler/core ./pkg/util/helper ./pkg/util`
+
+Could you cherry-pick this commit into #7837?
+````
+
+该文本只报告 exact-head CI 和本地 E4 证据，不宣称整套 CI 已通过，也不把 #7830 的 API markers、完整
+comparator 或 validation scope 混入这次 unblock 请求。
 
 ### Rebase 后预期 diff
 
@@ -200,7 +263,7 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 - CI：current SHA `c0b68f728` 全绿；任何本地后续提交都不能继承这份 current-SHA 结论。
 - Review：Copilot nested validation finding 已在 current head 修复；`@RainbowMango` 创建 #7837 接管
   API 变化，并明确要求 #7830 在其后 rebase。
-- PR1 下一步：等待 #7837 merge；以实际 merge SHA rebase，确认上述 13 个 API/eviction 文件从 diff
-  消失，再验证 12 个 residual validation/compatibility 文件。完成本地 review 后，才申请开放 PR branch
-  force-with-lease push 和 title/body 更新授权。
+- PR1 下一步：#7837 helper 适配已形成并验证为本地 DCO commit `ce77a4cdf`；经 exact-action gate 后
+  push 到 fork 并把 commit 提供给 #7837。其合并后，以实际 merge SHA rebase #7830，确认 API/eviction
+  文件退出 diff，再验证 residual validation/compatibility 文件。
 - PR2 下一步：等待 PR1 API/validation 合同稳定后再 rebase 和提交，避免线性 stack 重复返工。

@@ -424,3 +424,12 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Separate direct workflow event creation from an integration's rerun permission. Correlate the accepted command with the existing run's attempt, `triggering_actor`, start time, and new failed-job ID.
 - Evidence to gather: Exact comment actor/time and bot response, run `run_attempt`/`run_started_at`/`triggering_actor`, per-attempt job IDs and timestamps, and whether successful jobs were retained or actually rerun.
 - Test or fix cue: Do not infer bot capability from workflow YAML alone. State account trust, command acceptance, and rerun mechanics as separate claims; verify the resulting Actions state before prescribing a trigger path.
+
+## Adding A Slice Or Map Can Break Comparable Callers
+
+- Pattern: Adding a slice, map, or function field to a public Go struct makes the entire struct non-comparable, so generic equality and set helpers constrained by `comparable` can fail outside the API package even when code generation and narrow compile jobs pass.
+- Seen in: `karmada-io/karmada#7837`, where adding `TargetCluster.Components []TargetComponent` left `test/helper/scheduler.go` calling `slices.Contains`; lint, unit, CLI, and Operator jobs failed with `TargetCluster does not satisfy comparable` while codegen and the narrower compile job passed.
+- Miss symptom: Review checks the type, conversion, generated clients, CRDs, and API package compilation but does not search for map keys, `==`, `slices.Contains`, `maps` usage, generic constraints, or test helpers that consume the changed struct.
+- Review check: For every newly non-comparable field, search all direct and aliased uses of the enclosing type, then classify each equality caller by intended semantics: exact ordered representation, order-insensitive keyed collection, or domain-specific identity.
+- Evidence to gather: Exact field/type diff, compiler errors across the full consumer graph, generic function constraints, schema list semantics, serialization normalization, and existing equality tests for duplicates, order, and nil versus empty collections.
+- Test or fix cue: First reproduce the compile failure in the smallest consumer package. Use `ContainsFunc` plus an explicit equality function for the minimal repair; only introduce indexing, multiset matching, duplicate rejection, or nil/empty normalization when the API contract defines those semantics. Rerun the helper package and representative caller packages before broad CI.
