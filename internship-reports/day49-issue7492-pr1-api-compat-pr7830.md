@@ -3,10 +3,11 @@
 - 日期：2026-08-13
 - Issue：[`karmada-io/karmada#7492`](https://github.com/karmada-io/karmada/issues/7492)
 - Pull Request：[`karmada-io/karmada#7830`](https://github.com/karmada-io/karmada/pull/7830)
-- 当前 Head：`ac32f86714425b7e2288ca75d7a15942655fec85`
+- 远端当前 Head：`ac32f86714425b7e2288ca75d7a15942655fec85`
+- 待推本地 Head：`6ff28fe4a1d42b8a7980e60e0276306731c15656`
 - 初始 Head：`c0b68f728efe9336ff0ea226726228e4ea868fe8`
 - Base：`09c08f405b2f0b53106b1947e08a82d4cc94de28`
-- 状态：Open、非 Draft；stacked head 的 compile、unit、lint、codegen、CLI、Operator、Chart、DCO 和两个 base E2E matrix 已通过；仅 v1.35 base E2E 因临时 kind 集群创建失败为红，PR 新增的三个 compatibility specs 均已通过
+- 状态：Open、非 Draft；远端旧 head 仅 v1.35 base E2E 因临时 kind 集群创建失败为红；本地已改基到 #7837 current head 并通过 focused tests、base E2E compile 与 `make verify`，尚未 force-push
 
 ## 先说人话
 
@@ -328,8 +329,9 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 - Review：Copilot nested validation finding 已在 current head 修复；`@RainbowMango` 创建 #7837 接管
   API 变化；本地重建已删除 `GracefulEvictionTask.Components` 与完整 helper comparator，并补 main-resource
   v1alpha1 E2E、status guard 文案断言和 TargetCluster rollback identity/multiset 反例。
-- PR1 下一步：不为当前 v1.35 环境失败修改代码，也不再给 #7837 提供 helper commit 或评论。等待 #7837
-  合并后，以实际 merge commit 重建 PR1 ancestry、丢弃两个临时 stacked commits，并重新运行 residual tests。
+- PR1 下一步：不为当前 v1.35 环境失败修改代码，也不再给 #7837 提供 helper commit 或评论。已先基于
+  #7837 current head 重建本地 ancestry；待用户确认 exact lease 后 force-push 以触发新 head CI，评论等 CI
+  结果。#7837 最终合并后仍需按实际 merge commit 做最终 ancestry cleanup。
 - PR2 下一步：等待 PR1 API/validation 合同稳定后再 rebase 和提交，避免线性 stack 重复返工。
 
 ## `ac32f8671` Upstream CI 红灯复核
@@ -384,3 +386,35 @@ codegen、lint、compile、unit、三组 Kubernetes 三版本矩阵、base E2E �
 因此本地 `ce77a4cdf` 只保留为 #7830 当前临时 stacked ancestry 的历史中间点，不再提交给 #7837，
 也不再发布 helper comment。#7837 合并后，#7830 必须改基到实际 merge commit，完整丢弃
 `afecff517 + ce77a4cdf`，采用 upstream 已验证的 helper 实现后重新运行 residual tests。
+
+## 在 #7837 current head 上提前重建
+
+### 先说人话
+
+用户决定不等 #7837 合并：既然 `76589a9d5` 已经吸收 helper 修复并通过全部 checks，就直接把 #7830 的
+临时前置历史换成这个 current head。这样不需要追加空 commit，也不需要为无关的 v1.35 环境失败改代码；
+新的 PR head 会自然触发整套 CI。
+
+旧、新历史分别是：
+
+```text
+旧：a957f64d5 -> afecff517 -> ce77a4cdf -> ac32f8671
+新：a957f64d5 -> 76589a9d5 -> 6ff28fe4a
+```
+
+在独立 worktree `karmada-pr7830-current7837` 中，从 `76589a9d5` 只 cherry-pick PR1 residual
+`ac32f8671`，得到 DCO commit `6ff28fe4a`。`range-diff` 标记两个 residual 为 `=`，stable patch-id 均为
+`95394cbe4065b3a5f54abb456f14aabd3ac48681`；新 commit 的 parent 精确为 `76589a9d5`。相对新 base 仍是
+原来的 9 文件 `+1472/-11`，旧、新最终 tree 只在 #7837 已修复的 `test/helper/scheduler.go` 有差异。
+
+| 验证 | 结果 |
+| --- | --- |
+| `git diff --check a957f64d5..6ff28fe4a` | Pass |
+| `go test -race -count=1 ./pkg/webhook/resourcebinding ./pkg/karmadactl/cmdinit/karmada` | 2/2 packages Pass |
+| `go test -count=1 ./test/e2e/suites/base -run '^$'` | Pass，base E2E package 可完整编译 |
+| `GOMODCACHE=/home/ranxi/go/pkg/mod make verify` | Pass；staticcheck、mock、gofmt、vendor、Swagger、CRD、codegen 和 license 均无漂移 |
+
+当前远端 PR head 仍是 `ac32f8671`，没有发生 upstream 写操作。下一步只准备以该 SHA 为显式 lease，将
+`origin/feature/multi-component-scale-rescheduling` force-with-lease 更新到 `6ff28fe4a`；title 不变、
+不发布评论，先观察新 head CI。现有 PR body 中 `minimal compile follow-up` 的描述会在新拓扑下过期，
+但不与本次代码 push 混在一起，后续修改仍走 exact-text confirmation。
