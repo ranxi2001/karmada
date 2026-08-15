@@ -3,9 +3,9 @@
 - 日期：2026-08-16
 - PR0：[#7837](https://github.com/karmada-io/karmada/pull/7837)，head `76589a9d514543edc8c8ca47174cff360d3b832e`
 - PR1：[#7830](https://github.com/karmada-io/karmada/pull/7830)，head `6ff28fe4a1d42b8a7980e60e0276306731c15656`
-- PR2：[#7833](https://github.com/karmada-io/karmada/pull/7833)，旧 head `1d2ee95c4f701cc618d3c5a730ffe560298b4b8f`
-- PR3：[#7835](https://github.com/karmada-io/karmada/pull/7835)，旧 head `b1c41a584ce043746b293271abd85ccf1341014b`
-- 本轮状态：本地重排与验证已完成；远端分支和 PR 正文尚未更新，等待 exact-action/text 确认
+- PR2：[#7833](https://github.com/karmada-io/karmada/pull/7833)，`1d2ee95c4` -> `98535c5413cca7a697ee754934d4d3a147f90597`
+- PR3：[#7835](https://github.com/karmada-io/karmada/pull/7835)，`b1c41a584` -> `782232b7db4455b7339b669978a6e799753528df`
+- 本轮状态：本地重排、验证、远端 force-with-lease 和 PR 正文更新均已完成；current-SHA CI 已启动，未评论
 
 ## 先说人话
 
@@ -81,16 +81,20 @@ Git 自动合并且结果通过仓库生成物校验；PR3 无冲突。两个 so
 PR1 #7830 current head `6ff28fe4a` 的 16 个 GitHub Actions checks 与 DCO 也已全部成功；Tide 仍只是等待
 `lgtm/approved`，不属于 CI 失败。
 
-## 待确认的远端动作
+## 已执行的远端动作
 
-- 对 `feature/multi-component-result-producer` 使用旧 head `1d2ee95c4` 作为 lease，更新到 `98535c541`。
-- 对 `feature/multi-component-scale-planning` 使用旧 head `b1c41a584` 作为 lease，更新到 `782232b7d`。
-- #7833/#7835 标题和 Draft 状态保持不变；正文只修正依赖 SHA 和本轮真实验证边界。完整草稿见
-  [#7833 body](day50-pr7833-body.md) 与 [#7835 body](day50-pr7835-body.md)。
-- 不发布评论；推送新 SHA 后由 upstream PR CI 重新验证。
+- 用户确认 exact target/text 后，`feature/multi-component-result-producer` 以 `1d2ee95c4` 为 lease 更新到
+  `98535c541`；`feature/multi-component-scale-planning` 以 `b1c41a584` 为 lease 更新到 `782232b7d`。
+- `gh pr edit` 因 token 缺少 `read:org`，在 GraphQL 读取组织字段阶段失败，没有写入正文；随后使用同一 token
+  已有的 `repo` scope，通过 GitHub REST `PATCH /repos/karmada-io/karmada/pulls/{number}` 写入相同确认文本。
+- REST 回读证明两份正文与本地 [#7833 body](day50-pr7833-body.md) / [#7835 body](day50-pr7835-body.md)
+  逐字一致；两个 PR 的标题、Open/Draft 状态均未改变。
+- GitHub PR head 与 fork branch 已分别核对为完整 SHA `98535c5413cca7a697ee754934d4d3a147f90597` 和
+  `782232b7db4455b7339b669978a6e799753528df`。两边 DCO 已成功，首批 11 个 Actions jobs 已进入
+  `IN_PROGRESS`；没有发布评论，也没有等待 CI 终态。
 
 ## 当前未决边界
 
 这次只解决 reviewer comparison 被旧 stack 污染的问题，不证明 #7833 的功能切分已经符合维护者 Draft。
-#7833/#7835 当前都是 Draft 且没有 human review；重排后应先让 CI 验证新 SHA，再单独决定是否按 Draft
+#7833/#7835 当前都是 Draft 且没有 human review；当前应先让 CI 验证新 SHA，再单独决定是否按 Draft
 把 interpreter/Flink 从 #7833 拆出。不能把一次干净 rebase 写成 maintainer 已接受现有 PR2/PR3 边界。
