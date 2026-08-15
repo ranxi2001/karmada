@@ -315,7 +315,9 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 
 ## 当前状态与下一步
 
-- PR #7830：Open、非 Draft；远端仍是 `c0b68f728`，尚未更新或发布评论。
+- PR #7830：Open、非 Draft；2026-08-15 已按 exact lease 将远端 head 从 `c0b68f728` force-update 到
+  `ac32f8671`。title 已更新为 `feat: validate component scheduling results in bindings`，远端 body 与确认稿
+  逐字一致；没有发布评论。
 - 本地重建：`pr7830-rebuilt-on-pr7837` 已在 `afecff517 -> ce77a4cdf` 上形成 DCO commit
   `ac32f8671`（`feat: validate component scheduling results`）。完整临时 stack 相对 `a957f64d5` 为
   22 文件 `+1791/-16`；PR1 residual 相对 `ce77a4cdf` 精确 9 文件 `+1472/-11`。
@@ -325,8 +327,7 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 - Review：Copilot nested validation finding 已在 current head 修复；`@RainbowMango` 创建 #7837 接管
   API 变化；本地重建已删除 `GracefulEvictionTask.Components` 与完整 helper comparator，并补 main-resource
   v1alpha1 E2E、status guard 文案断言和 TargetCluster rollback identity/multiset 反例。
-- PR1 下一步：exact title/body 草稿见
-  [day49-pr7830-rebuilt-body-draft.md](day49-pr7830-rebuilt-body-draft.md)。用户确认 exact-action 后，按远端
-  old SHA `c0b68f728` force-with-lease 更新 PR head 到 `ac32f8671` 并同步 title/body，不发布评论；随后看
-  upstream PR CI。#7837 合并后再以实际 merge SHA 清理临时 stacked ancestry。
+- PR1 下一步：DCO 已成功，codegen、lint、CLI、Operator 和 Chart 三版本矩阵已为 `ac32f8671` 启动。
+  先等 authoritative upstream PR CI，不发布评论；有结果后再决定是否需要给 #7837 提供 helper commit。
+  #7837 合并后仍需以实际 merge SHA 清理临时 stacked ancestry。
 - PR2 下一步：等待 PR1 API/validation 合同稳定后再 rebase 和提交，避免线性 stack 重复返工。
