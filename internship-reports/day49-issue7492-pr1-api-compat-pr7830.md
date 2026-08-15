@@ -3,11 +3,11 @@
 - 日期：2026-08-13
 - Issue：[`karmada-io/karmada#7492`](https://github.com/karmada-io/karmada/issues/7492)
 - Pull Request：[`karmada-io/karmada#7830`](https://github.com/karmada-io/karmada/pull/7830)
-- 远端当前 Head：`ac32f86714425b7e2288ca75d7a15942655fec85`
-- 待推本地 Head：`6ff28fe4a1d42b8a7980e60e0276306731c15656`
+- 当前 Head：`6ff28fe4a1d42b8a7980e60e0276306731c15656`
+- 前一远端 Head：`ac32f86714425b7e2288ca75d7a15942655fec85`
 - 初始 Head：`c0b68f728efe9336ff0ea226726228e4ea868fe8`
 - Base：`09c08f405b2f0b53106b1947e08a82d4cc94de28`
-- 状态：Open、非 Draft；远端旧 head 仅 v1.35 base E2E 因临时 kind 集群创建失败为红；本地已改基到 #7837 current head 并通过 focused tests、base E2E compile 与 `make verify`，尚未 force-push
+- 状态：Open、非 Draft；已改基到 #7837 current head 并 force-with-lease 更新 PR；DCO 成功，upstream PR CI 已在新 SHA 上启动，未发布评论
 
 ## 先说人话
 
@@ -317,9 +317,9 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 
 ## 当前状态与下一步
 
-- PR #7830：Open、非 Draft；2026-08-15 已按 exact lease 将远端 head 从 `c0b68f728` force-update 到
-  `ac32f8671`。title 已更新为 `feat: validate component scheduling results in bindings`，远端 body 与确认稿
-  逐字一致；没有发布评论。
+- PR #7830：Open、非 Draft；2026-08-15 已先按 exact lease 将远端 head 从 `c0b68f728` 更新到
+  `ac32f8671`，随后采用 #7837 current head 再更新为 `6ff28fe4a`。title 保持
+  `feat: validate component scheduling results in bindings`；没有发布评论。
 - 本地重建：`pr7830-rebuilt-on-pr7837` 已在 `afecff517 -> ce77a4cdf` 上形成 DCO commit
   `ac32f8671`（`feat: validate component scheduling results`）。完整临时 stack 相对 `a957f64d5` 为
   22 文件 `+1791/-16`；PR1 residual 相对 `ce77a4cdf` 精确 9 文件 `+1472/-11`。
@@ -414,7 +414,8 @@ codegen、lint、compile、unit、三组 Kubernetes 三版本矩阵、base E2E �
 | `go test -count=1 ./test/e2e/suites/base -run '^$'` | Pass，base E2E package 可完整编译 |
 | `GOMODCACHE=/home/ranxi/go/pkg/mod make verify` | Pass；staticcheck、mock、gofmt、vendor、Swagger、CRD、codegen 和 license 均无漂移 |
 
-当前远端 PR head 仍是 `ac32f8671`，没有发生 upstream 写操作。下一步只准备以该 SHA 为显式 lease，将
-`origin/feature/multi-component-scale-rescheduling` force-with-lease 更新到 `6ff28fe4a`；title 不变、
-不发布评论，先观察新 head CI。现有 PR body 中 `minimal compile follow-up` 的描述会在新拓扑下过期，
-但不与本次代码 push 混在一起，后续修改仍走 exact-text confirmation。
+用户确认 exact action 后，已以 `ac32f8671` 为显式 lease，将
+`origin/feature/multi-component-scale-rescheduling` force-with-lease 更新到 `6ff28fe4a`。GitHub PR head
+与 fork remote 均已核对为该 SHA；DCO Success，首批 12 个 checks 已进入 queued/in-progress，证明 upstream
+PR CI 已重新触发。title、body 均未修改，也没有发布评论。现有 PR body 中 `minimal compile follow-up`
+的描述会在新拓扑下过期；按用户要求先等 CI 结果，后续修改仍走 exact-text confirmation。
