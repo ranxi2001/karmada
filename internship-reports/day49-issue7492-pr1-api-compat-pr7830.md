@@ -328,9 +328,8 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 - Review：Copilot nested validation finding 已在 current head 修复；`@RainbowMango` 创建 #7837 接管
   API 变化；本地重建已删除 `GracefulEvictionTask.Components` 与完整 helper comparator，并补 main-resource
   v1alpha1 E2E、status guard 文案断言和 TargetCluster rollback identity/multiset 反例。
-- PR1 下一步：不为当前 v1.35 环境失败修改代码；经用户确认后只请求重跑失败 matrix。重跑前不发布评论；
-  有稳定结果后再决定是否需要给 #7837 提供 helper commit。
-  #7837 合并后仍需以实际 merge SHA 清理临时 stacked ancestry。
+- PR1 下一步：不为当前 v1.35 环境失败修改代码，也不再给 #7837 提供 helper commit 或评论。等待 #7837
+  合并后，以实际 merge commit 重建 PR1 ancestry、丢弃两个临时 stacked commits，并重新运行 residual tests。
 - PR2 下一步：等待 PR1 API/validation 合同稳定后再 rebase 和提交，避免线性 stack 重复返工。
 
 ## `ac32f8671` Upstream CI 红灯复核
@@ -370,5 +369,18 @@ exit 1 结束：`GOTOOLCHAIN=auto` 在临时 `_go/pkg/mod` 下载只读 toolchai
 host 的 kernel OOM、PSI 或完整磁盘指标，因此不能把物理根因进一步写成已证实的 OOM 或磁盘故障。
 旧 issue #3667 记录过相同 `kubeadm init` 表象，但当时涉及不同 runner/kind 版本，不能直接套用其根因。
 
-当前不改代码、不追加空 commit、不重写 PR。唯一合理的下一验证是重跑 v1.35 failed job；任何 `/retest`
-comment 或其他 upstream 动作仍需用户确认 exact target/text。
+当前不改代码、不追加空 commit、不重写 PR。#7837 的新 head 已经全绿，当前临时 stack 很快会被正式
+rebase 取代，因此默认不单独重跑该 v1.35 job；如果 #7837 合并延迟且必须先恢复当前 SHA 的绿灯，任何
+`/retest` comment 或其他 upstream 动作仍需用户确认 exact target/text。
+
+## #7837 已吸收 helper 修复
+
+#7837 作者随后将 head 从 `afecff517` 改写为 `76589a9d5`，直接在其唯一 commit 中修复
+`test/helper/scheduler.go`：用 `slices.ContainsFunc` 比较 cluster identity/replicas，并用
+`slices.Equal` 比较有序 component 结果。两个 head 的实际 tree diff 只有该文件 `+4/-1`；current head 的
+codegen、lint、compile、unit、三组 Kubernetes 三版本矩阵、base E2E 三版本和 DCO 共 17 个 checks
+全部 Success。Tide 只等待 `lgtm/approved`，不是代码或 CI blocker。
+
+因此本地 `ce77a4cdf` 只保留为 #7830 当前临时 stacked ancestry 的历史中间点，不再提交给 #7837，
+也不再发布 helper comment。#7837 合并后，#7830 必须改基到实际 merge commit，完整丢弃
+`afecff517 + ce77a4cdf`，采用 upstream 已验证的 helper 实现后重新运行 residual tests。
