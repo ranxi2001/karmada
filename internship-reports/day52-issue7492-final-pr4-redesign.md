@@ -6,7 +6,9 @@
 - source branch：`pr4-local-integration-on-pr0-pr1-pr2-pr3`
 - 最终本地提交：`40d82879fbbbc1535e8028108ce68cbf4f7b9736`
 - 父提交：`ea87825092c2d225c574585626d1a3f844150bb0`（PR3 integration copy）
-- 边界：源码已提交但未推送；未创建或更新 upstream PR
+- 远端 source branch：`origin/feature/multi-component-failure-safe-rescheduling`
+- 推送结果：经显式 lease 从 `f54f228d7` 更新到 `40d82879f`，远端 head 已回读核对
+- 边界：未创建或更新 upstream PR，未修改 PR 正文或发表评论
 
 ## 先说人话
 
@@ -181,10 +183,10 @@ base E2E 命令只证明测试代码可编译，输出为 `[no tests to run]`；
 - live multi-cluster E2E 尚未执行；quota 场景的真实 estimator 行为仍需 upstream CI 或可用环境验证。
 - ordered `ClusterAffinities` 不参与自动/显式 component recovery。
 - custom scheduler 与 suspended binding 明确保留旧交付行为，不承诺 default scheduler 的 accepted-result 保护。
-- source branch 尚未推送；远端目标和 force-with-lease 仍需用户确认。
+- upstream PR 尚未创建或更新；title/body 与任何 reviewer-facing 动作仍需单独确认。
 
 ## 下一步
 
-reviewer-facing 文案见
-[`day52-issue7492-pr4-body-draft.md`](day52-issue7492-pr4-body-draft.md)。确认后再把本地提交以显式 lease 推送到
-`origin/feature/multi-component-failure-safe-rescheduling`；正文或 upstream PR 的任何更新仍需单独确认 exact target/text。
+source branch 已以显式 lease 推送并回读核对。reviewer-facing 文案见
+[`day52-issue7492-pr4-body-draft.md`](day52-issue7492-pr4-body-draft.md)；正文或 upstream PR 的任何更新仍需
+单独确认 exact target/text。
