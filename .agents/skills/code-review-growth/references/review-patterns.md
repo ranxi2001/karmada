@@ -433,3 +433,39 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: For every newly non-comparable field, search all direct and aliased uses of the enclosing type, then classify each equality caller by intended semantics: exact ordered representation, order-insensitive keyed collection, or domain-specific identity.
 - Evidence to gather: Exact field/type diff, compiler errors across the full consumer graph, generic function constraints, schema list semantics, serialization normalization, and existing equality tests for duplicates, order, and nil versus empty collections.
 - Test or fix cue: First reproduce the compile failure in the smallest consumer package. Use `ContainsFunc` plus an explicit equality function for the minimal repair; only introduce indexing, multiset matching, duplicate rejection, or nil/empty normalization when the API contract defines those semantics. Rerun the helper package and representative caller packages before broad CI.
+
+## Accepted-Result Migrations Need Provenance And A Recovery Door
+
+- Pattern: A generation acknowledged by an older controller proves only that the old behavior completed; it does not prove that newly introduced result fields or input identities were persisted. A migration must distinguish states that can be reconstructed from the old contract from states that require a new full operation.
+- Seen in: `karmada-io/karmada#7492`, where pre-upgrade multi-component bindings could have no component snapshot or a complete snapshot without the new accepted-requirements hash.
+- Miss symptom: The new controller either trusts every `generation == observedGeneration` object and silently invents accepted data, or freezes every old object with no automatic or user-triggered recovery path.
+- Review check: Enumerate every persisted shape produced by each predecessor version, state exactly what old success proves for Duplicated versus Divided scheduling, and identify a bounded recovery action for every unprovable state.
+- Evidence to gather: Old routing behavior, result schema by version, success/status invariants, placement strategy, feature-gate default, and whether an explicit full reschedule can preserve the previous result on failure.
+- Test or fix cue: Auto-backfill only states proven by the old contract; otherwise fail closed and provide an explicit full recalculation that atomically establishes the new snapshot and identities. Test both upgrade shapes and success/failure recovery.
+
+## Split Result And Status Writes Need Durable Provenance
+
+- Pattern: Reading the generation returned by a successful result patch protects only the current process call; a crash or status conflict loses that in-memory fact, so the next reconcile needs persisted evidence that the result belongs to the current scheduling input.
+- Seen in: `karmada-io/karmada#7492`, where the main binding patch could succeed, the status patch could fail, and a later ordinary Divided reconcile could erase or fail to acknowledge the accepted component result.
+- Miss symptom: A retry infers success from `generation > observedGeneration`, or uses only the patch response generation, then either trusts an unrelated detector update or reruns scheduling and clears a correct result on `FitError`.
+- Review check: Number `input read -> result write -> concurrent update -> status write -> retry`, then ask which facts survive process death and which write prevents a newer trigger from being consumed.
+- Evidence to gather: Atomic result metadata, normalized input digest, predicted and returned generation, resource-version preconditions on main and status patches, and the retry path for token-current versus token-stale states.
+- Test or fix cue: Persist a result-generation token and a normalized accepted-input digest with the result, use resource-version CAS for both writes, and test crash, conflict, config-only update, rollback, and a genuinely changed scheduling input.
+
+## Additional-Capacity Estimates Do Not Prove Full Replacement Capacity
+
+- Pattern: An estimator request for only the positive replica delta answers whether extra capacity exists beside the accepted workload; it cannot validate a replacement result whose existing replicas have changed requirements or whose accepted baseline is unknown.
+- Seen in: `karmada-io/karmada#7492`, where estimating `newReplicas - acceptedReplicas` would undercount a simultaneous CPU, node-claim, or priority-class change on the existing replicas.
+- Miss symptom: A patch labels every replica increase as incremental and reuses the old count even when component names, requirements, placement, or the accepted result identity changed.
+- Review check: Separate count delta from per-replica requirements and prove that every unchanged replica in the proposed result still has the requirements represented by the accepted baseline.
+- Evidence to gather: Name-keyed accepted replicas, accepted requirements identity, scale direction, placement identity, estimator accounting model, and behavior when the target remains healthy but cannot fit the delta.
+- Test or fix cue: Use delta estimation only for same-name, one-direction replica changes with matching accepted requirements; use full scheduling for an explicit recovery, and preserve the old result if either path fails.
+
+## ResourceVersion Is A Trigger, Not Semantic Freshness Proof
+
+- Pattern: A changed source `resourceVersion` says that some write occurred, but it does not say whether scheduler-relevant fields changed; equality can prove an exact referenced source, while inequality requires semantic comparison at the owning boundary.
+- Seen in: `karmada-io/karmada#7492`, where the binding controller must allow image-only updates but must not deliver a source whose component replicas or requirements are newer than the binding's accepted scheduling input.
+- Miss symptom: A controller freezes every resource-version change, blocking unrelated configuration delivery, or ignores the version difference and copies a newer CPU/node requirement before scheduling accepts it.
+- Review check: Identify the fields owned by scheduling, the component that interprets them, and which non-scheduling source changes are allowed to flow independently.
+- Evidence to gather: Referenced UID and resource version, interpreted component replicas and requirements, accepted input hash, pending-result state, and event ordering between source, detector, scheduler, and delivery controller.
+- Test or fix cue: Check UID first; accept an exact resource-version match; otherwise compare normalized scheduler inputs through the existing interpreter. Freeze the entire delivery only while those inputs are pending, and test a same-update config plus scale failure.
