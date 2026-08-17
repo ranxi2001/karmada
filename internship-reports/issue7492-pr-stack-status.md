@@ -8,7 +8,7 @@
 
 ## 先说人话
 
-#7492 已拆成四个公开 PR 和一个尚未创建 upstream PR 的最终实现：
+#7492 已拆成五个公开 PR，最后一片目前以 Draft 形式供 CI 和评审：
 
 - PR0 提供 API 字段；
 - PR1 保护这些字段不被非法或旧版本写入破坏；
@@ -26,20 +26,20 @@ master -> 76589a9d5 (PR0)
                     `-> 782232b7d (PR3)
 
 PR4 integration：
-76589a9d5 -> PR1 copy -> PR2 copy -> ea8782509 (PR3 copy) -> 40d82879f (PR4)
+76589a9d5 -> PR1 copy -> PR2 copy -> ea8782509 (PR3 copy) -> 49916cee1 (PR4)
 ```
 
 ## 当前状态
 
 | 层级 | 公开对象 / exact head | 作用 | 2026-08-17 状态 |
 | --- | --- | --- | --- |
-| PR0 | [#7837](https://github.com/karmada-io/karmada/pull/7837) `76589a9d514543edc8c8ca47174cff360d3b832e` | `TargetCluster.Components` 等 API 基线 | Open，非 Draft，17 项 checks/DCO 成功 |
+| PR0 | [#7837](https://github.com/karmada-io/karmada/pull/7837) `76589a9d514543edc8c8ca47174cff360d3b832e` | `TargetCluster.Components` 等 API 基线 | Open，非 Draft，17 项 checks/DCO 成功，已有 `lgtm` |
 | PR1 | [#7830](https://github.com/karmada-io/karmada/pull/7830) `6ff28fe4a1d42b8a7980e60e0276306731c15656` | validation、feature-gate rollback 与 v1alpha1 防丢失保护 | Open，非 Draft，17 项 checks/DCO 成功 |
 | PR2 | [#7833](https://github.com/karmada-io/karmada/pull/7833) `98535c5413cca7a697ee754934d4d3a147f90597` | result producer、`ReviseComponents`、Work delivery、Flink customization | Open，Draft，17 项 checks/DCO 成功 |
-| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `782232b7db4455b7339b669978a6e799753528df` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft，16 项成功；`e2e v1.35` 失败 |
-| PR4 | fork branch `40d82879fbbbc1535e8028108ce68cbf4f7b9736`，review range `ea87825092c2d225c574585626d1a3f844150bb0...40d82879fbbbc1535e8028108ce68cbf4f7b9736` | scale detection、target pinning、失败保留、result provenance 与 delivery fence | 已推送 fork；尚未创建 upstream PR |
+| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `782232b7db4455b7339b669978a6e799753528df` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft，16 项成功；`e2e v1.35` 为 master 已有 quota informer 同步竞态 |
+| PR4 | [#7841](https://github.com/karmada-io/karmada/pull/7841) `49916cee119fef3cbee1977c3675f38c9c2f6322`，review range `ea87825092c2d225c574585626d1a3f844150bb0...49916cee119fef3cbee1977c3675f38c9c2f6322` | scale detection、target pinning、失败保留、result provenance 与 delivery fence | Open，Draft；DCO 成功，CI 已启动 |
 
-截至状态核对，PR0-PR3 均没有 human review decision，Tide 仍等待 `lgtm/approved`；checks 成功不等于功能切分已获接受。PR2/PR3 调整 ancestry 后的 `range-diff` 均为 `=`；PR2 residual 为 40 个文件、`+1445/-45`，PR3 residual 为 4 个文件、`+448/-6`。
+截至状态核对，PR0 已获 `lgtm` 但仍缺 `approved`；PR1-PR3 没有 human review decision。checks 成功不等于功能切分已获接受。PR2/PR3 调整 ancestry 后的 `range-diff` 均为 `=`；PR2 residual 为 40 个文件、`+1445/-45`，PR3 residual 为 4 个文件、`+448/-6`。
 
 ## 分片评审边界
 
@@ -71,7 +71,7 @@ taskmanager = 6 x 500m CPU
 2. **安全估算**：健康 accepted target 上的纯 scale-up 固定该 target，只估算正 delta；纯 scale-down 跳过 estimator。容量不足时不迁移整个 workload。target missing/terminating 才允许走既有 failover。
 3. **失败保留**：name change、mixed direction、requirements change、placement conflict、ordered `ClusterAffinities` 或无效结果均 fail closed，不覆盖 accepted `spec.clusters` 和现有 Work。新的 explicit reschedule 是受控恢复入口，但 ordered `ClusterAffinities` 仍明确排除。
 4. **持久接受**：scheduler 用带 `metadata.resourceVersion` 前置条件的 main-resource patch 同时写 result、placement 与三个 accepted identity；status 使用独立 CAS patch。两次写之间失败时，下一次 reconcile 可以判断应修复 status 还是继续调度。
-5. **冻结交付**：default scheduler 管理的 pending binding 在读取 source、删除 orphan Work、创建或更新 Work 前返回。result 接受后，再比较 source UID、`resourceVersion` 和重新解释的 component inputs；image-only 等非调度变化仍可传播。
+5. **冻结交付**：default scheduler 管理的 pending binding 在读取 source、删除 orphan Work、创建或更新 Work 前返回。result 接受后，再比较 source UID、`resourceVersion` 和重新解释的 component inputs；image-only 等非调度变化仍可传播。普通 multi-component placement 和仅由 `RequiredBy` 增加、没有自有 component result 的 target 保留旧交付语义。
 6. **兼容边界**：custom scheduler、suspended binding 和 feature-off 路径保留旧交付语义。legacy 自动 backfill 只覆盖可证明成功的 `Duplicated` 状态；其他对象需要 explicit reschedule。
 
 三个持久 identity：
@@ -105,7 +105,7 @@ go test -race -count=1 ./pkg/scheduler/core ./pkg/util
 make verify
 ```
 
-最终 PR4 是 1 个 DCO commit，修改 21 个文件，`+4454/-114`。已通过：
+最终 PR4 candidate 是 1 个 DCO commit，修改 21 个文件，`+4554/-114`。已通过：
 
 ```text
 go test -race -count=1 ./pkg/util ./pkg/controllers/binding ./pkg/scheduler ./pkg/scheduler/core ./pkg/scheduler/metrics
@@ -116,28 +116,34 @@ git diff --check
 
 PR2 和 PR4 的 base E2E compile 命令输出 `[no tests to run]`，只证明测试 package 可编译。没有执行 live multi-cluster Flink E2E，也没有运行完整 `make test`；真实 quota/estimator 行为仍未在集群中验证。ordered `ClusterAffinities` 是有意排除项，custom scheduler 与 suspended binding 则明确保留旧交付语义；这些兼容边界有单元测试覆盖，但不属于 default-scheduler 自动恢复合同。
 
+终审发现并修复了一个普通 placement 回归：旧 candidate 会要求所有 default-scheduler multi-component binding 都携带 component result，导致不产出该结果的普通 RB/CRB placement 和 `RequiredBy` target 无法创建 Work。新增的真实 `ensureWork` 回归在旧实现上三种场景均失败，在 `49916cee1` 上均通过；自有 accepted target 的 fail-closed 路径未放宽。
+
+仍有一个非阻塞残余：成功 scale 后缓存的是完整 desired assumption；若 workload 一直保持 `Healthy`，紧接着的第二次 scale-up 可能把自身旧 reservation 与新 delta 同时扣减，保守地等待五分钟 TTL 和队列重试。它不会覆盖 accepted Work，但 generation-aware assumption release 需要后续处理。
+
+[#7835 的 v1.35 红灯](https://github.com/karmada-io/karmada/actions/runs/31902564843/job/95056366571)不是本 stack 的产品代码路径：测试仅等待 ResourceQuota 对象可读便创建 Deployment，但 member1 estimator 尚未观察 quota，返回无上限并把 4 个副本全部调度到 member1；断言继续等待固定的 2/2 结果。失败 spec 与 helper 在当前 master 上相同，同 head v1.34/v1.36 均通过。artifact 无法再区分 informer 未见对象和 quota status 未初始化，但 producer-to-impact 链已经闭合。该红灯按 master E2E 同步竞态处理，不据此修改 PR3/PR4。
+
 ## 下一步
 
-1. 先判断 #7835 的 `e2e v1.35` 是否为代码失败或独立 flake；不要用其余矩阵成功替代 RCA。
-2. 经 exact target/head/title/body 确认后，只创建 PR4 Draft；本次不同时请求 reviewer 或转为 Ready。
-3. PR4 upstream CI 需要覆盖 live Flink scale-up、scale-down、容量不足、requirements rejection 与恢复。
-4. 等 PR0-PR3 review 信号后再调整依赖和 merge 顺序；当前 Open/Draft 状态不等于 maintainer acceptance。
+1. 观察 #7841 upstream CI，重点核对 live Flink scale-up、scale-down、容量不足、requirements rejection 与恢复。
+2. 等 PR0-PR3 review 信号后再调整依赖和 merge 顺序；当前 Open/Draft 状态不等于 maintainer acceptance。
 
 <a id="pr4-upstream-draft"></a>
 
-## PR4 upstream draft
+## PR4 upstream publication
 
 Exact target：`karmada-io/karmada:master`
 
-Exact head：`ranxi2001:feature/multi-component-failure-safe-rescheduling@40d82879fbbbc1535e8028108ce68cbf4f7b9736`
+Posted Draft PR：[karmada-io/karmada#7841](https://github.com/karmada-io/karmada/pull/7841)
 
-拟定标题：
+Exact head：`ranxi2001:feature/multi-component-failure-safe-rescheduling@49916cee119fef3cbee1977c3675f38c9c2f6322`
+
+已发布标题：
 
 ```text
 feat: reschedule scaled multi-component workloads
 ```
 
-拟定正文：
+已发布正文：
 
 ````markdown
 **What type of PR is this?**
@@ -156,17 +162,17 @@ Fixes #7492
 
 **Special notes for your reviewer**:
 
-- Depends on #7830, #7833, and #7835; all build on the API change in #7837. Review this PR's integrated residual as `ea8782509...40d82879f`.
-- Rollout order: update the API/CRD first, then the binding controller, then the scheduler. Otherwise keep `MultiplePodTemplatesScheduling` disabled until both runtime components are updated.
-- A healthy accepted target is not changed solely because of scale-up; a missing or terminating target can use the existing failover path.
-- Validation: `go test -race -count=1 ./pkg/util ./pkg/controllers/binding ./pkg/scheduler ./pkg/scheduler/core ./pkg/scheduler/metrics`; `go test -count=1 ./test/e2e/suites/base -run '^$'`; `make verify`. Full `make test` and live multi-cluster E2E were not run.
-- Codex assisted with implementation, tests, review, and PR drafting; I reviewed the final diff and validation results.
+- This integration branch contains patch-equivalent copies of #7830, #7833, and #7835 on #7837. Review the PR4-specific changes as `ea8782509...49916cee1`.
+- Rollout order: update the API/CRD first, then the binding-controller leader, then the scheduler; keep `MultiplePodTemplatesScheduling` disabled until all three are updated. A healthy accepted target stays pinned, while a missing or terminating target may use failover. A rapid consecutive scale-up may be delayed until the preceding scheduling assumption is released or expires; generation-aware release is follow-up work.
+- Validation: `go test -race -count=1 ./pkg/util ./pkg/controllers/binding ./pkg/scheduler ./pkg/scheduler/core ./pkg/scheduler/metrics`; `go test -count=1 ./test/e2e/suites/base -run '^$'` (compile only); `make verify`. Full `make test` and live multi-cluster E2E were not run.
+
+Codex assisted with implementation, tests, review, and PR drafting.
 
 **Does this PR introduce a user-facing change?**:
 
 ```release-note
-`karmada-scheduler`: With `MultiplePodTemplatesScheduling` enabled and the accepted target available, component replica changes now trigger rescheduling on that target; scale-up estimates only added replicas, scale-down skips estimation, and failed rescheduling keeps the previously accepted member-cluster configuration.
+`karmada-scheduler`: With `MultiplePodTemplatesScheduling` enabled and the accepted target available, component replica changes now trigger rescheduling on that target; scale-up estimates only added replicas, scale-down skips estimation, and a no-fit or unsupported transition keeps the previously accepted member-cluster configuration.
 ```
 ````
 
-创建或修改 upstream PR、评论、reviewer request 和 Ready transition 仍需单独确认 exact action/text。
+后续修改 upstream PR、评论、reviewer request 和 Ready transition 仍需单独确认 exact action/text。
