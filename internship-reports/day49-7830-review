@@ -1,0 +1,315 @@
+可以，按这个顺序做。**这次先不要继续改功能代码，先把机制实验做明白。**
+
+# #7830 行动方案
+
+### 1. 先 rebase，清掉历史包袱
+
+#7837 已经在 **2026-08-17** merge 到 master，commit 是 `1dd55a5`；而 #7830 页面目前仍显示 2 个 commits，并且之前还是 stack 在 #7837 上的。先让 diff 只剩你真正要做的东西。([GitHub][1])
+
+```bash
+git fetch upstream
+
+git checkout feature/multi-component-scale-rescheduling
+
+git rebase upstream/master
+
+git push --force-with-lease origin feature/multi-component-scale-rescheduling
+```
+
+rebase 后第一件事：
+
+```bash
+git diff upstream/master...HEAD --stat
+git diff upstream/master...HEAD
+```
+
+**先别修冲突之外的任何代码。**
+
+---
+
+### 2. 做 mentor 要的核心实验：v1alpha1 请求到底怎么进入 webhook
+
+这个实验是当前最高优先级。
+
+临时在 ResourceBinding validating webhook 入口打印：
+
+```go
+klog.Infof("kind=%+v", req.Kind)
+klog.Infof("requestKind=%+v", req.RequestKind)
+klog.Infof("resource=%+v", req.Resource)
+klog.Infof("requestResource=%+v", req.RequestResource)
+klog.Infof("subResource=%q", req.SubResource)
+klog.Infof("requestSubResource=%q", req.RequestSubResource)
+klog.Infof("object=%s", string(req.Object.Raw))
+klog.Infof("oldObject=%s", string(req.OldObject.Raw))
+```
+
+**不要提交这段代码，只用于实验。**
+
+Kubernetes 官方定义是：当 webhook 只注册 v1alpha2、`matchPolicy: Equivalent`，客户端请求 equivalent 的旧版本时，API Server 可以转换后再调用 webhook；此时 `kind` 是 webhook 实际收到的转换后版本，而 `requestKind` 保留客户端原始版本。([Kubernetes][2])
+
+但这次你不要靠文档直接下结论，**实际跑 Karmada。**
+
+---
+
+### 3. 跑 4 组请求，把结果记录成表
+
+先用 **v1alpha2** 创建一个确实有 component scheduling result 的 Binding：
+
+```yaml
+spec:
+  components:
+  - name: worker
+    replicas: 3
+
+  clusters:
+  - name: member1
+    replicas: 3
+    components:
+    - name: worker
+      replicas: 3
+```
+
+然后跑：
+
+```text
+Case A
+v1alpha2 GET / UPDATE main resource
+
+Case B
+v1alpha1 GET / UPDATE main resource
+
+Case C
+v1alpha2 UPDATE /status
+
+Case D
+v1alpha1 UPDATE /status
+```
+
+最终你要得到这样一张表：
+
+| Case        | webhook 是否触发 | Kind | RequestKind | Object 有 components? | OldObject 有 components? | 最终存储 components 是否还在 |
+| ----------- | ------------ | ---- | ----------- | -------------------- | ----------------------- | -------------------- |
+| v1a2 main   | ?            | ?    | ?           | ?                    | ?                       | ?                    |
+| v1a1 main   | ?            | ?    | ?           | ?                    | ?                       | ?                    |
+| v1a2 status | ?            | ?    | ?           | ?                    | ?                       | ?                    |
+| v1a1 status | ?            | ?    | ?           | ?                    | ?                       | ?                    |
+
+**这个表比你写 500 行代码有价值。**
+
+---
+
+### 4. 特别验证两个问题
+
+#### 问题 A：`APIReader.Get()` 到底有没有必要？
+
+你当前 PR 明确写着：
+
+> v1alpha1 guard uses an uncached v1alpha2 read
+
+而且为此给 webhook wiring 增加了 `APIReader`。([GitHub][3])
+
+实验重点看：
+
+```go
+req.OldObject
+```
+
+如果 v1alpha1 UPDATE 经过 conversion 后：
+
+```text
+req.Object
+    = 新对象，v1alpha2 表示
+
+req.OldObject
+    = 旧对象，v1alpha2 表示
+    = components 信息完整
+```
+
+那么：
+
+```go
+APIReader.Get(...)
+```
+
+大概率直接删除。
+
+因为 admission 自己已经把 old state 给你了，没理由再访问 apiserver。
+
+---
+
+#### 问题 B：`/status` guard 到底有没有必要？
+
+你目前 PR 专门增加了 v1alpha1 `/status` compatibility handling。PR 描述也明确把 main-resource 和 `/status` 都纳入了 guard。([GitHub][3])
+
+实验不要只看 webhook：
+
+```text
+v1alpha1 GET
+→ 修改 status
+→ PUT/PATCH /status
+→ 再 v1alpha2 GET
+```
+
+最后直接检查：
+
+```yaml
+spec.clusters[].components
+```
+
+还在不在。
+
+**如果还在，就把整个“v1alpha1 status 会丢 components”的理论删掉。**
+
+---
+
+### 5. 实验完以后再决定删什么
+
+我建议你的默认态度变成：
+
+> **没有实验或者明确 API contract 支持的代码，一律删。**
+
+优先审查这些：
+
+```text
+APIReader
+↓
+很可能删
+
+v1alpha1 /status webhook
+↓
+很可能删
+
+专门的 status compatibility E2E
+↓
+跟着行为一起删
+
+webhook config 为版本兼容新增的规则
+↓
+重新评估
+
+v1alpha1 write guard
+↓
+等实验结果再决定
+
+feature-gate old/new 大量 comparison
+↓
+重新问：PRD 是否真的要求 admission 层保证？
+```
+
+尤其你现在 #7830 的 PR 描述已经膨胀到：membership、duplicate、`requiredBy`、feature-gate rollback、v1alpha1 main/status protection。([GitHub][3])
+
+**不要默认这些都应该留下。**
+
+---
+
+### 6. 然后重新读 PRD，只回答三个问题
+
+拿着 PRD，不看现有实现，自己写三行：
+
+```text
+① 7830 要保护的具体 invariant 是什么？
+
+② 谁会破坏这个 invariant？
+
+③ 如果不校验，实际哪个 consumer 会出问题？
+```
+
+比如：
+
+```text
+TargetCluster.components 中不能出现重复 component
+
+谁会破坏？
+scheduler / API client？
+
+不校验会怎样？
+scheduler 后续读取时语义不确定？
+```
+
+如果第三问回答不了：
+
+> “可能有风险”“理论上不安全”
+
+先不要写。
+
+要能回答：
+
+> **哪个函数/模块会读取这份数据，它依赖什么假设，违反假设后具体会怎样。**
+
+---
+
+### 7. 把 `requiredBy`、feature gate 单独重新审一次
+
+这两个特别容易让 scope 爆炸。
+
+对每一个都画 producer/owner/consumer：
+
+```text
+requiredBy[].clusters[].components
+
+producer = ?
+owner    = ?
+consumer = ?
+为什么必须由当前 Binding webhook 校验？
+```
+
+如果你无法明确回答，就不要因为“类型也是 `[]TargetCluster`”而复用 validation。
+
+这就是这次 `GracefulEvictionTask` 给你的教训：**struct 长得像，不代表协议语义一样。**
+
+---
+
+### 8. 最终把 PR 压到“最小可解释 diff”
+
+你最终应该能面对 mentor 用 30 秒解释：
+
+> #7837 introduced the component scheduling result.
+> After rebasing, I verified how v1alpha1 requests are converted before admission.
+> I removed X/Y/Z because Kubernetes already guarantees those behaviors.
+> #7830 now only contains A and B because these are the two invariants that are not guaranteed elsewhere.
+
+如果最后实验发现：
+
+```text
+A、B 也没有明确需求
+```
+
+**那就允许结论是：#7830 不需要，关闭 PR。**
+
+这不是失败。比为了保住 PR 硬找理由强很多。
+
+---
+
+## 你今天最应该完成的顺序
+
+```text
+1. rebase #7837
+        ↓
+2. 不改功能代码
+        ↓
+3. 打 AdmissionRequest 日志
+        ↓
+4. v1alpha1 / v1alpha2 main-resource 实验
+        ↓
+5. v1alpha1 / v1alpha2 status 实验
+        ↓
+6. 记录 Kind / RequestKind / Object / OldObject
+        ↓
+7. 明确 conversion + admission 链路
+        ↓
+8. 删除 APIReader / status guard 等被证明冗余的代码
+        ↓
+9. 回到 PRD，重新确定 7830 最小职责
+        ↓
+10. 重写测试，只测试最终真正需要的行为
+```
+
+**今天先做到第 6 步，不要急着继续“修 #7830”。** Kubernetes CRD 多版本里，只有一个版本标记为 storage version，其他 served version 在读写过程中依赖转换；这正是你现在应该先吃透的底层机制。([Kubernetes][4])
+
+等你把 **四组实验日志**贴给我，我可以直接和你一起逐字段分析 `Kind / RequestKind / Object / OldObject`，然后判断 #7830 哪些代码该删、哪些真该留。
+
+[1]: https://github.com/karmada-io/karmada/pull/7837 "Introduce spec.clusters.components field for holding scheduled components by RainbowMango · Pull Request #7837 · karmada-io/karmada · GitHub"
+[2]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/?utm_source=chatgpt.com "Dynamic Admission Control"
+[3]: https://github.com/karmada-io/karmada/pull/7830 "feat: validate component scheduling results in bindings by ranxi2001 · Pull Request #7830 · karmada-io/karmada · GitHub"
+[4]: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/?utm_source=chatgpt.com "Versions in CustomResourceDefinitions"
