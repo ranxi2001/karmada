@@ -74,6 +74,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Cross-run occurrences, first hard failures, source-level no-self-heal chain, existing or closed fixes, current base behavior, and a counterfactual regression plan.
 - Test or fix cue: End the census with `READY / DONE / NEEDS_RCA / NO_FIX`. A same-SHA green rerun must not demote a repeated E3 defect; conversely, repeated terminal symptoms without a common causal edge must not be turned into timeout, generic retry, or defensive-nesting PRs.
 
+## Matrix Version Labels Must Be Bound To Runtime Roles
+
+- Pattern: The same version string can name a member cluster, host Kind cluster, embedded control-plane API server, component branch, or dependency image in different workflows; grouping failures by the displayed version alone can merge opposite compatibility directions.
+- Seen in: Karmada Day 50 scheduled E2E scan, where ordinary `v1.30.0` set `CLUSTER_VERSION` for member clusters while compatibility `v1.30.0` set `KARMADA_APISERVER_VERSION`. The former rejected `Complete=True` without `SuccessCriteriaMet=True`; the latter rejected that condition on a NonIndexed Job without `successPolicy`.
+- Miss symptom: Identical E2E timeout and matrix label are reported as one root cause, leading to a proposed unconditional field or condition change that fixes one matrix and breaks the other.
+- Review check: Before clustering by version, map every matrix axis and environment variable to the concrete runtime process/image it controls, then record all independently versioned peers in the request path.
+- Evidence to gather: Workflow YAML, setup-script defaults, checked-out branch SHA, container image/`inspect.json`, component startup version logs, and the first rejecting component's exact error.
+- Test or fix cue: Build role-labeled cases such as `old member -> new API server` and `new member -> old API server`. Require the proposed compatibility contract and regression tests to satisfy both directions before authorizing a fix PR.
+
 ## Recovery-Event Fixes Must Prove Semantic Equality And Termination
 
 - Pattern: Expanding an update predicate can restore a dropped recovery event while also enqueueing representation-only changes or creating a controller feedback loop.

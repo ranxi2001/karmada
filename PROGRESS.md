@@ -21,7 +21,7 @@
 
 ## Last Run
 
-- 2026-08-17：完成 [近期 E2E 失败归并分析](internship-reports/day50-karmada-recent-e2e-failure-scan-2026-08-17.md)：最近周末 32 个红 job 中 16 个归并为旧 member Job 缺少 `JobSuccessCriteriaMet` 的确定性 version-skew 缺陷，其余主要为 control-plane etcd 延迟和 Kind 生命周期失败；#7827 current head 全部 E2E checks 通过。
+- 2026-08-17：纠正并完成 [近期 E2E 失败归并分析](internship-reports/day50-karmada-recent-e2e-failure-scan-2026-08-17.md)：16 个 Job 红 job 是同一聚合边界的两个相反 version-skew 合同，普通矩阵为旧 member -> 新 API server，compatibility 矩阵为新 member -> 旧 API server v1.30；issue 可建，PR 需先确认版本化终态合同。
 - 2026-08-17：发布 PR4 Draft [#7841](https://github.com/karmada-io/karmada/pull/7841) at `49916cee1`；DCO 成功、CI 已启动。PR3 红灯归因为 master 已有 quota informer 同步竞态，不修改 PR3/PR4 产品代码。
 - 2026-08-17：把 #7492 的六份过程记录合并为一份 [PR stack 交接](internship-reports/issue7492-pr-stack-status.md#history-and-evidence)，保留当前 refs、最终合同、关键反例与验证边界。
 - 2026-08-16：PR2/PR3 residual 重放后 patch 等价，PR4 最终收敛为 `40d82879f`；focused race、base E2E compile 和 `make verify` 通过，fork source branch 已回读确认。
