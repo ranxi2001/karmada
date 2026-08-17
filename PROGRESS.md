@@ -15,12 +15,13 @@
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
 | [#7492 PR stack](internship-reports/issue7492-pr-stack-status.md#stack-overview) | PR0 #7837 已有 `lgtm`；PR1 #7830、PR2 #7833 checks 成功；PR3 #7835 红灯已归因为 master 已有 quota 同步竞态；PR4 [#7841](https://github.com/karmada-io/karmada/pull/7841) 已以 Draft 发布 | 观察 #7841 CI 与 PR0-PR3 review 信号；live Flink 行为仍待真实集群验证 |
-| [PR #7827 / Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md) | Open，head `6ebc4b459`；最终 diff 仅 `estimator_test.go`，focused validation 通过；live E2E 仍是边界 | 出现 current-SHA CI 或 review 新信号时处理 |
+| [PR #7827 / Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md) | Open，head `6ebc4b459`；最终 diff 仅 `estimator_test.go`，focused validation 与 current-SHA 3 个 upstream E2E jobs 通过；本地未运行 live E2E | 等待 maintainer review 新信号 |
 | [Day 39 Descheduler](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 汇报稿按整任务调度模型整理；仍缺真实 YAML 对生命周期、诊断、lock、回执与 cooldown 的证据 | 周一前拿真实 YAML 核对并试讲 |
 | [PR #7662 / Day 40](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) | Open，head `586f6fc3508e`；partial 一期限定 Deployment，10 个 stop gates 尚待确认 | `@zhy76` / `@RainbowMango` 回复或 proposal commit |
 
 ## Last Run
 
+- 2026-08-17：完成 [近期 E2E 失败归并分析](internship-reports/day50-karmada-recent-e2e-failure-scan-2026-08-17.md)：最近周末 32 个红 job 中 16 个归并为旧 member Job 缺少 `JobSuccessCriteriaMet` 的确定性 version-skew 缺陷，其余主要为 control-plane etcd 延迟和 Kind 生命周期失败；#7827 current head 全部 E2E checks 通过。
 - 2026-08-17：发布 PR4 Draft [#7841](https://github.com/karmada-io/karmada/pull/7841) at `49916cee1`；DCO 成功、CI 已启动。PR3 红灯归因为 master 已有 quota informer 同步竞态，不修改 PR3/PR4 产品代码。
 - 2026-08-17：把 #7492 的六份过程记录合并为一份 [PR stack 交接](internship-reports/issue7492-pr-stack-status.md#history-and-evidence)，保留当前 refs、最终合同、关键反例与验证边界。
 - 2026-08-16：PR2/PR3 residual 重放后 patch 等价，PR4 最终收敛为 `40d82879f`；focused race、base E2E compile 和 `make verify` 通过，fork source branch 已回读确认。
@@ -43,7 +44,7 @@
 
 - 观察 [#7841](https://github.com/karmada-io/karmada/pull/7841) CI；后续 body/comment、reviewer request 或 Ready transition 仍需再次确认 exact action/text。
 - 周一前用 Day 39 HTML 稿试讲，并用真实 YAML 核对生命周期、诊断、lock、handoff 和 cooldown。
-- #7827、#7662 只在 CI/review/proposal 出现新信号时继续。
+- #7827 等待 maintainer review；#7662 只在 review/proposal 出现新信号时继续。
 
 ## Stop Conditions
 
