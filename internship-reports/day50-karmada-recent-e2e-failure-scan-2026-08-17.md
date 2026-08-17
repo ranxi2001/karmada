@@ -87,6 +87,17 @@
 
 但该 PR 的 maintainer review 已明确保留 version-skew 边界：这个修改不能完全解决 #6414，只能在 control plane 与 member Kubernetes 版本一致时正常工作，[#6414 仍可能需要另一种方案](https://github.com/karmada-io/karmada/pull/6964#issuecomment-3591045723)。当前两套日志分别命中了“新 API server + 旧 member”和“旧 API server + 新 member”两个方向，正是当时已经声明、但 issue 关闭后未继续跟踪的边界。
 
+### 为什么 #6964 当时没有一次修完
+
+现有讨论能证明这是有意识的窄修复，不是完全遗漏：
+
+1. 当时的直接任务是让 [#6960](https://github.com/karmada-io/karmada/pull/6960) 把 compatibility 测试扩展到 Kubernetes v1.34；#6964 的 body 明确说补丁已在该 PR 验证，并准备回移 release branch。
+2. #6964 只在“所有 member 已经报告 `SuccessCriteriaMet=True`”时聚合该 condition。它没有为旧 member 合成新语义，也没有把目标 API server 的版本或 feature-gate capability 传入 `ParsingJobStatus`。
+3. #6964 的 body 在 review 前已经警告：`karmada-apiserver@v1.30.0` 管理 v1.32+ member 的场景可能失败，值得后续研究。维护者合入时再次明确该补丁只覆盖版本一致的组合。
+4. 完整修复不是再加一个 `if`：同一个普通 JobStatus 在新 API server 上必须带 condition，在旧 v1.30 API server 上又不能带。代码需要先有“按哪个目标能力生成合法终态”的合同，而当时的 thread 没有形成这个设计。
+
+#6414 随带有 `Fixes #6414` 的 #6964 合并而自动关闭。关闭动作证明该窄补丁完成了当时绑定的 PR，不证明 maintainer 评论中保留的 version-skew 场景已经解决。现有证据不能说明为什么此后没有人继续实现，例如优先级或人力原因；能确定的是风险已被明确记录，但没有留下独立 open issue 继续跟踪。
+
 修复合同应当是：Karmada 根据 member 状态得出统一的完成语义，同时向目标 Karmada API server 写入该版本允许的 JobStatus 表示。代码如何获知或规避版本化校验仍未确定；无条件合成 `JobSuccessCriteriaMet=True` 已被 v1.30 compatibility artifact 直接证伪，无条件删除也会重新触发较新 API server 的错误。因此目前可以写 issue，但还不能声称已有可提交的最小 PR 方案。
 
 ## 其余失败为何不应按业务 spec 归因
