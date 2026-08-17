@@ -2,13 +2,13 @@
 
 这个目录用于记录我在 Karmada 项目实习期间的学习、调研、源码阅读、实验、社区观察和问题。
 
-记录方式以实习生视角为主：当天看了哪些文档，跑了哪些命令，理解了哪些概念，遇到哪些问题，以及下一步准备继续研究什么。
+记录方式以实习生视角为主：这项工作查了哪些资料，跑了哪些命令，形成了什么结论，遇到哪些问题，以及下一步准备验证什么。
 
 ## 当前总目标
 
 在 2026 年 9 月前拿到 AgentCube Karmada 项目社区席位。
 
-这不是单纯的学习目标，而是社区贡献目标。后续日报和 TODO 优先围绕 upstream 可见证据组织：issue/PR 推进、CI 结果、review 响应、测试补强、会议提案和 mentor-facing 复盘。
+这不是单纯的学习目标，而是社区贡献目标。后续报告和 TODO 优先围绕 upstream 可见证据组织：issue/PR 推进、CI 结果、review 响应、测试补强、会议提案和 mentor-facing 复盘。
 
 ## 周总结
 
@@ -19,7 +19,7 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - [Week 5：稳定 CI 环境并建立 Flake 证据链](week5-summary.md)
 - [Week 6：从架构 Review 与证书收敛走向可验证的 Flake 修复](week6-summary.md)
 
-## 日报列表
+## 记录索引
 
 - [Day 1：Karmada #7598 依赖升级 follow-up 和 upstream PR](day1-karmada-7598-default-version-pr.md)
 - [Day 2：Karmada 项目理解和源码地图](day2-karmada-project-understanding.md)
@@ -72,15 +72,18 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - [Day 47：#7492 PR1 旧版本状态写入的数据保护设计](day47-issue7492-v1alpha1-status-data-loss-fix-design.md)（[时序 Mermaid](day47-issue7492-v1alpha1-status-data-loss.mmd)）
 - [Day 48：EstimatorAssumption 跨用例清理隔离与 PR #7827](day48-estimator-assumption-e2e-isolation-pr7827.md)
 - [Day 49：#7492 PR1 API、旧版本写入保护与 PR #7830 CI](day49-issue7492-pr1-api-compat-pr7830.md)
+- [#7492 PR0-PR4 Stack 状态、验证与 PR4 草稿](issue7492-pr-stack-status.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
 
 ## 建议记录格式
 
-每篇日报优先回答这些问题：
+同一 issue、PR 或连续实现栈默认维护一份按任务命名的报告；rebase、CI、PR body 和方案迭代直接更新这份报告，不再按天拆文件。只有形成可独立复用的调研、RCA、设计或 mentor 交付物时，才新增记录。
+
+每份报告优先回答这些问题：
 
 - `## 先说人话`：复杂 API、调度、controller、RCA、并发或生命周期分析，先用一个具体例子解释结论和当前能否行动，再进入字段与源码证据。
-- 今天的目标是什么？
+- 这项工作的目标是什么？
 - 读了哪些官方文档、源码文件、issue 或 PR？
 - 跑了哪些命令？成功和失败分别是什么？
 - 学到了哪些 Karmada / Kubernetes / 多集群控制面的概念？
@@ -88,7 +91,7 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - 哪些只是推测，需要后续验证？
 - 下一步最小行动是什么？
 
-日报正文和标题默认大部分使用中文；代码标识符、API 字段、命令、错误、上游标题、链接和短引用保留原文。通俗解释必须保持证据强度，不能把维护者建议写成共识、把待确认问题写成硬性要求，或把可能风险写成已经发生的故障。
+报告正文和标题默认大部分使用中文；代码标识符、API 字段、命令、错误、上游标题、链接和短引用保留原文。通俗解释必须保持证据强度，不能把维护者建议写成共识、把待确认问题写成硬性要求，或把可能风险写成已经发生的故障。
 
 遇到失败时不要只写“失败了”。至少记录命令、错误现象、初步原因、尝试过的方案、临时绕过方式和后续需要。
 
@@ -98,5 +101,5 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - 短期循环状态：写到根目录 `PROGRESS.md`。
 - 当前任务和优先级：写到 `todo.md`。
 - 反复出现的术语：写到 `intern-glossary.md`。
-- 当天学习、调试、源码阅读、社区分析：新建 `dayN-*.md`。
+- 学习、调试、源码阅读和社区分析：优先更新对应 task report；只有形成独立成果时才新增文件。
 - 可复用工作流：沉淀到 `.agents/skills/<skill-name>/SKILL.md`。

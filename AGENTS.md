@@ -42,10 +42,12 @@ Keep internship records on the `intern` branch unless the user explicitly asks o
 Use these files for local learning state:
 
 - `PROGRESS.md`: short loop memory only. Read it at the start of each work loop and update it at the end with last work, blockers, ruled-out paths, next step, and stop conditions.
-- `internship-reports/`: daily reports, architecture notes, source-reading records, benchmark notes, community triage notes, and mentor-facing summaries.
+- `internship-reports/`: task reports, architecture notes, source-reading records, benchmark notes, community triage notes, and mentor-facing summaries.
 - `internship-reports/todo.md`: current task inventory with status, priority, evidence, and next action.
 - `internship-reports/intern-glossary.md`: recurring Karmada, Kubernetes, multi-cluster, scheduler, and controller terms.
 - `.agents/skills/`: reusable workflows that are useful enough to repeat across projects or later Karmada tasks.
+
+Do not create a new day-numbered report for every rebase, CI transition, PR-body draft, or implementation iteration within the same issue or PR stack. Maintain one task-oriented canonical report and update or replace it as the work evolves. Create another report only when it is an independently useful artifact for the user or mentor. Process-only commands, push chronology, transient CI snapshots, and superseded drafts belong in Git history or the bounded `PROGRESS.md` / `todo.md` state, not in separate reports.
 
 When writing learning reports, include process blockers and debugging evidence, not just the final successful path. Record failed commands, observed errors, likely root causes, and workarounds. For abstract Kubernetes or distributed-systems concepts, add short Markdown notes such as `> 注释：...` or `> 分析：...` near the relevant paragraph so a future reviewer can read the report without chat context.
 
@@ -75,7 +77,7 @@ Use `.agents/skills/youtube-transcript-proofread/` for Karmada YouTube meeting e
 
 Use English for every newly created diagram or visual artifact in this Karmada workspace, including images stored only in internship reports, because they may later be reused in upstream issues, PRs, reviews, or community meetings. Do not generate Chinese-labeled diagrams unless the user explicitly requests a local-only Chinese learning artifact. Any upstream- or community-facing image must be English-only.
 
-Name report images and exported visual assets in `internship-reports/` with a `dayN-` prefix matching the report that uses them, and update both local Markdown links and raw GitHub image URLs when renaming.
+Name report images and exported visual assets in `internship-reports/` with the owning report's filename stem; legacy `dayN-` reports keep their existing prefix. Update both local Markdown links and raw GitHub image URLs when renaming.
 
 On the current Windows workspace only, draw.io is installed per-user at `C:\Users\ranxi\AppData\Local\Programs\draw.io\draw.io.exe` and is not on PATH. For drawio-skill exports on this Windows machine, use this full path before declaring draw.io unavailable; `drawio`, `draw.io`, and `C:\Program Files\draw.io\draw.io.exe` may fail even when the app is installed. On macOS or other machines, follow the normal drawio-skill detection order instead of assuming this Windows path.
 
