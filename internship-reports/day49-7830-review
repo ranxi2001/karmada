@@ -593,3 +593,138 @@ OldObject   = 原来是什么
 
 这就是你今天应该先搞清楚的主线，其他 `requiredBy`、feature gate、E2E 暂时都可以先放一边。
 
+---
+
+## 实验结果：v1alpha1 请求进入 webhook 后发生了什么
+
+### 先说人话
+
+实验回答了 mentor 提出的两个问题：
+
+1. v1alpha1 主资源请求通过 `matchPolicy: Equivalent` 进入 webhook 后，`Kind` 的确是 v1alpha2，
+   `RequestKind` 是 v1alpha1。
+2. 但是 webhook 收到的 `Object` 和 `OldObject` 都没有原来的 component data。只有 uncached
+   v1alpha2 读取仍能看到 storage 中的 component data。
+
+另外做了一个允许写入的反事实：保持相同 webhook rules 和 AdmissionReview 观测，只把 handler 临时改为
+`Allowed`。v1alpha1 main 和 `/status` 更新都返回 200，随后用 v1alpha2 GET 时，两处 component 字段都已经
+消失。因此，当前 guard 阻止的是本实验中已复现的数据丢失。
+
+### 实验环境
+
+- 时间：2026-08-17
+- PR candidate：`e1495093fcc04f6b220699eae79b08423bd0307f`
+- Base：`08f8a2016f20fc68544eb7cf66f360620db859b0`
+- API Server：Kubernetes `v1.34.0`，临时单节点 Kind
+- CRD：`resourcebindings.work.karmada.io`
+  - `v1alpha1`: `served=true`, `storage=false`
+  - `v1alpha2`: `served=true`, `storage=true`
+  - `conversion.strategy=None`
+- Webhook：直接运行 candidate 的 `pkg/webhook/resourcebinding.ValidatingAdmission`
+- Rules 与 #7830 一致：
+  - main resource：`v1alpha2 + matchPolicy: Equivalent`
+  - legacy status：`v1alpha1 + matchPolicy: Exact`
+- 请求方式：localhost-only `kubectl proxy` 加 raw HTTP PUT；URL 和请求体 `apiVersion` 均显式指定版本，
+  没有使用 typed client 或 hub conversion。
+
+每个 Case 使用独立 ResourceBinding。初始 v1alpha2 对象都包含：
+
+```yaml
+spec:
+  components:
+    - name: worker
+      replicas: 3
+  clusters:
+    - name: member1
+      components:
+        - name: worker
+          replicas: 3
+```
+
+日志只记录脱敏后的请求元数据、`Object`/`OldObject`/storage read 的长度、component 数量与 SHA-256，
+以及响应；不记录完整 Object、annotations、status 或 `UserInfo`。临时证书、kubeconfig 和日志均为 mode
+`0600`，未提交到 Git。
+
+### 四组请求结果
+
+表中的 `1/1` 表示 `spec.components` 有 1 项，`spec.clusters[*].components` 合计有 1 项；`0/0` 表示两处
+都为空。
+
+| Case | webhook | `Kind` | `RequestKind` | `Object` | `OldObject` | uncached v1alpha2 | HTTP | 最终 v1alpha2 storage |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| v1alpha2 main | 触发 | v1alpha2 | v1alpha2 | 1/1 | 1/1 | 1/1 | 200 | 1/1；annotation 写入成功 |
+| v1alpha1 main | 触发 | v1alpha2 | v1alpha1 | 0/0 | 0/0 | 1/1 | 403 | 1/1；annotation 未写入 |
+| v1alpha2 `/status` | 未触发 | N/A | N/A | N/A | N/A | N/A | 200 | 1/1；condition 写入成功 |
+| v1alpha1 `/status` | 触发 | v1alpha1 | v1alpha1 | 0/0 | 0/0 | 1/1 | 403 | 1/1；condition 未写入 |
+
+两条拒绝响应的 message 均为：
+
+```text
+component-aware bindings must be updated through work.karmada.io/v1alpha2
+```
+
+v1alpha1 main 的 AdmissionReview 关键字段为：
+
+```text
+Kind            = work.karmada.io/v1alpha2/ResourceBinding
+RequestKind     = work.karmada.io/v1alpha1/ResourceBinding
+Resource        = work.karmada.io/v1alpha2/resourcebindings
+RequestResource = work.karmada.io/v1alpha1/resourcebindings
+Object          = v1alpha2, components 0/0
+OldObject       = v1alpha2, components 0/0
+APIReader GET   = v1alpha2, components 1/1
+```
+
+这说明 API Server 确实把请求转换成了 webhook 注册的 v1alpha2 GVK，但 conversion 无法重新生成 v1alpha1
+中不存在的字段。`OldObject` 也已经是有损结果，不能代替 storage-state read。
+
+v1alpha1 `/status` 的 AdmissionReview 关键字段为：
+
+```text
+Kind               = work.karmada.io/v1alpha1/ResourceBinding
+RequestKind        = work.karmada.io/v1alpha1/ResourceBinding
+SubResource        = status
+RequestSubResource = status
+Object              = v1alpha1, components 0/0
+OldObject           = v1alpha1, components 0/0
+APIReader GET       = v1alpha2, components 1/1
+```
+
+Exact status rule 不做版本转换，webhook 收到的对象和旧对象都是 v1alpha1 表示。
+
+### 无 guard 反事实
+
+反事实沿用同一 CRD、rules、TLS 和 AdmissionReview 编码，只把 handler 改为记录后返回 `Allowed`。
+
+| 请求 | AdmissionReview 中的 `Object/OldObject` | 写入结果 | 随后 v1alpha2 GET |
+| --- | --- | ---: | --- |
+| v1alpha1 main | 0/0，storage read 为 1/1 | 200 | component data 变为 0/0；annotation 已写入 |
+| v1alpha1 `/status` | 0/0，storage read 为 1/1 | 200 | component data 变为 0/0；condition 已写入 |
+
+该结果与以下源码机制一致：`/status` 请求虽然只允许客户端修改 status，但 status strategy 操作的是该
+served-version Store 已经解码出的 v1alpha1 旧对象。这个旧对象无法表达 components；编码回 storage
+version 时，丢失的字段没有来源可以恢复。
+
+### Legacy 对象控制组
+
+对两个从未包含 component data 的 ResourceBinding，恢复 candidate 的真实 guard 后再发 v1alpha1 请求：
+
+| 请求 | HTTP | 最终结果 |
+| --- | ---: | --- |
+| v1alpha1 main | 200 | annotation 写入成功 |
+| v1alpha1 `/status` | 200 | condition 写入成功 |
+
+这说明 guard 的判定边界是 storage 中是否已有 component data，不是统一禁止所有 v1alpha1 客户端。
+
+### 当前结论与边界
+
+- `APIReader.Get()` 仍有必要：v1alpha1 main 的 `OldObject` 虽然已经转换成 v1alpha2 GVK，但 component data
+  是空的，无法判断 storage 中是否存在新版本字段。
+- v1alpha1 `/status` guard 仍有必要：允许同一请求后，v1alpha2 storage 的 component data 确实被清空。
+- v1alpha2 `/status` 不匹配当前两条 validating webhook rule，更新成功且 component data 保持不变。
+- 当前实验只执行了 namespaced `ResourceBinding`。`ClusterResourceBinding` 走同一 handler 和同构 rules，
+  但本轮没有把它写成“已实测”。
+- 这是 API Server、CRD conversion 和真实 candidate handler 的组件级实验，不是完整 Karmada 控制面 E2E；
+  scheduler、controller 和 member cluster 不在本次验证范围。
+
+实验结束后已停止 webhook/proxy 并删除唯一临时 Kind 集群。probe 源码不会进入 #7830 diff。
