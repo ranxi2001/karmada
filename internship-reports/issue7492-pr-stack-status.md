@@ -36,7 +36,7 @@ PR4 integration：
 | PR0 | [#7837](https://github.com/karmada-io/karmada/pull/7837) `76589a9d514543edc8c8ca47174cff360d3b832e` | `TargetCluster.Components` 等 API 基线 | Open，非 Draft，17 项 checks/DCO 成功，已有 `lgtm` |
 | PR1 | [#7830](https://github.com/karmada-io/karmada/pull/7830) `6ff28fe4a1d42b8a7980e60e0276306731c15656` | validation、feature-gate rollback 与 v1alpha1 防丢失保护 | Open，非 Draft，17 项 checks/DCO 成功 |
 | PR2 | [#7833](https://github.com/karmada-io/karmada/pull/7833) `98535c5413cca7a697ee754934d4d3a147f90597` | result producer、`ReviseComponents`、Work delivery、Flink customization | Open，Draft，17 项 checks/DCO 成功 |
-| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `782232b7db4455b7339b669978a6e799753528df` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft，16 项成功；`e2e v1.35` 为 master 已有 quota informer 同步竞态 |
+| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `782232b7db4455b7339b669978a6e799753528df` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft，16 项成功；`e2e v1.35` 的直接机制是 estimator 请求未使用已创建 quota，底层同步原因待确认 |
 | PR4 | [#7841](https://github.com/karmada-io/karmada/pull/7841) `49916cee119fef3cbee1977c3675f38c9c2f6322`，review range `ea87825092c2d225c574585626d1a3f844150bb0...49916cee119fef3cbee1977c3675f38c9c2f6322` | scale detection、target pinning、失败保留、result provenance 与 delivery fence | Open，Draft；DCO 成功，CI 已启动 |
 
 截至状态核对，PR0 已获 `lgtm` 但仍缺 `approved`；PR1-PR3 没有 human review decision。checks 成功不等于功能切分已获接受。PR2/PR3 调整 ancestry 后的 `range-diff` 均为 `=`；PR2 residual 为 40 个文件、`+1445/-45`，PR3 residual 为 4 个文件、`+448/-6`。
@@ -120,7 +120,7 @@ PR2 和 PR4 的 base E2E compile 命令输出 `[no tests to run]`，只证明测
 
 仍有一个非阻塞残余：成功 scale 后缓存的是完整 desired assumption；若 workload 一直保持 `Healthy`，紧接着的第二次 scale-up 可能把自身旧 reservation 与新 delta 同时扣减，保守地等待五分钟 TTL 和队列重试。它不会覆盖 accepted Work，但 generation-aware assumption release 需要后续处理。
 
-[#7835 的 v1.35 红灯](https://github.com/karmada-io/karmada/actions/runs/31902564843/job/95056366571)不是本 stack 的产品代码路径：测试仅等待 ResourceQuota 对象可读便创建 Deployment，但 member1 estimator 尚未观察 quota，返回无上限并把 4 个副本全部调度到 member1；断言继续等待固定的 2/2 结果。失败 spec 与 helper 在当前 master 上相同，同 head v1.34/v1.36 均通过。artifact 无法再区分 informer 未见对象和 quota status 未初始化，但 producer-to-impact 链已经闭合。该红灯按 master E2E 同步竞态处理，不据此修改 PR3/PR4。
+[#7835 的 v1.35 红灯](https://github.com/karmada-io/karmada/actions/runs/31902564843/job/95056366571)闭合了直接失败机制：测试仅等待 ResourceQuota 对象可读便创建 Deployment，处理 member1 请求的 estimator 没有使用该 quota，返回无上限并把 4 个副本全部调度到 member1；断言继续等待固定的 2/2 结果。失败 spec 与 helper 在当前 master 上相同，同 head v1.34/v1.36 均通过。artifact 无法证明底层原因一定是 informer 未见对象，也没有 master 基线复现，因此不把它写成已确认的 master 回归；当前只确认测试同步边界不足，不据此修改 PR3/PR4 产品代码。完整归并见 [Day 51](day51-karmada-recent-pr-ci-e2e-failures-2026-08-17.md#7835等待-member-api-对象不等于-estimator-已看到它)。
 
 ## 下一步
 

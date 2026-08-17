@@ -1,5 +1,7 @@
 # Day 50：Karmada 近期 E2E 失败归并分析
 
+> 范围说明：本文只分析 `schedule` 触发的周末 workflow，不解释 PR CI。近期 `pull_request` E2E 的独立统计与 RCA 见 [Day 51](day51-karmada-recent-pr-ci-e2e-failures-2026-08-17.md)。
+
 ## 先说人话
 
 截至 2026-08-17，Karmada 周末 E2E 矩阵看起来有很多测试同时失败，但这些红灯不能按 job 数量理解成同样多的独立缺陷。
