@@ -313,3 +313,283 @@ A、B 也没有明确需求
 [2]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/?utm_source=chatgpt.com "Dynamic Admission Control"
 [3]: https://github.com/karmada-io/karmada/pull/7830 "feat: validate component scheduling results in bindings by ranxi2001 · Pull Request #7830 · karmada-io/karmada · GitHub"
 [4]: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/?utm_source=chatgpt.com "Versions in CustomResourceDefinitions"
+
+
+可以。你先不要管代码，先把 **Kubernetes 多版本 + webhook** 理解成下面 3 张图。
+
+### 1. 最核心：v1alpha1 请求，不等于 webhook 收到 v1alpha1
+
+```mermaid
+flowchart LR
+    A["用户 / Client<br/>提交 v1alpha1 ResourceBinding"]
+    B["Kube API Server"]
+    C["版本转换<br/>v1alpha1 → v1alpha2"]
+    D["Validating Webhook<br/>#7830"]
+    E["写入 Storage Version"]
+    F["etcd"]
+
+    A -->|"请求 v1alpha1"| B
+    B --> C
+    C -->|"webhook 实际看到 v1alpha2 对象"| D
+    D -->|"允许"| E
+    E --> F
+```
+
+你之前最容易误解的是这里：
+
+```text
+客户端发 v1alpha1
+≠
+webhook 收到 v1alpha1
+```
+
+因为你的 webhook 注册的是 `v1alpha2 + matchPolicy: Equivalent`，API Server 可以先做 conversion，再把 **v1alpha2 对象**送给 webhook。
+
+所以 mentor 让你做实验，就是验证这条链。
+
+---
+
+### 2. `Kind` 和 `RequestKind` 为什么会不一样
+
+假设用户：
+
+```text
+PUT /apis/work.karmada.io/v1alpha1/resourcebindings/foo
+```
+
+实际可能是：
+
+```mermaid
+flowchart TD
+    A["Client<br/>请求版本：v1alpha1"]
+    B["API Server"]
+    C["Conversion"]
+    D["AdmissionRequest"]
+    E["Webhook Handler"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+
+    D --- F["RequestKind = v1alpha1<br/>表示：用户最开始请求什么版本"]
+    D --- G["Kind = v1alpha2<br/>表示：Webhook 实际收到什么版本"]
+```
+
+所以你实验时重点打印：
+
+```go
+req.Kind
+req.RequestKind
+```
+
+你大概率会看到：
+
+```text
+RequestKind = v1alpha1
+Kind        = v1alpha2
+```
+
+这句话你一定要记住：
+
+> **RequestKind 是“从哪来”，Kind 是“现在是什么”。**
+
+---
+
+### 3. 为什么 `components` 会成为问题
+
+两个版本能力不一样：
+
+```mermaid
+flowchart LR
+    A["v1alpha1 TargetCluster<br/><br/>name<br/>replicas"]
+    B["v1alpha2 TargetCluster<br/><br/>name<br/>replicas<br/>components"]
+
+    A -->|"转换到 v1alpha2"| C["name ✅<br/>replicas ✅<br/>components = empty"]
+    B -->|"转换到 v1alpha1"| D["name ✅<br/>replicas ✅<br/>components ❌ 无法表达"]
+```
+
+比如 v1alpha2 有：
+
+```yaml
+clusters:
+- name: member1
+  replicas: 3
+  components:
+  - name: worker
+    replicas: 3
+```
+
+转成 v1alpha1：
+
+```yaml
+clusters:
+- name: member1
+  replicas: 3
+```
+
+`components` 不是被“故意删除”，而是：
+
+> **v1alpha1 这个 API 数据结构根本没有地方装它。**
+
+这就是 conversion 机制。
+
+---
+
+## 那你现在 #7830 最大的问题在哪里？
+
+你原来的思路接近这样：
+
+```mermaid
+flowchart TD
+    A["发现客户端请求来自 v1alpha1"]
+    B["我担心 components 丢失"]
+    C["Webhook 额外 APIReader.Get()"]
+    D["重新读取当前 v1alpha2 Binding"]
+    E["检查旧 components"]
+    F["决定拒不拒绝"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+```
+
+mentor 的疑问是：
+
+> **你为什么需要自己再 GET 一次？Kubernetes AdmissionRequest 本身是不是已经给了你需要的信息？**
+
+因为 UPDATE webhook 本身有：
+
+```mermaid
+flowchart LR
+    A["AdmissionRequest"]
+
+    A --> B["Object<br/>准备写入的新对象"]
+    A --> C["OldObject<br/>修改前的旧对象"]
+```
+
+所以正确实验应该是：
+
+```mermaid
+flowchart TD
+    A["已有 v1alpha2 Binding<br/>components = worker:3"]
+    B["Client 用 v1alpha1 UPDATE"]
+    C["API Server conversion"]
+    D["Webhook"]
+    E["打印 Object"]
+    F["打印 OldObject"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+
+    F --> G{"OldObject 里面<br/>还有 components 吗？"}
+
+    G -->|"有"| H["APIReader.Get 很可能是多余的"]
+    G -->|"没有"| I["再研究是否真的需要额外读取"]
+```
+
+**这就是你下一步实验最重要的问题。**
+
+---
+
+## `/status` 又是什么问题？
+
+你之前担心：
+
+```text
+v1alpha1 更新 status
+↓
+因为它看不到 components
+↓
+把 spec.clusters[].components 干掉
+```
+
+但 `/status` 的设计本身就是：
+
+```mermaid
+flowchart LR
+    A["Client<br/>UPDATE /status"]
+    B["API Server"]
+    C["只更新 status"]
+    D["原来的 spec 保留"]
+
+    A --> B
+    B --> C
+    C --> D
+```
+
+也就是说，如果 Kubernetes 已经保证：
+
+```text
+/status 不能覆盖 spec
+```
+
+那你额外写：
+
+```text
+v1alpha1 /status component protection
+```
+
+就很可能属于：
+
+> **Kubernetes 已经替你保证了，你又重复实现了一遍。**
+
+所以 mentor 才会觉得 PR 越来越奇怪。
+
+---
+
+# 最终你脑子里只留这一张
+
+```mermaid
+flowchart TD
+    A["Client"]
+
+    A -->|"v1alpha1 请求"| B["Kube API Server"]
+    A -->|"v1alpha2 请求"| B
+
+    B --> C["API Version Conversion"]
+
+    C --> D["Validating Webhook"]
+
+    D --> E{"允许？"}
+
+    E -->|"Yes"| F["转换成 Storage Version"]
+    F --> G["etcd"]
+
+    E -->|"No"| H["Reject"]
+
+    D --- I["Kind<br/>Webhook 实际收到的版本"]
+    D --- J["RequestKind<br/>Client 原始请求版本"]
+    D --- K["Object<br/>新对象"]
+    D --- L["OldObject<br/>旧对象"]
+```
+
+你现在先把 4 个东西搞懂：
+
+```text
+Kind        = webhook 现在看到什么版本
+RequestKind = 用户原来请求什么版本
+
+Object      = 用户想写成什么
+OldObject   = 原来是什么
+```
+
+然后你的实验本质上就只问两个问题：
+
+```text
+① v1alpha1 请求进来以后：
+   Kind / RequestKind 到底是什么？
+
+② UPDATE 时：
+   OldObject 里面有没有原来的 components？
+```
+
+如果 **②答案是“有”**，那你现在为了找旧 components 加进去的 `APIReader.Get()` 基本就失去存在理由了。
+
+这就是你今天应该先搞清楚的主线，其他 `requiredBy`、feature gate、E2E 暂时都可以先放一边。
+
