@@ -35,13 +35,101 @@ master -> 1dd55a5d5 (PR0 merged)
 | 层级 | 公开对象 / exact head | 作用 | 2026-08-18 状态 |
 | --- | --- | --- | --- |
 | PR0 | [#7837](https://github.com/karmada-io/karmada/pull/7837) `76589a9d514543edc8c8ca47174cff360d3b832e` | `TargetCluster.Components` 等 API 基线 | 已合并为 `1dd55a5d57b416ef8c7fb5876a961d24e342c007` |
-| PR1 | [#7830](https://github.com/karmada-io/karmada/pull/7830) `4583e06d2050058d4ff8a3980fe587ea12a48c79` | `ReviseComponents` interpreter + Work delivery | Open，非 Draft；14 passed、4 pending、0 failed；无 human review decision |
-| PR2 | [#7833](https://github.com/karmada-io/karmada/pull/7833) `014c555f898cf575422b65d8c4fbb95e56295cea` | scheduler component result producer | Open，非 Draft；`e2e v1.34` 失败，其余已完成 checks 成功；无 human review decision |
-| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `9fb3992fd518aa13992efddb2a8405a21d1b5414` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft；`e2e v1.34/v1.36` 失败；无 human review decision |
-| PR4 | [#7841](https://github.com/karmada-io/karmada/pull/7841) `49916cee119fef3cbee1977c3675f38c9c2f6322` | scale detection、target pinning、失败保留、result provenance 与 delivery fence | Open，Draft；旧 integration history 的 checks 已结束，需要按当前 PR1/PR2 重新对齐 |
+| PR1 | [#7830](https://github.com/karmada-io/karmada/pull/7830) `4583e06d2050058d4ff8a3980fe587ea12a48c79` | `ReviseComponents` interpreter + Work delivery | Open，非 Draft；17 checks passed，Tide pending；无 human review decision |
+| PR2 | [#7833](https://github.com/karmada-io/karmada/pull/7833) `014c555f898cf575422b65d8c4fbb95e56295cea` | scheduler component result producer | Open，非 Draft；16 passed、1 E2E failed，Tide pending；无 human review decision |
+| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `9fb3992fd518aa13992efddb2a8405a21d1b5414` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft；15 passed、2 E2E failed，Tide pending；无 human review decision |
+| PR4 | [#7841](https://github.com/karmada-io/karmada/pull/7841) `49916cee119fef3cbee1977c3675f38c9c2f6322` | scale detection、target pinning、失败保留、result provenance 与 delivery fence | Open，Draft；17 checks passed，Tide pending；旧 integration history 需要按当前 PR1/PR2 重新对齐 |
 
-PR1-PR3 目前都没有 human review decision。PR1 的 checks 尚未结束；PR2/PR3 的 E2E 红灯需要另行分类，
-不影响本次对 #7830 职责边界的源码结论，也不能被写成当前栈已完成验证。
+PR1-PR3 目前都没有 human review decision。PR1 的实质 checks 已通过，只有 Tide 等待；PR2/PR3 的
+E2E 红灯需要另行分类。这些状态不影响本次职责边界的源码结论，也不能被写成当前栈已完成验证。
+
+## 与 maintainer draft `c14af2f` 的对齐和 gap
+
+[RainbowMango/karmada@c14af2f](https://github.com/RainbowMango/karmada/commit/c14af2f1119a66d4672a814cc80f7612943d35d3)
+只新增了一份 286 行的 `scheduling-result-for-components.md`，文档自标记为
+`Draft (design discussion, not yet a formal proposal)`。它是 maintainer 对数据流和分片的强方向证据，
+但不等于当前 PR 实现已获得 maintainer acceptance。
+
+总体结论是：**主路线高度一致，当前主要 gap 是缺少有效的 result validation 分片，以及
+#7841 还是 stale integration history。** #7835/#7841 的 scale rescheduling 与失败保留是 #7492
+在这条通用数据流之上追加的问题特定逻辑，不能因 maintainer draft 没有展开它们就判定为偏离。
+
+| Maintainer 建议分片 | 当前公开栈 | 判断 |
+| --- | --- | --- |
+| 1. API + codegen + ResourceBinding webhook validation | #7837 只合入了 API/codegen；当前 #7830/#7833/#7835 都没有 result validation | **真实 gap**：旧 #7841 历史中的 `validateComponentFields` 不属于任何当前有效分片 |
+| 2. Scheduler 双写 `Components` | #7833 在 scheduler 接受结果时写入 multi-component result | 对 #7492 当前范围对齐；未做 draft 更广的单组件 `Replicas + Components[0]` 双写 |
+| 3. `ReviseComponents` 全链路 + `ensureWork` | #7830 提供 interpreter contract、各扩展路径和 Work delivery | 核心职责对齐；提前带了 Flink 这一个 concrete consumer，是可接受的 vertical slice |
+| 4. thirdparty scripts + Flink E2E | #7830 只补 Flink script；旧 #7841 含 Flink E2E | 覆盖面比 draft 窄，且 E2E 依附的 integration history 已失效；本轮没有 live-run 证据 |
+| 5. FRQ / eviction / HPA 等下游迁移 | 不在当前 #7492 PR1-PR4 内 | 明确 deferred；不应为了对齐一份较广的演进 draft 扩大当前 scale-rescheduling scope |
+
+### 当前必须补的边界：result validation
+
+API 已允许任意 v1alpha2 client 写 `clusters[*].components`，而当前有效 PR 栈没有负责以下
+invariant 的 owner：
+
+- `clusters[*].components[*].name` 必须属于本 binding 的 `spec.components[*].name`；
+- 同一 target cluster 内 component name 不能重复；
+- feature gate 关闭时，不能引入或修改新格式的 scheduling result，同时需明确已存对象的回滚语义。
+
+这是 API/webhook 的职责，不应由 scheduler 假设“只有我会写”，也不应埋进最后的 activation
+PR。既然 #7837 已经合并，当前最清晰的修复是补一个窄的 validation follow-up，在生产者激活之前合入；
+如果必须减少 PR 数量，可将这一小段并入 #7833，但不应继续只存在于 stale #7841 中。
+
+### 有意不同的 ownership 语义：`requiredBy`
+
+Maintainer draft 建议 `mergeTargetClusters()` 对同名 component 取 `max`。当前 #7830 的规则是：
+本 binding 自己的 target 优先；只由 `requiredBy` 引入的 target 保留 cluster name，但清空 foreign
+`Components`。
+
+这个差异不是漏实现。`requiredBy` snapshot 中的 component assignment 属于 referring
+workload，其 component name 即使恰好与 dependency workload 同名，也不能自动变成后者的副本决策。
+当前做法把 `requiredBy` 限定为 propagation reachability，权责更清晰。它是对 draft 的有意修正，
+需要 maintainer 明确确认，不应对外描述为“已与 draft 完全等价”。
+
+### 延后而非当前 blocker 的范围
+
+- `GracefulEvictionTask.Components` 未随 #7837 合入，当前 #7492 也不做 partial component eviction；
+  继续延后比为 API 对称而扩大协议面更稳妥。
+- draft 的单组件双写、`ReviseReplica` fallback 和 Deployment/StatefulSet 原生 `GetComponents`
+  是 legacy-field convergence 路线；当前 PR 只覆盖 multi-template scale rescheduling。
+- FRQ result-based accounting、eviction、HPA、descheduler 和更多 thirdparty script 均应保持后续分片，
+  不与 #7841 的失败保留一次合入。
+
+### 我们超出 draft 的部分：provenance + delivery fence
+
+Maintainer draft 解决的是“如何表示 component result，并把它写回 Work”，没有定义
+“这份 result 对应 scheduler 接受过的哪一版 source input”。#7492 的失败语义使后一个问题
+不能被略过：旧 result `taskmanager=4` 与新 source `500m CPU` 可以被 #7830 组合成 scheduler
+从未接受过的 `4 x 500m CPU` Work。
+
+因此，旧 #7841 实现的 accepted requirements hash、result generation/spec identity、source UID/component
+校验、pending-result delivery fence 和失败保留，是 #7492 的必要安全扩展，不是与 draft 争夺职责。
+正确分工仍是 scheduler 持久化 accepted identity，binding controller 在交付边界消费并冻结 Work，
+ResourceInterpreter 不判断 freshness。这套扩展仍需 maintainer review，且必须在当前 PR heads 上重建后才是有效实现。
+
+## 2026-08-18 拆分质量复核
+
+当前分片的逻辑方向合理，但公开栈还没有形成可直接交给 reviewer 的一致历史。PR1-PR3 各自边界清楚；
+PR4 仍引用重构前的 validation 版 PR1，正文中“包含 #7830、#7833、#7835 patch-equivalent copies”的描述
+已经失效。整体可评价为“分片设计基本成立，integration PR 尚未重建”，不能按当前 #7841 直接请求 review。
+
+| PR | 拆分判断 | 依据 | 当前处理 |
+| --- | --- | --- | --- |
+| #7830 | 可接受的 delivery vertical slice | 2 commits、37 files、`+1276/-40`；文件多主要来自 interpreter API、生成物和测试。hook 与唯一生产 consumer 放在一起，避免单独合入无 consumer 的 API | 不再拆 PR；按两个 commits 分段 review，并明确 accepted-input freshness 属于后续硬依赖 |
+| #7833 | 当前最干净的分片 | 1 commit、2 files、`+102`；只在 scheduler 接受结果时写 `TargetCluster.Components` | 保持独立；feature gate 在 provenance + delivery fence 落地前必须保持关闭 |
+| #7835 | 合理的无副作用 planner | 1 commit、2 files、`+478/-6`；没有 production caller | 保持独立；更新已失效的 base/review range，并单独分类当前 E2E 红灯 |
+| #7841 | 目标合同原子，但当前 PR 不可 review | GitHub diff 为 76 files、`+8228/-171`；真正 residual 是 21 files、`+4554/-114`，其中大部分是 scheduler、binding 和 E2E tests。provenance、failure retention 与 delivery fence 共同构成安全激活合同，不宜按组件机械拆开 | 保留一个 activation PR，但先基于当前 PR1/PR2/PR3 重建，删除旧 validation/webhook copies，再验证 residual |
+
+建议保留 #7830/#7833/#7835 的当前分片，但在 producer 激活前补上独立的 result-validation
+follow-up，期间保持 Alpha gate `MultiplePodTemplatesScheduling=false`，最后从最新 `master`
+重建 PR4。更严格的 owner-boundary 方案是让
+PR2 同时持久化 accepted-input provenance、PR1 只在 delivery fence 通过后消费 result，再把 PR4 缩成纯
+activation；该方案边界更完整，但会再次 force-push PR1/PR2 并增加 review churn，当前没有 maintainer 指示
+要求这样重排。
+
+推荐的 merge / rollout 约束是：API 已由 #7837 合入；binding delivery 先于 scheduler producer 部署；
+PR4 安全合同合入并完成 runtime component 升级前，不启用 `MultiplePodTemplatesScheduling`。这是一项工程建议，
+尚未获得 maintainer acceptance。
 
 ## 分片评审边界
 
@@ -135,9 +223,10 @@ PR2 和 PR4 的 base E2E compile 命令输出 `[no tests to run]`，只证明测
 
 ## 下一步
 
-1. 等 #7830 checks 完成，并核对 reviewer 是否接受“interpreter + delivery adapter”的分片定位。
+1. 补一个窄的 result-validation follow-up，只管 API invariant 与 gate-off 写入边界，不恢复已删除的广泛 mixed-version 实验代码。
 2. 分类 #7833/#7835 当前 E2E 红灯，不把单次 CI 现象直接写成产品代码根因。
-3. 按当前 PR1/PR2/PR3 heads 重新对齐 #7841；保留 provenance + delivery fence 合同，删除旧分片副本。
+3. 按当前 PR1/PR2/PR3 heads 重新对齐 #7841；保留 provenance + delivery fence 合同，删除旧 validation/producer copies。
+4. 请 maintainer 分别确认 `requiredBy` 只承载 reachability 的语义，以及 provenance/fence 作为 #7492 安全扩展的必要性。
 
 <a id="pr4-upstream-draft"></a>
 

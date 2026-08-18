@@ -591,6 +591,22 @@ PR body 声明 root CAs preserved、第一版不做 CA rotation；internal etcd 
 
 本轮是只读 upstream review：未 push、未编辑 PR body、未 resolve thread、未发布 review/comment、未 request reviewer。
 
+## 2026-08-18 当前 head 拆分复核
+
+当前 upstream head 是 `bf24e47ce3bdecc9771b99fe85ac082253496a87`：1 commit、8 files、
+`+2031/-28`。新增行主要集中在 `cert_rotation.go`（630 行）和 `deploy_test.go`（1144 行）；范围仍是一个
+用户动作 `karmadactl init --cert-mode=rotate`，没有混入 controller、Helm、operator 或 CA rotation。
+
+上一轮三个 P1 边界在当前源码中已有对应处理：`buildRotateCertConfigs()` 合并旧 leaf SAN，
+`validateLocalAdminKubeconfigIdentity()` 比较 client certificate public-key identity，external etcd 路径保留并
+校验现有 CA/client credentials、拒绝 replacement。这个快照只证明旧 finding 的代码方向已覆盖；本轮没有
+重跑完整测试或重新判定 merge readiness。
+
+从 PR 拆分看，不建议再按文件切分 #7697。证书续签、init-managed local kubeconfig 刷新、Secret preflight
+和 update-only 写入共同构成一次恢复操作；拆开会产生“Secret 已续签但本地管理凭据仍旧”之类的中间合同。
+external etcd credential rotation 已明确排除并 fail closed，因此当前 scope 可以维持一个 PR。其主要剩余成本是
+安全审查和 human review，不是 PR 主题混杂。
+
 ## Stop Conditions
 
 本任务只在以下条件全部满足后标记 `DONE`：

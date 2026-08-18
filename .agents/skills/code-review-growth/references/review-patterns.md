@@ -478,3 +478,12 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: Identify the fields owned by scheduling, the component that interprets them, and which non-scheduling source changes are allowed to flow independently.
 - Evidence to gather: Referenced UID and resource version, interpreted component replicas and requirements, accepted input hash, pending-result state, and event ordering between source, detector, scheduler, and delivery controller.
 - Test or fix cue: Check UID first; accept an exact resource-version match; otherwise compare normalized scheduler inputs through the existing interpreter. Freeze the entire delivery only while those inputs are pending, and test a same-update config plus scale failure.
+
+## Stacked PR Rewrites Can Orphan Contract Owners
+
+- Pattern: After one PR in a dependent stack is force-pushed, rebased, or narrowed, an old integration branch can still contain its removed code while no current reviewable PR owns that invariant. Green integration checks and old patch-equivalence claims do not repair the ownership gap.
+- Seen in: `karmada-io/karmada#7492`, where result validation remained in the stale history of `#7841` after current `#7830` was rebuilt as interpreter plus Work delivery and `#7833` remained producer-only.
+- Miss symptom: A stack inventory lists API, producer, consumer, and activation PRs, sees the validation files somewhere in the cumulative diff, and concludes the contract is covered without mapping it to a current exact head and mergeable dependency.
+- Review check: For every required invariant, name one current PR owner and verify the code in that PR's actual base-to-head diff. Recompute each residual after every history rewrite, then compare PR-body dependency and patch-equivalence claims with current patch identities.
+- Evidence to gather: Exact bases and heads, commit ancestry, patch IDs or residual diffs, current and stale file lists, feature-gate default, merge/rollout order, and the design or API contract that requires each invariant.
+- Test or fix cue: Restore an orphaned invariant in a narrow owner-aligned follow-up or the nearest current owner, rebuild the integration branch from current heads, update the PR body, and keep activation disabled until every required owner is present in the deployable stack.
