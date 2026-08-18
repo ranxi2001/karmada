@@ -48,6 +48,67 @@ result 是否仍对应当前 source”。`ResourceInterpreter` 知道 `taskmanag
 [`day49-7830-review-component-ownership.mmd`](day49-7830-review-component-ownership.mmd)。按仓库 export gate
 只保留 `.mmd`，本轮未生成 PNG/SVG。
 
+## 为什么会改 37 个文件
+
+这 37 个文件不代表 37 个独立行为变更。根因是 `ResourceInterpreter` 不是一个单实现接口：
+同一个 operation 需要同时贯通 config API、声明式 Lua、自定义 webhook、内置 thirdparty rule、
+`karmadactl interpret` 的规则认知、配置 webhook 校验和生成的 CRD/OpenAPI/applyconfiguration。
+最后 binding controller 还要成为这个 operation 的 production consumer。
+
+按 base `1819ee7bd` 到 head `4583e06d2` 的 `--numstat` 分类：
+
+| 文件类型 | 数量 | 行数 | 为什么需要 |
+| --- | ---: | ---: | --- |
+| 测试与 fixture | 11 | `+690/-0` | 覆盖 interpreter 各路径、Flink 字段改写、fail-closed、legacy fallback 和 `requiredBy` ownership；占全部新增行约 54% |
+| 生成代码与发布 schema | 9 | `+214/-2` | `ComponentRevision` 和 webhook request 的 `DesiredComponents` 是 config API 变化，必须同步 CRD、OpenAPI、deepcopy 和 applyconfiguration |
+| 手写产品/工具代码 | 17 | `+372/-38` | 定义 operation，打通四类 interpreter 入口，添加 Flink 映射，并在 `ensureWork` 中消费 result |
+
+从 commit 维度看更清楚：
+
+- `997a594b1` 是 capability commit：35 files、`+839/-27`。它让 `ReviseComponents` 能够被配置、调用和测试，
+  但尚没有 Work-delivery consumer。
+- `4583e06d2` 是 consumer commit：2 files、`+437/-13`。真正产品逻辑只在
+  `pkg/controllers/binding/common.go` 的 `+76/-13`，另外 361 行是 binding 回归测试。
+
+### 主要文件组和职责
+
+| 文件组 | 主要改动 | 权责边界 |
+| --- | --- | --- |
+| `pkg/apis/config/v1alpha1/` | 新增 `InterpreterOperationReviseComponents`、`ComponentRevision` 和 webhook request 的 `DesiredComponents` | 定义扩展合同和序列化形状；不决定调度结果 |
+| `pkg/resourceinterpreter/interpreter.go` | 在顶层 interface 和 dispatcher 中加 `ReviseComponents` | 按 configurable Lua -> custom webhook -> built-in thirdparty -> native 的既有顺序找 hook；不判断 result freshness |
+| `customized/declarative/` 与 `customized/webhook/` | 让 Lua 能接收 component list，让 webhook context 传递 `DesiredComponents` 并校验 patch response | 提供两种用户扩展机制；只负责 object patch |
+| `default/thirdparty/.../FlinkDeployment/` | 内置 Lua 要求完整的 `jobmanager` + `taskmanager` result，拒绝 unknown/duplicate/missing component，再写入两个 replica 字段 | 拥有 Flink CRD 字段映射；不拥有 placement 或 capacity 决策 |
+| `pkg/controllers/binding/common.go` | `ensureWork()` 在 override 之前调用 `reviseWorkloadReplicas()`；有 component result 时优先用新 hook，否则只在 source 与 result 完全匹配时原样交付，不匹配则 fail closed | 消费已持久化结果并创建/更新 Work；不生成 result、不估算容量 |
+| `mergeTargetClusters()` | 本 binding 的 target 优先；`requiredBy` 只新增传播目标，并清空 foreign `Components` | dependency 只借 cluster reachability，不继承 referring workload 的 replica assignment |
+| `pkg/util/interpreter/`、`pkg/karmadactl/interpret/`、`pkg/webhook/configuration/` | 让规则集和配置校验认识新 operation；CLI 因没有 component-assignment 输入而显式拒绝直接执行 | 工具/配置一致性；不是 production result producer |
+
+### 实际交付路径
+
+以 `TargetCluster.Components = [{jobmanager, 1}, {taskmanager, 4}]` 为例：
+
+1. binding controller 从 `ResourceBinding.spec.clusters[]` 读到 member cluster 的 accepted result。
+2. `ensureWork()` clone 当前 source workload，然后调用 `reviseWorkloadReplicas()`。
+3. `ResourceInterpreter` 选中 Flink 的 `componentRevision` Lua rule。
+4. Lua 校验 component 集合，把 1/4 分别写入 `spec.jobManager.replicas` 和
+   `spec.taskManager.replicas`。
+5. binding controller 再应用 OverridePolicy，保持“override 优先级最高”的旧合同，最后创建或更新 Work。
+6. 如果对象没有 `ReviseComponents` hook，只有当 `GetComponents()` 解释出来的 name/replicas
+   与 result 完全相同才放行；不同则返回 error，不交付一份副本数不匹配的 Work。
+
+### 这个 PR 明确不管什么
+
+- 不产生 `TargetCluster.Components`；这是 scheduler producer #7833 的职责。
+- 不比较 scale delta，不调 estimator；这是 #7835/#7841 的 scheduler 路径。
+- 不校验 ResourceBinding 中 result 的 API invariant；旧 validation 实现已被 force-push 移出当前 PR。
+- 不证明 result 仍对应当前 source requirements；这需要 scheduler-owned provenance 与
+  binding-side delivery fence。
+- 当前只有 Flink 内置 component revision；native Deployment/StatefulSet 和其他 thirdparty workload
+  未因这个 PR 获得新的 component revision 能力。
+
+因此，从 review 角度不应按 37 个文件平铺。先审 `4583e06d2` 的 `common.go` 确认
+consumer 语义，再审 `997a594b1` 的 config contract -> dispatcher -> Lua/webhook -> Flink 链路，
+最后对生成物做机械一致性核对。文件数大，但当前主题仍是一个可识别的 delivery vertical slice。
+
 ## 当前 Review Finding
 
 ### P1 scope / merge gate：不要把副本 result 当成完整 source acceptance
@@ -95,7 +156,7 @@ dependency workload、legacy `ReviseReplica` 和 mixed own/inherited target 路�
 - 讨论：当前 human comments 都针对 force-push 前的 API/validation diff；当前 head 尚无 human review
   decision；
 - 本轮只执行 `git diff --check upstream/master...upstream/pr-7830`，未重复运行 PR body 已报告的 focused
-  tests；核对时 upstream checks 为 14 passed、4 pending、0 failed。
+  tests；2026-08-18 最新核对时 17 checks passed，只有 Tide pending。
 
 ## 2026-08-17 已被替换实现的历史实验
 

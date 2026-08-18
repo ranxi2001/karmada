@@ -21,6 +21,7 @@
 
 ## Last Run
 
+- 2026-08-18：完成 [PR #7830 文件规模与职责拆解](internship-reports/day49-7830-review.md#为什么会改-37-个文件)：37 files 中 11 个是测试/fixture、9 个是生成/schema、17 个是手写代码；主链仍是 `ReviseComponents` capability + binding Work delivery。未发布 upstream review/comment。
 - 2026-08-18：#7841 已用 exact lease 从 `9a18960ea` 更新到 `b2b27ad01`；4 个 lint 问题完成本地 staticcheck、focused/race、`make verify` 和 diff checks，新 CI 已启动。完成 [Day52 多组件设计答辩](internship-reports/day52-issue7492-multi-component-pr-design-defense.md)。
 - 2026-08-18：复审 [PR #7830 当前 head](internship-reports/day49-7830-review.md#当前-review-finding)：组件职责放置合理，但当前 delivery 可组合“旧 accepted replicas + 新 source requirements”；完整功能必须依赖 scheduler-owned provenance + binding delivery fence。新增 [职责图](internship-reports/day49-7830-review-component-ownership.mmd)，未发布 upstream review。
 - 2026-08-17：完成 [近期 PR CI E2E 归并](internship-reports/day51-karmada-recent-pr-ci-e2e-failures-2026-08-17.md)：51 次 `pull_request` workflow 中 12 次失败，19 个红 E2E job 归并为 12 个确定性契约问题、1 个已确认直接机制但底层原因待定的 estimator 同步问题、6 个环境/control-plane 故障；与 Day 50 的 schedule 样本分开处理。
