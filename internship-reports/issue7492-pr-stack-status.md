@@ -1,6 +1,6 @@
 # #7492 多组件调度 PR 栈交接
 
-> 状态核对：2026-08-17。PR 和 CI 状态会变化，技术合同与验证边界以本文记录的 exact SHA 为准。
+> 状态核对：2026-08-18。PR 和 CI 状态会变化，技术合同与验证边界以本文记录的 exact SHA 为准。
 
 这份文档合并原先分散的六份记录，只保留后续评审、发布和维护仍需要的信息。已发布的 PR 正文、rebase 命令、push 过程和被替代的设计可从 Git 历史或对应 GitHub PR 查询，不再单独维护副本。
 
@@ -8,46 +8,52 @@
 
 ## 先说人话
 
-#7492 已拆成五个公开 PR，最后一片目前以 Draft 形式供 CI 和评审：
+#7492 的公开 PR 在 PR0 合并后重新拆分：
 
-- PR0 提供 API 字段；
-- PR1 保护这些字段不被非法或旧版本写入破坏；
-- PR2 生成组件调度结果，并在 Work 交付时应用结果；
+- PR0 已合并，提供 API 字段；
+- PR1 提供 `ReviseComponents` interpreter 能力，并在 Work 交付时应用组件结果；
+- PR2 只生成并持久化 scheduler component result；
 - PR3 计算扩缩容时需要估算的副本变化；
-- PR4 把前述能力接入 scheduler，并在重新调度失败时保留旧结果和现有 Work。
+- PR4 的旧 candidate 把前述能力接入 scheduler，并在重新调度失败时保留旧结果和现有 Work。
 
-公开的 PR1、PR2、PR3 都直接建立在 PR0 上，是三个 sibling PR。PR4 为了提前验证最终组合，在本地 integration history 中依次复制 PR1、PR2、PR3，再提交自己的 residual。两种历史用途不同：公开 sibling PR 便于分别 review，integration history 用于验证组合后的源码和 focused tests。
+当前 PR1/PR2 已从最新 `master` 重建；PR3 尚保持原 planner history。PR4 `49916cee1` 仍包含重构前
+PR1/PR2 的 patch-equivalent copies，只能作为 provenance、delivery fence 与失败保留合同的历史实现证据，
+不能当作当前分片已组合完成。
 
 ```text
-公开 PR：
-master -> 76589a9d5 (PR0)
-                    |-> 6ff28fe4a (PR1)
-                    |-> 98535c541 (PR2)
-                    `-> 782232b7d (PR3)
+master -> 1dd55a5d5 (PR0 merged)
+                    |-> 4583e06d2 (PR1: interpreter + delivery)
+                    |-> 014c555f8 (PR2: result producer)
+                    `-> 9fb3992fd (PR3: planner, older ancestry)
 
-PR4 integration：
-76589a9d5 -> PR1 copy -> PR2 copy -> ea8782509 (PR3 copy) -> 49916cee1 (PR4)
+旧 PR4 integration：... -> old PR1 copy -> old PR2 copy -> PR3 copy -> 49916cee1
+当前要求：保留 PR4 自身合同，按新 PR1/PR2/PR3 heads 重新对齐
 ```
 
 ## 当前状态
 
-| 层级 | 公开对象 / exact head | 作用 | 2026-08-17 状态 |
+| 层级 | 公开对象 / exact head | 作用 | 2026-08-18 状态 |
 | --- | --- | --- | --- |
-| PR0 | [#7837](https://github.com/karmada-io/karmada/pull/7837) `76589a9d514543edc8c8ca47174cff360d3b832e` | `TargetCluster.Components` 等 API 基线 | Open，非 Draft，17 项 checks/DCO 成功，已有 `lgtm` |
-| PR1 | [#7830](https://github.com/karmada-io/karmada/pull/7830) `6ff28fe4a1d42b8a7980e60e0276306731c15656` | validation、feature-gate rollback 与 v1alpha1 防丢失保护 | Open，非 Draft，17 项 checks/DCO 成功 |
-| PR2 | [#7833](https://github.com/karmada-io/karmada/pull/7833) `98535c5413cca7a697ee754934d4d3a147f90597` | result producer、`ReviseComponents`、Work delivery、Flink customization | Open，Draft，17 项 checks/DCO 成功 |
-| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `782232b7db4455b7339b669978a6e799753528df` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft，16 项成功；`e2e v1.35` 的直接机制是 estimator 请求未使用已创建 quota，底层同步原因待确认 |
-| PR4 | [#7841](https://github.com/karmada-io/karmada/pull/7841) `49916cee119fef3cbee1977c3675f38c9c2f6322`，review range `ea87825092c2d225c574585626d1a3f844150bb0...49916cee119fef3cbee1977c3675f38c9c2f6322` | scale detection、target pinning、失败保留、result provenance 与 delivery fence | Open，Draft；DCO 成功，CI 已启动 |
+| PR0 | [#7837](https://github.com/karmada-io/karmada/pull/7837) `76589a9d514543edc8c8ca47174cff360d3b832e` | `TargetCluster.Components` 等 API 基线 | 已合并为 `1dd55a5d57b416ef8c7fb5876a961d24e342c007` |
+| PR1 | [#7830](https://github.com/karmada-io/karmada/pull/7830) `4583e06d2050058d4ff8a3980fe587ea12a48c79` | `ReviseComponents` interpreter + Work delivery | Open，非 Draft；14 passed、4 pending、0 failed；无 human review decision |
+| PR2 | [#7833](https://github.com/karmada-io/karmada/pull/7833) `014c555f898cf575422b65d8c4fbb95e56295cea` | scheduler component result producer | Open，非 Draft；`e2e v1.34` 失败，其余已完成 checks 成功；无 human review decision |
+| PR3 | [#7835](https://github.com/karmada-io/karmada/pull/7835) `9fb3992fd518aa13992efddb2a8405a21d1b5414` | component comparison 与 scale estimation planner，本身不激活生产入口 | Open，Draft；`e2e v1.34/v1.36` 失败；无 human review decision |
+| PR4 | [#7841](https://github.com/karmada-io/karmada/pull/7841) `49916cee119fef3cbee1977c3675f38c9c2f6322` | scale detection、target pinning、失败保留、result provenance 与 delivery fence | Open，Draft；旧 integration history 的 checks 已结束，需要按当前 PR1/PR2 重新对齐 |
 
-截至状态核对，PR0 已获 `lgtm` 但仍缺 `approved`；PR1-PR3 没有 human review decision。checks 成功不等于功能切分已获接受。PR2/PR3 调整 ancestry 后的 `range-diff` 均为 `=`；PR2 residual 为 40 个文件、`+1445/-45`，PR3 residual 为 4 个文件、`+448/-6`。
+PR1-PR3 目前都没有 human review decision。PR1 的 checks 尚未结束；PR2/PR3 的 E2E 红灯需要另行分类，
+不影响本次对 #7830 职责边界的源码结论，也不能被写成当前栈已完成验证。
 
 ## 分片评审边界
 
-- **PR2**：负责 scheduler result producer、`ReviseComponents` interpreter/delivery 链、Flink customization 和 `RequiredBy` ownership；单组件 `Divided` 调度保留 scalar result，变化后的多组件结果缺少 revision hook 时 fail closed。它不负责 scale detection、增量估算、重新调度或失败保留。这个范围比 maintainer Draft 中建议的 PR2 更宽，仍需 reviewer 确认拆分是否合适。
+- **PR1**：负责 `ReviseComponents` interpreter/delivery 链、Flink customization 和 `RequiredBy`
+  ownership。它消费 `TargetCluster.Components`，但不生成 result，也不判断 result 是否对应当前 source input。
+- **PR2**：只负责 scheduler result producer。它把 scheduler 接受的 per-component replica assignment 持久化到
+  `TargetCluster.Components`，不理解 CRD 内部字段路径，也不负责 Work delivery。
 - **PR3**：按组件名比较 desired 与 accepted 结果；纯 scale-up 只规划正 delta，纯 scale-down 不调用 estimator，缺快照或不支持的形状使用 full desired。predicate/planner 在该分片中没有生产调用者，因此 PR3 自身不改变生产行为。
-- **PR4**：才把 scale change 接入 scheduler，并负责 target pinning、失败保留、result provenance 和 delivery fence。PR4 的 integration history 只能证明组合可构建和局部合同成立，不能代替各 sibling PR 的独立 review。
+- **PR4**：把 scale change 接入 scheduler，并负责 target pinning、失败保留、result provenance 和 delivery
+  fence。其 `49916cee1` integration history 只能证明旧组合的局部合同，需按当前 PR1/PR2 重新对齐。
 
-## PR4 为什么需要重做
+## 当前完整功能为什么仍需要 PR4 合同
 
 旧 prototype 只保存组件名和副本数。假设已经接受：
 
@@ -63,9 +69,11 @@ taskmanager = 6 x 500m CPU
 
 旧逻辑只估算新增的 `2 x 500m`，却可能在成功后交付完整的 `6 x 500m`；失败时也可能保留 4 个副本，却把每个副本的资源需求改成 `500m`。因此“副本数结果没变”不能证明旧 Work 应当接受最新 source。
 
-最终 PR4 增加 accepted requirements identity 和 Work delivery fence：资源需求变化不能借旧结果通过；scheduler 尚未接受新结果时，binding controller 也不能提前更新或删除 Work。
+旧 PR4 candidate 增加 accepted requirements identity 和 Work delivery fence：资源需求变化不能借旧结果通过；
+scheduler 尚未接受新结果时，binding controller 也不能提前更新或删除 Work。当前拆分仍需要这套合同，但
+必须重新对齐代码历史和 PR 依赖。
 
-## PR4 最终合同
+## 旧 PR4 candidate 已证明的目标合同
 
 1. **判断 pending**：受支持的单集群 placement 尚无 component result、desired 与 accepted 的 name/replicas 不同、requirements hash 不同，或已有 accepted component result 后 placement 离开该形状时，进入 pending。
 2. **安全估算**：健康 accepted target 上的纯 scale-up 固定该 target，只估算正 delta；纯 scale-down 跳过 estimator。容量不足时不迁移整个 workload。target missing/terminating 才允许走既有 failover。
@@ -84,7 +92,10 @@ taskmanager = 6 x 500m CPU
 
 requirements hash 的输入是按 name 排序的 `Name + ReplicaRequirements`，不含 replicas；replicas 由 `TargetCluster.Components` 单独保存。result-generation token 对应 main patch 接受的 binding generation。scheduling-spec hash 覆盖接受后的完整 `ResourceBindingSpec`，只清除 source `ResourceVersion` 并规范化 component 顺序。
 
-当前 PR4 设计的安全 rollout 前提是 `API/CRD (#7837) -> new binding controller leader -> new scheduler`。这还不是 maintainer 已接受或 mixed-version live E2E 已证明的发布合同；无法保证两个 runtime component 都已更新时，应保持 Alpha feature gate `MultiplePodTemplatesScheduling` 关闭。
+旧 PR4 candidate 的安全 rollout 前提是 `API/CRD (#7837) -> new binding controller leader -> new scheduler`。
+这还不是 maintainer 已接受或 mixed-version live E2E 已证明的发布合同；重新对齐前也不是当前 PR 栈的有效
+集成结论。无法保证两个 runtime component 都已更新时，应保持 Alpha feature gate
+`MultiplePodTemplatesScheduling` 关闭。
 
 <a id="history-and-evidence"></a>
 
@@ -124,8 +135,9 @@ PR2 和 PR4 的 base E2E compile 命令输出 `[no tests to run]`，只证明测
 
 ## 下一步
 
-1. 观察 #7841 upstream CI，重点核对 live Flink scale-up、scale-down、容量不足、requirements rejection 与恢复。
-2. 等 PR0-PR3 review 信号后再调整依赖和 merge 顺序；当前 Open/Draft 状态不等于 maintainer acceptance。
+1. 等 #7830 checks 完成，并核对 reviewer 是否接受“interpreter + delivery adapter”的分片定位。
+2. 分类 #7833/#7835 当前 E2E 红灯，不把单次 CI 现象直接写成产品代码根因。
+3. 按当前 PR1/PR2/PR3 heads 重新对齐 #7841；保留 provenance + delivery fence 合同，删除旧分片副本。
 
 <a id="pr4-upstream-draft"></a>
 

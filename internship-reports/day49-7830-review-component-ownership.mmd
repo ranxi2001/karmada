@@ -1,0 +1,53 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    fontFamily: "Arial"
+  flowchart:
+    curve: basis
+    htmlLabels: true
+---
+flowchart LR
+    subgraph INPUT["Desired-state ownership"]
+        SOURCE["Source workload<br/>current specification"]:::source
+        DETECTOR["Resource detector<br/>extract current components"]:::process
+        CURRENT[("Binding current input<br/>resource reference + spec.components")]:::state
+    end
+
+    subgraph DECISION["Scheduling ownership"]
+        SCHEDULER["Scheduler<br/>decide placement and capacity"]:::process
+        ACCEPTED[("Accepted result<br/>spec.clusters[].components")]:::state
+        PROVENANCE[("Accepted input provenance<br/>required downstream, absent from #7830")]:::risk
+    end
+
+    subgraph DELIVERY["Delivery ownership"]
+        BINDING["Binding controller<br/>gate and assemble Work"]:::process
+        INTERPRETER["ResourceInterpreter<br/>map component names to workload fields"]:::process
+        WORK[("Work manifest")]:::state
+    end
+
+    subgraph DEPENDENCIES["Dependency reachability"]
+        DISTRIBUTOR["Dependencies distributor<br/>snapshot referrer targets"]:::external
+        REQUIRED[("requiredBy<br/>cluster reachability only")]:::state
+    end
+
+    SOURCE -.->|source event| DETECTOR
+    DETECTOR -->|current replicas and requirements| CURRENT
+    CURRENT -->|scheduling input| SCHEDULER
+    SCHEDULER -->|accepted per-cluster replicas| ACCEPTED
+    CURRENT -.->|accepted input identity| PROVENANCE
+    ACCEPTED -.->|result identity| PROVENANCE
+    SOURCE -->|latest object fetched by name| BINDING
+    ACCEPTED -->|replica assignment| BINDING
+    PROVENANCE -.->|required follow-up delivery fence| BINDING
+    BINDING -->|desired object + accepted assignment| INTERPRETER
+    INTERPRETER -->|field-level revision| WORK
+    DISTRIBUTOR -.->|referrer snapshots| REQUIRED
+    REQUIRED -->|add target cluster; drop foreign components| BINDING
+
+    classDef source fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef process fill:#d5e8d4,stroke:#82b366,color:#14532d;
+    classDef state fill:#fff2cc,stroke:#d6b656,color:#713f12;
+    classDef external fill:#f5f5f5,stroke:#666666,color:#262626,stroke-dasharray:5 5;
+    classDef risk fill:#f8cecc,stroke:#b85450,color:#7f1d1d,stroke-dasharray:6 4;

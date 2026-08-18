@@ -1,31 +1,108 @@
-# Day 49：PR #7830 Mentor Review 与多版本写入实验
+# Day 49：PR #7830 职责边界复审与多版本写入实验
 
-- 日期：2026-08-17
+- 日期：2026-08-17 至 2026-08-18
 - 相关 Issue：[#7492](https://github.com/karmada-io/karmada/issues/7492)
-- 相关 PR：[#7830](https://github.com/karmada-io/karmada/pull/7830)、[#7837](https://github.com/karmada-io/karmada/pull/7837)
+- 相关 PR：[#7830](https://github.com/karmada-io/karmada/pull/7830)、[#7833](https://github.com/karmada-io/karmada/pull/7833)、[#7841](https://github.com/karmada-io/karmada/pull/7841)
 - 实验对象：`ResourceBinding`
 
-这份记录整理周会 mentor 对 PR #7830 的意见，以及随后完成的真实 API Server 实验。mentor 要求先暂停
-功能扩展，通过实验回答 `OldObject` 是否保留 component data、`APIReader` 是否必要、v1alpha1
-`/status` 是否真的会破坏 v1alpha2 storage，再决定删除或保留代码。
+> 2026-08-18 更新：PR #7830 已 force-push 为 `4583e06d2050058d4ff8a3980fe587ea12a48c79`，当前
+> diff 是 `ReviseComponents` interpreter 能力与 Work delivery；原 validation、feature-gate rollback 和
+> v1alpha1 write guard 已全部退出该 PR。本文后半部的 API Server 实验仍是有效机制证据，但只描述已被
+> 替换的旧实现，不能当作当前 diff 的代码说明。
 
 ## 先说人话
 
-实验确认：只要 v1alpha2 `ResourceBinding` 已经保存 component scheduling result，v1alpha1 客户端再更新
-主资源或 `/status`，都有可能把这些新字段从 storage 中清空。
+当前 PR 的正确定位是“把已经存在的 component scheduling result 翻译成具体 Work 字段”，不是“判断这份
+result 是否仍对应当前 source”。`ResourceInterpreter` 知道 `taskmanager` 应写到
+`spec.taskManager.replicas`；它不应判断 scheduler 是否已经接受本次 CPU、内存、placement 或 source
+版本变化。
 
-具体表现如下：
+具体例子：scheduler 上次接受的是 `taskmanager = 4 x 100m CPU`，用户一次更新为
+`taskmanager = 6 x 500m CPU`。当前 #7830 会读取最新 source，再用旧 result 把副本数改回 4；Flink
+脚本只改 `replicas`，所以可能生成 `4 x 500m CPU` 的 Work。旧 result 只证明“4 个副本被接受”，没有
+证明“500m CPU 也被接受”。
 
-- v1alpha1 main request 通过 `matchPolicy: Equivalent` 进入 webhook 后，`Kind` 是 v1alpha2，
-  `RequestKind` 是 v1alpha1；但 `Object` 和 `OldObject` 的 component data 都是 `0/0`。
-- v1alpha1 `/status` request 进入 Exact rule 后，`Object` 和 `OldObject` 同样是 `0/0`。
-- uncached v1alpha2 `APIReader.Get()` 能从 storage 读到完整的 `1/1` component data。
-- 临时关闭 guard 后，两类 v1alpha1 写入都返回 200；随后 v1alpha2 GET 显示 component data 已变成
-  `0/0`。
-- 从未包含 component data 的 legacy Binding 仍可通过 v1alpha1 更新 main resource 和 `/status`。
+因此本轮结论是：
 
-因此，PR #7830 中的 v1alpha1 write guard、uncached `APIReader` 和独立 status rule 都有实验依据，不能
-仅根据 webhook 已提供 `OldObject` 或 status subresource 的一般语义删除。
+- `ReviseComponents` 放在 ResourceInterpreter、由 binding controller 在生成 Work 时调用，组件定位正确；
+- #7830 自身没有 accepted-input provenance 或 delivery fence，不能单独宣称 failed reschedule 下的完整
+  fail-closed 交付；
+- 该接受性协议应由 scheduler 持久化、binding controller 消费。旧 #7841 candidate 已实现 provenance
+  与 delivery fence，但其 integration history 仍包含 force-push 前的 PR1/PR2，需要按当前拆分重新对齐；
+  不要让 ResourceInterpreter 或 binding controller 用一次直接 API read、重试或副本数相等来猜
+  scheduler acceptance；
+- `requiredBy` 只借用 referring binding 的目标集群。当前代码丢弃 foreign `Components`、保留 dependency
+  自身字段的方向正确。
+
+## 当前 PR 的组件权责
+
+| 角色 | 拥有的事实或动作 | 不应承担的责任 |
+| --- | --- | --- |
+| source + detector | 从当前 workload 提取 `spec.components`、`ReplicaRequirements` 和 `ResourceVersion` | 不决定 placement 或 accepted result |
+| scheduler | 计算并持久化 `spec.clusters[].components`；完整方案还要持久化 accepted input identity | 不知道 CRD 内部 replica 字段路径 |
+| binding controller | 在交付边界读取 accepted result、执行 delivery gate、生成或保留 Work | 不重新估算容量，也不凭 cache/API freshness 推断调度成功 |
+| ResourceInterpreter | 把 name-keyed assignment 映射到 workload-kind 的字段 | 不决定 result 新鲜度、placement 或 retry 合同 |
+| dependencies distributor | 把 referring binding 的目标集群写入 `requiredBy` snapshot | 不把 referring workload 的 component assignment 变成 dependency 的 assignment |
+
+职责图的 canonical source 是
+[`day49-7830-review-component-ownership.mmd`](day49-7830-review-component-ownership.mmd)。按仓库 export gate
+只保留 `.mmd`，本轮未生成 PNG/SVG。
+
+## 当前 Review Finding
+
+### P1 scope / merge gate：不要把副本 result 当成完整 source acceptance
+
+当前 binding controller 按名字读取最新 workload，而 `reviseWorkloadReplicas()` 在发现
+`TargetCluster.Components` 和 `ReviseComponents` hook 后立即改写副本。Flink 的
+`ReviseComponents` 只写 `jobManager.replicas` 与 `taskManager.replicas`，但同一 customization 的
+`GetComponents` 会把 CPU、memory 和 PodTemplate scheduling requirements 作为 scheduler input。
+
+这证明一个可达窗口：detector 已把新 source 写入 Binding、scheduler 尚未接受或最终拒绝新 input 时，
+binding controller 仍可把“旧副本 result + 新 requirements”写入 Work。证据是当前 head 的
+`pkg/controllers/binding/binding_controller.go:126-138`、`pkg/controllers/binding/common.go:156-172`、
+`pkg/util/helper/binding.go:287-327`，以及 Flink customization
+`pkg/resourceinterpreter/default/thirdparty/resourcecustomizations/flink.apache.org/v1beta1/FlinkDeployment/customizations.yaml:185-245`。
+这是 `CODE` 级可达路径；本轮没有 live E2E 或生产日志，不写成已观测事故。
+
+最小处理不是给 binding controller 增加 direct GET 或 generic retry，而是明确 PR 依赖：
+
+1. 保留 PR body 当前的 delivery-side 定位，并补充它不提供 accepted-input freshness；
+2. 把 scheduler-owned provenance + binding delivery fence 作为完整功能和 rollout 的硬依赖；旧 #7841
+   candidate 已证明这套方向可以实现，但需要按当前 PR1/PR2 拆分重新对齐后才能作为合并依据；
+3. 如果 reviewer 要求 #7830 独立合并后就满足 fail-closed 合同，应把真正消费
+   `TargetCluster.Components` 的 production call 推迟到 fence 同时落地，而不是在本 PR 猜 freshness。
+
+这条 finding 不否定当前代码相对旧行为的局部改善：旧路径本来就可能传播整个新 source，当前 hook 至少
+能保留 accepted replica count。问题是 PR 的定位和独立合同不能超过它实际证明的范围。
+
+## `requiredBy` 权责复核
+
+`DependenciesDistributor` 在 `BindingSnapshot.Clusters` 中复制 referring binding 的完整 schedule result，
+但 dependency binding 只需要这些 cluster names 来补充传播目标。#7830 在合并 inherited-only target 时
+清除 `TargetCluster.Components`，同时让本 binding 自己已经拥有的同名 target 优先，这两点都符合 owner
+边界，也有 unit + real `ensureWork` 测试。
+
+现有 scalar `TargetCluster.Replicas` 仍会随 snapshot 保留，这是旧 `requiredBy` 合同，不应仅因本 PR 新增
+component delivery 就顺带重构。若后续要统一为“inherited target 只携带 reachability”，应单独审计所有
+dependency workload、legacy `ReviseReplica` 和 mixed own/inherited target 路径。
+
+## 当前 Review Surface 与状态
+
+- reviewed head：`4583e06d2050058d4ff8a3980fe587ea12a48c79`，base
+  `1819ee7bd392a7e2c750897b57b47acda4dc005c`；2 commits、37 files、`+1276/-40`；
+- 深读：interpreter API/实现、binding delivery、Flink rule、`requiredBy` producer/consumer、相关 unit tests；
+  generated OpenAPI/CRD/applyconfiguration 只核对生成范围；
+- 讨论：当前 human comments 都针对 force-push 前的 API/validation diff；当前 head 尚无 human review
+  decision；
+- 本轮只执行 `git diff --check upstream/master...upstream/pr-7830`，未重复运行 PR body 已报告的 focused
+  tests；核对时 upstream checks 为 14 passed、4 pending、0 failed。
+
+## 2026-08-17 已被替换实现的历史实验
+
+以下内容整理当时 mentor 对 validation 版本的意见，以及真实 API Server 实验。实验确认：只要 v1alpha2
+`ResourceBinding` 已保存 component scheduling result，v1alpha1 客户端再更新主资源或 `/status`，都有
+可能把新字段从 storage 清空；uncached v1alpha2 read 能看到 webhook `OldObject` 已丢失的数据。这个结论
+仍适用于未来 legacy-write 设计，但对应代码已不在当前 #7830。
 
 ## 业务场景
 
