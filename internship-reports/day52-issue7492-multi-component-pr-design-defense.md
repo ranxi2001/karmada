@@ -1,7 +1,7 @@
 # Day 52：#7492 多组件调度 PR 设计与答辩
 
-> 证据快照：2026-08-18。公开实现以 `#7841@9a18960ea5f307df744784e00688e9c5987c7056`
-> 为准；修复 lint 后的本地候选为 `b2b27ad01c79ec8cb355461a674110c59d6fb3bf`，尚未推送。
+> 证据快照：2026-08-18。公开实现以 `#7841@b2b27ad01c79ec8cb355461a674110c59d6fb3bf`
+> 为准；前一 head `9a18960ea5f307df744784e00688e9c5987c7056` 的首次 CI lint 失败。
 > PR 和 CI 状态只代表本文记录时刻。
 
 ## 先说人话
@@ -111,7 +111,7 @@ flowchart TB
 | [#7833](https://github.com/karmada-io/karmada/pull/7833) | `014c555f8` | scheduler 如何产生 result | `AssignReplicas()` 写完整 component snapshot，现有 patch 流程自然持久化 |
 | [#7830](https://github.com/karmada-io/karmada/pull/7830) | `4583e06d2` | result 如何变成 Work | commit A 增加 `ReviseComponents`，commit B 在 binding delivery 中消费，并处理 `RequiredBy` ownership |
 | [#7835](https://github.com/karmada-io/karmada/pull/7835) | `9fb3992fd` | 已知 accepted snapshot 后，容量怎么算 | 纯 scale-up 算正 delta，纯 scale-down 跳过 estimator，unknown/mixed 显式拒绝；equal 由 activation 当作 steady state |
-| [#7841](https://github.com/karmada-io/karmada/pull/7841) | `9a18960ea` | 何时触发、何时接受、失败如何保留 | reschedule routing、provenance、delivery fence、CAS commit、恢复与 E2E |
+| [#7841](https://github.com/karmada-io/karmada/pull/7841) | `b2b27ad01` | 何时触发、何时接受、失败如何保留 | reschedule routing、provenance、delivery fence、CAS commit、恢复与 E2E |
 
 拆分依据不是文件数，而是职责：API 不产生结果，scheduler 不理解 Flink 字段，interpreter 不判断 freshness，
 planner 不决定何时调度。#7841 把 trigger、accepted commit 和 failure retention 放在一起，是为了避免出现
@@ -119,17 +119,17 @@ planner 不决定何时调度。#7841 把 trigger、accepted commit 和 failure 
 
 ### 为什么 #7841 有五个 commits
 
-公开 integration branch 的五个 commits 是：
+当前公开 integration branch 的五个 commits 是：
 
 ```text
 014c555f8  #7833 result producer
 32d2e45d5  #7830 ReviseComponents capability 的 patch-equivalent copy
 db8073d38  #7830 Work delivery 的 patch-equivalent copy
 bdcc01b66  #7835 corrected planner 的 patch-equivalent copy
-9a18960ea  #7841 activation residual
+b2b27ad01  #7841 activation residual + lint fix
 ```
 
-本地候选 `b2b27ad01` 是对第五个 commit 的 amend，只修 lint；它不是第六个 commit。
+`b2b27ad01` 是对前一第五个 commit `9a18960ea` 的 amend；lint fix 没有增加第六个 commit。
 
 前四个是尚未合入 `master` 的依赖，不是 #7841 重复实现。它们分别提供 producer、interpreter、consumer
 和 planner；等对应 PR 合并后，rebase 会自然只剩最后一个 residual commit。提前 squash 不会减少 GitHub diff，
@@ -187,7 +187,7 @@ scheduler 不能用一次 Kubernetes API 请求同时更新 Binding spec/annotat
 
 ## 源码定位
 
-| 设计点 | `#7841@9a18960ea` 中的入口 |
+| 设计点 | `#7841@b2b27ad01` 中的入口 |
 | --- | --- |
 | source snapshot hash | `pkg/util/eventfilter/eventfilter.go`、`pkg/detector/detector.go` |
 | transition / pending / requirements hash | `pkg/util/binding.go` |
@@ -222,10 +222,10 @@ E2E package compile。
 E2E compile 输出 `[no tests to run]`，只证明 package 可编译，不是 live multi-cluster E2E。精确命令和 SHA
 归属统一记录在 [stack 状态页](issue7492-pr-stack-status.md#validation)，不在答辩稿复制动态清单。
 
-截至 2026-08-18（Asia/Shanghai），首次 upstream #7841 CI 的 lint job 因 1 个导出注释和 3 个 gocyclo
+前一 head `9a18960ea` 的首次 upstream #7841 CI lint job 因 1 个导出注释和 3 个 gocyclo
 阈值问题失败；其余已结束的非 E2E checks 均通过，三个 base E2E jobs 当时仍在运行。这是确定性代码质量门禁，
-不能写成 flake，也不改变上面的设计结论。本地候选 `b2b27ad01` 已通过 upstream 同款 staticcheck、
-focused/race tests、`make verify` 和 diff checks；新 CI 结果应在发布后回填到
+不能写成 flake，也不改变上面的设计结论。修复后的 `b2b27ad01` 已通过 upstream 同款 staticcheck、
+focused/race tests、`make verify` 和 diff checks，并已触发新一轮 CI；最终结果回填到
 [stack 状态页](issue7492-pr-stack-status.md)。
 
 ## 尚未证明和明确排除的范围
@@ -257,7 +257,7 @@ accepted requirements hash 和 detector-observed source hash，并在 binding co
 做 delivery fence。result main patch 和 status patch 分开时，再用 result generation 或 scheduling-spec hash
 修复 split write。功能 tree 的 focused/race 与完整 `make test` 已有本地证据；lint-only 候选还通过了
 staticcheck、focused/race 和 `make verify`。live E2E 和 mixed-version rollout 仍是明确未完成项，
-首次 upstream lint 的四个问题尚待发布后 CI 验证。
+首次 upstream lint 的四个问题已修复，正在等待新 exact-head CI 验证。
 
 ## Mentor 常问问题
 
@@ -331,7 +331,7 @@ fence 和 failure retention 共同定义一次安全 activation。
 ### 14. 现在是否已经 production-ready？
 
 不能这样说。#7837 已合并，其余 PR 尚未获得实质性 human review；live E2E、mixed-version rollout、admission
-validation 和公开 head 的 CI lint 都仍是明确门禁。
+validation 和新 exact-head CI 都仍是明确门禁。
 
 ### 15. 目前最需要 maintainer 决定什么？
 
@@ -341,7 +341,7 @@ fail-closed / explicit recovery 语义，以及 admission validation 与 feature
 ## 答辩时不要说的三句话
 
 1. 不说“整套设计已经被 maintainer 接受”；已合并的是 #7837，其余仍在 review 前后阶段。
-2. 不说“E2E 已通过”；本地只做了 E2E compile，公开 head 的 CI lint 已红，本地修复尚未推送。
+2. 不说“E2E 已通过”；本地只做了 E2E compile，新 exact-head CI 仍在运行。
 3. 不说“webhook 已保护所有 component result”；当前栈没有这份 admission validation。
 
 ## 证据入口

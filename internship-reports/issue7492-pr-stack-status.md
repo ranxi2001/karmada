@@ -1,6 +1,6 @@
 # #7492 多组件调度 PR 栈状态
 
-> 状态核对：2026-08-18 17:15（Asia/Shanghai）。动态 PR / CI 状态以 GitHub 为准；本文只保存后续
+> 状态核对：2026-08-18 17:22（Asia/Shanghai）。动态 PR / CI 状态以 GitHub 为准；本文只保存后续
 > review 和发布仍需要的当前事实，不再维护 rebase、push 或旧 PR body 过程记录。
 
 <a id="stack-overview"></a>
@@ -8,13 +8,12 @@
 ## 先说人话
 
 #7492 已按职责拆成五层：API、result producer、interpreter / Work delivery、scale planner 和安全 activation。
-#7837 已合并；#7830、#7833、#7835 仍独立 review；#7841 已按这些新分片重建。公开 head 是
-`9a18960ea5f307df744784e00688e9c5987c7056`，修复 lint 后的本地候选是
-`b2b27ad01c79ec8cb355461a674110c59d6fb3bf`，尚未推送。
+#7837 已合并；#7830、#7833、#7835 仍独立 review；#7841 已按这些新分片重建。公开 head 已从 lint
+失败的 `9a18960ea5f307df744784e00688e9c5987c7056` 更新为
+`b2b27ad01c79ec8cb355461a674110c59d6fb3bf`。
 
-当前 blocker 不是 integration history。公开 head 的 4 个确定性 lint 问题已在本地候选修复并验证，下一步是
-经确认后更新 PR、让新 exact head 重跑 CI。完整功能启用前还要通过 live E2E、确认 rollout / admission
-validation 边界，并获得 maintainer review。
+当前 blocker 不是 integration history。4 个确定性 lint 问题已经修复，新 exact-head CI 正在运行。
+完整功能启用前还要通过 live E2E、确认 rollout / admission validation 边界，并获得 maintainer review。
 
 ```text
 master / #7837 API merged
@@ -32,11 +31,11 @@ master / #7837 API merged
 | [#7830](https://github.com/karmada-io/karmada/pull/7830) | `4583e06d2050` | `ReviseComponents` capability + Work delivery | Open，非 Draft；2 commits，37 files，17 checks success，Tide pending |
 | [#7833](https://github.com/karmada-io/karmada/pull/7833) | `014c555f898c` | scheduler 写完整 component result | Open，非 Draft；1 commit，2 files；16 success、v1.34 E2E failure |
 | [#7835](https://github.com/karmada-io/karmada/pull/7835) | `9fb3992fd518` | component scale planner，不接生产入口 | Open，Draft；1 commit，2 files；15 success、v1.34/v1.36 E2E failure |
-| [#7841](https://github.com/karmada-io/karmada/pull/7841) | public `9a18960ea5f3`；local `b2b27ad01c79` | trigger、provenance、failure retention、delivery fence | Open，Draft；public head lint failure；本地 lint-only candidate 待推送 |
+| [#7841](https://github.com/karmada-io/karmada/pull/7841) | `b2b27ad01c79` | trigger、provenance、failure retention、delivery fence | Open，Draft；新 CI 已启动，DCO success，9 个 Kubernetes matrix jobs pending |
 
 除 #7837 外，当前 heads 尚无实质性 human review。bot、reviewer request 和 Tide 状态不能写成人类认可。
 
-## #7841 public / local candidate 五个 commits
+## #7841 当前五个 commits
 
 | Commit | 对应公开分片 | 说明 |
 | --- | --- | --- |
@@ -44,7 +43,7 @@ master / #7837 API merged
 | `32d2e45d5` | #7830 commit A | 与公开 `997a594b1` patch-equivalent 的 interpreter capability |
 | `db8073d38` | #7830 commit B | 与公开 `4583e06d2` residual patch-equivalent 的 Work delivery |
 | `bdcc01b66` | #7835 | 与公开 `9fb3992fd` patch-equivalent 的 corrected planner |
-| public `9a18960ea` / local `b2b27ad01` | #7841 residual | safe activation protocol；lint 修复 amend 后仍是第五个 commit |
+| `b2b27ad01` | #7841 residual | safe activation protocol；lint 修复 amend 后仍是第五个 commit |
 
 前四个是未合入 `master` 的依赖。对应 PR 合并后 rebase 会自然删除它们；提前 squash 不会减少 diff，只会
 破坏 patch-equivalence 和分层 review。
@@ -98,8 +97,8 @@ lint 的四个确定性问题是：
 3. `runComponentScaleRoutingCase` gocyclo 16；
 4. `TestAcceptedComponentTargetIsReusedOnlyWhileFilterEligible` gocyclo 25。
 
-这不是 E2E flake。本地候选 `b2b27ad01c79ec8cb355461a674110c59d6fb3bf` 仅重构上述三处文件，
-相对 public head 为 3 files、`+159/-137`；它已通过：
+这不是 E2E flake。修复后的 `b2b27ad01c79ec8cb355461a674110c59d6fb3bf` 仅重构上述三处文件，
+相对前一 head 为 3 files、`+159/-137`；它已通过：
 
 ```text
 PATH=/root/go/bin:$PATH hack/verify-staticcheck.sh
@@ -113,6 +112,7 @@ git show --check
 `9a18960ea` 功能 tree 的本地验证还通过完整 `make test` 和
 `go test -count=1 ./test/e2e/suites/base -run '^$'`；后者输出 `[no tests to run]`，只证明 package 可编译。
 lint-only amend 后没有重跑完整 `make test`，也没有本地 live multi-cluster Flink E2E 或 mixed-version rollout。
+17:22 回读确认 PR head 已是 `b2b27ad01`；新 run 已启动，DCO 通过，9 个 Kubernetes matrix jobs pending。
 
 <a id="risks"></a>
 
@@ -128,7 +128,7 @@ lint-only amend 后没有重跑完整 `make test`，也没有本地 live multi-c
 
 ## 下一步
 
-1. 经用户确认后，用 exact force-with-lease 将 `b2b27ad01` 推到 #7841 branch，并核对新 head CI；
+1. 监控 `b2b27ad01` 的新 exact-head CI，确定 lint 修复及三档 E2E 结果；
 2. 继续分类 #7833/#7835 的 E2E failure，不把红灯直接等同于产品回归；
 3. 运行或获得 exact-head live Flink E2E 证据；
 4. 请 maintainer 评审 accepted-result / source-coherence 协议、`RequiredBy` ownership，以及 admission / rollout
