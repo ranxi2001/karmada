@@ -8,14 +8,15 @@
 ## 先说人话
 
 #7492 已按职责拆成五层：API、result producer、interpreter / Work delivery、scale planner 和安全 activation。
-#7837 已合并；#7830、#7833、#7835 仍独立 review；#7841 已按这些新分片重建，公开 head 为
+#7837、#7833 已合并；#7830、#7835 仍独立 review；#7841 已按这些新分片重建，公开 head 为
 `b2b27ad01c79ec8cb355461a674110c59d6fb3bf`。#7841 已转为 Ready，当前 16 个 checks success；
 唯一红灯是 v1.34 base E2E 在不相关 rescheduling spec 的 `BeforeEach` 创建临时 member 失败。
 
 #7833 在 2026-08-20 收到 `@RainbowMango` 的首条真人 review 建议：把 helper 从
 `componentSchedulingResult` 改名为 `buildTargetComponents`。PR head `29474a636` 已按建议改名并 rebase 到
 `upstream/master@1c4a0ff70`，聚焦 race test 和全部 scheduler package tests 通过；branch update 和原 thread
-内的简短 reply 均已完成。新 head 的 v1.35 E2E 因 Karmada etcd / host control plane 失去响应而失败；
+内的简短 reply 均已完成。#7833 随后于 `2026-08-20 09:59:35Z` 合并，merge commit 为
+`a8ad84cb5288709cc5f6f0e8a5aad0b87a000a31`。合并前 v1.35 E2E 因 Karmada etcd / host control plane 失去响应而失败；
 失败 Deployment 不进入本 PR 新增的 `Components > 1` 分支，scheduler 在控制面故障前已成功完成重调度。
 
 本地 test-only 候选 `3bb0a304a` 新增 Flink、Volcano Job、RayCluster 三类 workload 的 4-spec focus 矩阵。
@@ -36,11 +37,11 @@ master / #7837 API merged
 | --- | --- | --- | --- |
 | [#7837](https://github.com/karmada-io/karmada/pull/7837) | `76589a9d5145`，merge `1dd55a5d57b4` | `TargetCluster.Components` API / conversion / codegen | 已合并；18 checks success |
 | [#7830](https://github.com/karmada-io/karmada/pull/7830) | `4583e06d2050` | `ReviseComponents` capability + Work delivery | Open，非 Draft；2 commits，37 files，17 checks success，Tide pending |
-| [#7833](https://github.com/karmada-io/karmada/pull/7833) | `29474a636cfb` | scheduler 写完整 component result | Open，非 Draft；helper rename 和 reply 已完成；v1.34/v1.36 E2E 通过，v1.35 因 control-plane failure 红灯 |
+| [#7833](https://github.com/karmada-io/karmada/pull/7833) | `29474a636cfb`，merge `a8ad84cb5288` | scheduler 写完整 component result | 已合并；helper rename 和 reply 已完成；v1.34/v1.36 E2E 通过，合并前 v1.35 因 control-plane failure 红灯 |
 | [#7835](https://github.com/karmada-io/karmada/pull/7835) | `3619c24f6ebc` | component scale planner，不接生产入口 | Open，非 Draft；1 commit，2 files；14 success、3 failure、Tide pending |
 | [#7841](https://github.com/karmada-io/karmada/pull/7841) | `b2b27ad01c79` | trigger、provenance、failure retention、delivery fence | Open，非 Draft；16 success、v1.34 base E2E failure、Tide pending |
 
-#7833 已有一条不改变行为的 helper 命名建议；其余开放 PR 尚无实质性 human review。当前没有 `/lgtm`、
+#7833 合并前只有一条不改变行为的 helper 命名建议；其余开放 PR 尚无实质性 human review。当前没有 `/lgtm`、
 `/approve` 或设计认可，bot、reviewer request 和 Tide 状态不能写成人类认可。
 
 ## #7841 当前五个 commits
@@ -174,8 +175,8 @@ RayCluster lifecycle 212.689s、Ray label-eligibility recovery 142.202s，最终
 
 ## 下一步
 
-1. `29474a636` 只剩 v1.35 control-plane failure；获用户确认后重跑该 job，不为该红灯改 scheduler 代码；
-2. 再决定是否整理并把 test-only `3bb0a304a` 更新到 #7841；
+1. 保留 #7833 合并前 v1.35 control-plane failure 的 RCA，不再为已合并 PR 触发重跑或改代码；
+2. 决定是否整理并把 test-only `3bb0a304a` 更新到 #7841；
 3. 更新后只把新 SHA 的 upstream checks 归属于对应新 candidate；保留旧 head 的验证边界；
 4. 请 maintainer 评审 accepted-result / source-coherence 协议、`RequiredBy` ownership，以及 admission / rollout
    边界。
