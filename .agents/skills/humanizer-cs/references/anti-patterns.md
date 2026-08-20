@@ -23,6 +23,7 @@ AI-writing signals are editing clues, not proof of authorship. Fix trust and rev
 | P2 | Chatbot preamble | "Great question" and "You're absolutely right" delay the answer | Start with the answer or finding |
 | P2 | Deference theater | Repeated thanks and apologies reduce signal | Use one natural acknowledgment only when socially useful |
 | P1 | Canned acknowledgment plus report dump | A fixed "Thanks for pointing this out" opening followed by a long recap sounds generated and hides the reply | Use one short, context-specific acknowledgment or none, then answer the thread |
+| P1 | SHA-and-test boilerplate reply | A generic status sentence combining a commit SHA with a test summary turns a one-line naming or wording follow-up into a release-status template | State only the changed object and action; include a SHA or test result only when it disambiguates the requested change |
 | P1 | Question-list ending | Several unrelated requests leave the other person unsure what to answer first | Ask only for the fact or decision that changes the next step; link the rest |
 | P1 | Repeated meta-validation disclaimer | Repeated "I checked the relevant paths" or broad "this does not establish ... end to end" scaffolding narrates the process instead of the result | Keep one concrete tested boundary when it matters, then omit redundant process narration |
 | P2 | Promotional adjectives | "Robust", "seamless", and "comprehensive" replace behavior | Name the guarantee, failure mode, or measured result |

@@ -375,13 +375,7 @@ When review comments arrive:
 Useful response format:
 
 ```md
-Thanks, updated in the latest push.
-
-Change:
-- ...
-
-Validation:
-- ...
+Renamed the helper as suggested.
 ```
 
 ## PR Status Script
