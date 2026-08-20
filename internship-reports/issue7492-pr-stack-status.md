@@ -13,9 +13,9 @@
 唯一红灯是 v1.34 base E2E 在不相关 rescheduling spec 的 `BeforeEach` 创建临时 member 失败。
 
 #7833 在 2026-08-20 收到 `@RainbowMango` 的首条真人 review 建议：把 helper 从
-`componentSchedulingResult` 改名为 `buildTargetComponents`。本地 candidate `29474a636` 已按建议改名并
-rebase 到 `upstream/master@1c4a0ff70`，聚焦 race test 和全部 scheduler package tests 通过；公开分支尚未
-更新，因此这仍是本地已完成、等待 upstream branch update 审批的状态。
+`componentSchedulingResult` 改名为 `buildTargetComponents`。PR head `29474a636` 已按建议改名并 rebase 到
+`upstream/master@1c4a0ff70`，聚焦 race test 和全部 scheduler package tests 通过；branch update 已完成，
+当前只等待是否发布一条简短的 review reply。
 
 本地 test-only 候选 `3bb0a304a` 新增 Flink、Volcano Job、RayCluster 三类 workload 的 4-spec focus 矩阵。
 live E2E 实际运行在仅差一处注释的 `d8df11c3d` 上，并已在 Kubernetes v1.36.1 跑通。该测试栈尚未推到
@@ -35,7 +35,7 @@ master / #7837 API merged
 | --- | --- | --- | --- |
 | [#7837](https://github.com/karmada-io/karmada/pull/7837) | `76589a9d5145`，merge `1dd55a5d57b4` | `TargetCluster.Components` API / conversion / codegen | 已合并；18 checks success |
 | [#7830](https://github.com/karmada-io/karmada/pull/7830) | `4583e06d2050` | `ReviseComponents` capability + Work delivery | Open，非 Draft；2 commits，37 files，17 checks success，Tide pending |
-| [#7833](https://github.com/karmada-io/karmada/pull/7833) | 公开 `014c555f898c`；本地 `29474a636cfb` | scheduler 写完整 component result | Open，非 Draft；维护者建议 helper 改名，本地已修复并验证，尚未 push |
+| [#7833](https://github.com/karmada-io/karmada/pull/7833) | `29474a636cfb` | scheduler 写完整 component result | Open，非 Draft；维护者建议 helper 改名，已修复、验证并更新公开 head，等待简短 reply |
 | [#7835](https://github.com/karmada-io/karmada/pull/7835) | `3619c24f6ebc` | component scale planner，不接生产入口 | Open，非 Draft；1 commit，2 files；14 success、3 failure、Tide pending |
 | [#7841](https://github.com/karmada-io/karmada/pull/7841) | `b2b27ad01c79` | trigger、provenance、failure retention、delivery fence | Open，非 Draft；16 success、v1.34 base E2E failure、Tide pending |
 
@@ -95,9 +95,9 @@ master / #7837 API merged
 
 ## 验证与当前 CI
 
-#7833 公开 head `014c555f898cf575422b65d8c4fbb95e56295cea` 的 compile、lint、codegen、unit、
+#7833 旧公开 head `014c555f898cf575422b65d8c4fbb95e56295cea` 的 compile、lint、codegen、unit、
 v1.35/v1.36 E2E 和三组 Kubernetes 测试已通过；v1.34 E2E 在 2026-08-20 核对时仍 pending，Tide 等待
-`approved` / `lgtm`。本地 candidate `29474a636cfbee097f43e6a78c6af3ca64fc67fa` 只把 helper 与调用点
+`approved` / `lgtm`。当前 head `29474a636cfbee097f43e6a78c6af3ca64fc67fa` 只把 helper 与调用点
 改名为 `buildTargetComponents`，并 rebase 到 `upstream/master@1c4a0ff70`。range-diff 没有其他 patch
 变化，以下命令通过：
 
@@ -108,7 +108,7 @@ git diff --check upstream/master...HEAD
 git range-diff 1819ee7bd..014c555f8 upstream/master..29474a636
 ```
 
-该 candidate 尚未 push，公开 CI 不能归属于 `29474a636`。
+公开 CI 将以 `29474a636` 重新运行；旧 head 的结果不能直接当作新 head 的完整验证。
 
 公开 `#7841@b2b27ad01c79ec8cb355461a674110c59d6fb3bf` 的 lint、codegen、compile、unit、
 CLI/Chart/Operator 三档矩阵、v1.35/v1.36 base E2E 和 DCO 均通过，共 16 个 success。唯一失败是
@@ -164,10 +164,9 @@ RayCluster lifecycle 212.689s、Ray label-eligibility recovery 142.202s，最终
 
 ## 下一步
 
-1. 获得 exact action approval 后，以 `--force-with-lease` 把 #7833 从公开 `014c555f8` 更新到本地
-   `29474a636`，并在原 review thread 简短回复 rename 与验证结果；
-2. 再决定是否整理并把 test-only `3bb0a304a` 更新到 #7841；
-3. 更新后只把新 SHA 的 upstream checks 归属于对应新 candidate；更新前保留本地证据边界；
+1. 获得 exact reply approval 后，在原 review thread 简短记录 rename；
+2. 跟进 `29474a636` 的 upstream checks，再决定是否整理并把 test-only `3bb0a304a` 更新到 #7841；
+3. 更新后只把新 SHA 的 upstream checks 归属于对应新 candidate；保留旧 head 的验证边界；
 4. 请 maintainer 评审 accepted-result / source-coherence 协议、`RequiredBy` ownership，以及 admission / rollout
    边界。
 
