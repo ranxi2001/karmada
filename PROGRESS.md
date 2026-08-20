@@ -14,22 +14,22 @@
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
-| [#7492 PR stack](internship-reports/issue7492-pr-stack-status.md#stack-overview) | #7833 已更新到 `29474a636`，rename 修复和 scheduler tests 已完成；尚未发布 reply。#7841 公开 head `b2b27ad01` 已 Ready；本地 E2E 候选 `3bb0a304a` 尚未 push | 先审批 #7833 简短 reply，再跟进新 head CI；随后决定 #7841 test-only 更新，rollout、admission、CRB 和自动 target-loss failover 仍是边界 |
+| [#7492 PR stack](internship-reports/issue7492-pr-stack-status.md#stack-overview) | #7833 `29474a636` 的 rename、reply 已完成；v1.34/v1.36 E2E 通过，v1.35 因 etcd/control-plane collapse 失败且不经过新代码分支。#7841 公开 head `b2b27ad01` 已 Ready；本地 E2E 候选 `3bb0a304a` 尚未 push | 获确认后只重跑 #7833 v1.35，不改 scheduler。随后决定 #7841 test-only 更新；rollout、admission、CRB 和自动 target-loss failover 仍是边界 |
 | [PR #7827 / Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md) | Open，head `6ebc4b459`；最终 diff 仅 `estimator_test.go`，focused validation 与 current-SHA 3 个 upstream E2E jobs 通过；本地未运行 live E2E | 等待 maintainer review 新信号 |
 | [Day 39 Descheduler](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 汇报稿按整任务调度模型整理；仍缺真实 YAML 对生命周期、诊断、lock、回执与 cooldown 的证据 | 周一前拿真实 YAML 核对并试讲 |
 | [PR #7662 / Day 40](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) | Open，head `586f6fc3508e`；partial 一期限定 Deployment，10 个 stop gates 尚待确认 | `@zhy76` / `@RainbowMango` 回复或 proposal commit |
 
 ## Last Run
 
-- 2026-08-20：复核 [PR #7833](https://github.com/karmada-io/karmada/pull/7833) 当前 `014c555f8` 与完整 thread。`@RainbowMango` 最新建议仅把 `componentSchedulingResult` 改名为 `buildTargetComponents`；candidate `29474a636` 已按建议改名、rebase `upstream/master@1c4a0ff70`、force-push 到公开 PR，range-diff 无其他 patch 变化，`go test -race ./pkg/scheduler/core` 与 `go test ./pkg/scheduler/...` 通过。尚未回复 upstream。
+- 2026-08-20：完成 #7833 新 head CI 红灯 RCA。v1.35 job `96349704810` 的普通 Deployment 不进入 `Components > 1` 新分支，scheduler 在 `08:03:39` 已成功重调度；`08:03:42` 起 etcd linearized read 无法完成 raft agreement，随后 API liveness、leader lease 和整个 host control plane 连锁失效。v1.34/v1.36 E2E 通过；当前不改代码、不把 exit 137 无证据写成 OOM。
+- 2026-08-20：复核 [PR #7833](https://github.com/karmada-io/karmada/pull/7833) 当前 `014c555f8` 与完整 thread。`@RainbowMango` 最新建议仅把 `componentSchedulingResult` 改名为 `buildTargetComponents`；candidate `29474a636` 已按建议改名、rebase `upstream/master@1c4a0ff70`、force-push 到公开 PR，range-diff 无其他 patch 变化，`go test -race ./pkg/scheduler/core` 与 `go test ./pkg/scheduler/...` 通过；原 thread reply 已发布。
 - 2026-08-19：在 #7841 production-equivalent tree 上完成 Kubernetes v1.36.1 三类 workload focused E2E：Flink、Volcano Job、RayCluster 共 4/4 通过（568.362s）。覆盖 2/3/4 组件、零副本、delta/no-fit、mixed/name/shape/requirements 拒绝、explicit recovery、label-filter eligibility 与迁移后 pinned no-fit；本地候选 `3bb0a304a` 只改 4 个 test/fixture 文件，compile、golangci-lint、diff/show checks 通过。[Day52 答辩稿](internship-reports/day52-issue7492-multi-component-pr-design-defense.md) 已更新证据边界。
 - 2026-08-18：完成 [PR #7830 文件规模与职责拆解](internship-reports/day49-7830-review.md#为什么会改-37-个文件)：37 files 中 11 个是测试/fixture、9 个是生成/schema、17 个是手写代码；主链仍是 `ReviseComponents` capability + binding Work delivery。未发布 upstream review/comment。
 - 2026-08-18：#7841 已用 exact lease 从 `9a18960ea` 更新到 `b2b27ad01`；4 个 lint 问题完成本地 staticcheck、focused/race、`make verify` 和 diff checks，新 CI 已启动。完成 [Day52 多组件设计答辩](internship-reports/day52-issue7492-multi-component-pr-design-defense.md)。
-- 2026-08-18：复审 [PR #7830 当前 head](internship-reports/day49-7830-review.md#当前-review-finding)：组件职责放置合理，但当前 delivery 可组合“旧 accepted replicas + 新 source requirements”；完整功能必须依赖 scheduler-owned provenance + binding delivery fence。新增 [职责图](internship-reports/day49-7830-review-component-ownership.mmd)，未发布 upstream review。
 
 ## Current Blockers
 
-- #7833：公开 head `29474a636` 已完成维护者 rename 建议和本地验证；只剩 review reply 尚未获 exact text approval，新 head CI 尚待观察。
+- #7833：公开 head `29474a636` 已完成 rename、验证和 thread reply；v1.34/v1.36 E2E 通过，v1.35 为 etcd/control-plane collapse。未经用户确认不触发重跑。
 - #7492：本地 test-only 候选 `3bb0a304a` 尚未获开放 PR 分支更新授权；当前栈仍缺 arbitrary-client admission validation、mixed-version rollout，以及 CRB、自动 target-loss failover、split-write 的 live 证据。
 - Day 39：尚缺真实 YAML 来证明 `NotStarted`、长期 `SchedulerUnschedulable`、单目标 Placement、执行前 admission lock 和新目标回执。
 - #7662：V1 estimator 缺 source freshness；public mode、threshold、V2 观测合同、requestID/ack、pinned selection 与 Descheduler 仲裁仍待确认。
@@ -44,7 +44,7 @@
 
 ## Next
 
-- 准备 #7833 exact reply：只记录 `buildTargetComponents` rename；获确认后才回复 thread，并跟进新 head CI。
+- #7833 只剩 v1.35 control-plane failure；获确认后重跑该 job，不提交代码改动。
 - 准备 #7841 的 exact branch-update packet：目标、旧/新 SHA、4-file test-only diff、v1.36.1 4/4 live E2E、未跑项和 PR body 增量；获确认后才 push。
 - 若更新 #7841，跟进新 SHA 的 upstream lint/compile/unit/E2E；不把单版本本地 focus 写成多版本或全量 base suite。
 - 周一前用 Day 39 HTML 稿试讲，并用真实 YAML 核对生命周期、诊断、lock、handoff 和 cooldown。

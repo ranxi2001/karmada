@@ -14,8 +14,9 @@
 
 #7833 在 2026-08-20 收到 `@RainbowMango` 的首条真人 review 建议：把 helper 从
 `componentSchedulingResult` 改名为 `buildTargetComponents`。PR head `29474a636` 已按建议改名并 rebase 到
-`upstream/master@1c4a0ff70`，聚焦 race test 和全部 scheduler package tests 通过；branch update 已完成，
-当前只等待是否发布一条简短的 review reply。
+`upstream/master@1c4a0ff70`，聚焦 race test 和全部 scheduler package tests 通过；branch update 和原 thread
+内的简短 reply 均已完成。新 head 的 v1.35 E2E 因 Karmada etcd / host control plane 失去响应而失败；
+失败 Deployment 不进入本 PR 新增的 `Components > 1` 分支，scheduler 在控制面故障前已成功完成重调度。
 
 本地 test-only 候选 `3bb0a304a` 新增 Flink、Volcano Job、RayCluster 三类 workload 的 4-spec focus 矩阵。
 live E2E 实际运行在仅差一处注释的 `d8df11c3d` 上，并已在 Kubernetes v1.36.1 跑通。该测试栈尚未推到
@@ -35,7 +36,7 @@ master / #7837 API merged
 | --- | --- | --- | --- |
 | [#7837](https://github.com/karmada-io/karmada/pull/7837) | `76589a9d5145`，merge `1dd55a5d57b4` | `TargetCluster.Components` API / conversion / codegen | 已合并；18 checks success |
 | [#7830](https://github.com/karmada-io/karmada/pull/7830) | `4583e06d2050` | `ReviseComponents` capability + Work delivery | Open，非 Draft；2 commits，37 files，17 checks success，Tide pending |
-| [#7833](https://github.com/karmada-io/karmada/pull/7833) | `29474a636cfb` | scheduler 写完整 component result | Open，非 Draft；维护者建议 helper 改名，已修复、验证并更新公开 head，等待简短 reply |
+| [#7833](https://github.com/karmada-io/karmada/pull/7833) | `29474a636cfb` | scheduler 写完整 component result | Open，非 Draft；helper rename 和 reply 已完成；v1.34/v1.36 E2E 通过，v1.35 因 control-plane failure 红灯 |
 | [#7835](https://github.com/karmada-io/karmada/pull/7835) | `3619c24f6ebc` | component scale planner，不接生产入口 | Open，非 Draft；1 commit，2 files；14 success、3 failure、Tide pending |
 | [#7841](https://github.com/karmada-io/karmada/pull/7841) | `b2b27ad01c79` | trigger、provenance、failure retention、delivery fence | Open，非 Draft；16 success、v1.34 base E2E failure、Tide pending |
 
@@ -108,7 +109,16 @@ git diff --check upstream/master...HEAD
 git range-diff 1819ee7bd..014c555f8 upstream/master..29474a636
 ```
 
-公开 CI 将以 `29474a636` 重新运行；旧 head 的结果不能直接当作新 head 的完整验证。
+公开 CI 已在 `29474a636` 上重新运行；旧 head 的结果不计入当前 candidate。
+
+当前 head 的 v1.35 E2E job `96349704810` 在 `resource reschedule when join or unJoin cluster` 中失败。
+测试于 `08:03:17` 创建临时 member，scheduler 于 `08:03:39` 把普通 Deployment 成功写为
+`[{member-e2e-z9bx7 1 []} {member2 1 []} {member3 1 []} {member1 1 []}]`；该对象没有 components，
+因此不会执行本 PR 新增的 `len(spec.Components) > 1` 分支。`08:03:42` 起 etcd 的 linearized read 在
+`agreement among raft nodes` 阶段连续超时，Karmada API liveness 随后失败，scheduler 因无法续租退出，
+etcd 容器最终以 137 结束；测试等 Ready 满 420 秒后只看到 `172.18.0.2:5443 connection refused`。
+同一 SHA 的 v1.34、v1.36 E2E 均已通过。当前证据支持 CI 环境 / control-plane collapse，
+不支持修改 #7833 代码；未定位宿主机层面的 CPU、I/O 或 memory 根因，因此不把 exit 137 直接写成 OOM。
 
 公开 `#7841@b2b27ad01c79ec8cb355461a674110c59d6fb3bf` 的 lint、codegen、compile、unit、
 CLI/Chart/Operator 三档矩阵、v1.35/v1.36 base E2E 和 DCO 均通过，共 16 个 success。唯一失败是
@@ -164,8 +174,8 @@ RayCluster lifecycle 212.689s、Ray label-eligibility recovery 142.202s，最终
 
 ## 下一步
 
-1. 获得 exact reply approval 后，在原 review thread 简短记录 rename；
-2. 跟进 `29474a636` 的 upstream checks，再决定是否整理并把 test-only `3bb0a304a` 更新到 #7841；
+1. `29474a636` 只剩 v1.35 control-plane failure；获用户确认后重跑该 job，不为该红灯改 scheduler 代码；
+2. 再决定是否整理并把 test-only `3bb0a304a` 更新到 #7841；
 3. 更新后只把新 SHA 的 upstream checks 归属于对应新 candidate；保留旧 head 的验证边界；
 4. 请 maintainer 评审 accepted-result / source-coherence 协议、`RequiredBy` ownership，以及 admission / rollout
    边界。
