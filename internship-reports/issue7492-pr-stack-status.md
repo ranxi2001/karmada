@@ -90,6 +90,29 @@ go test -count=1 ./pkg/scheduler/core ./pkg/scheduler ./pkg/controllers/binding 
 四个 package 均通过。这个结果是 focused unit / controller evidence，不等同于当前干净候选已经重新跑过 live
 multi-cluster E2E；之前的 v1.36.1 live 结果仍属于旧行为等价 tree。
 
+## #7841 branch-update packet（2026-08-21）
+
+在四个功能 patch 之后移植原 test-only 栈 `0ecf16531 -> 0017dd94f -> ad3444697 -> 9dd7af61d ->
+3bb0a304a`，形成本地分支 `rewrite/pr7841-update-20260821`，head 为 `6a51dcd9c`。该分支以
+`upstream/master@a8ad84cb5288` 为祖先，保留 #7830、#7835、#7841 的四个分层 commit，并新增两个 Ray
+fixture、`multi_component_rescheduling_test.go` 和对既有 suite 的测试改动；相对当前 master 为 62 个文件、
+`+8037/-209`。
+
+最终 packet 通过：
+
+```text
+go test -count=1 ./pkg/scheduler/core ./pkg/scheduler ./pkg/controllers/binding ./pkg/util -run '<focused component-scale and delivery fence tests>'
+go test -count=1 ./test/e2e/suites/base -run '^$'
+PATH=/root/go/bin:$PATH golangci-lint run ./test/e2e/suites/base/...
+git diff --check upstream/master...HEAD
+git show --check --oneline HEAD
+```
+
+待用户确认后，唯一的 upstream-facing 动作为把该 head 更新到 #7841 当前 fork head：
+`git push --force-with-lease origin HEAD:feature/multi-component-failure-safe-rescheduling`。当前尚未 push，
+也没有把本地 compile/lint 结果写成 live multi-cluster E2E 证据；live E2E、mixed-version rollout、arbitrary-client
+admission validation 和其他未闭合边界仍按下文记录。
+
 ## 当前公开状态
 
 | 层级 | Exact head | 当前职责 | 快照状态 |
