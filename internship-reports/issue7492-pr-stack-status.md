@@ -108,10 +108,10 @@ git diff --check upstream/master...HEAD
 git show --check --oneline HEAD
 ```
 
-待用户确认后，唯一的 upstream-facing 动作为把该 head 更新到 #7841 当前 fork head：
-`git push --force-with-lease origin HEAD:feature/multi-component-failure-safe-rescheduling`。当前尚未 push，
-也没有把本地 compile/lint 结果写成 live multi-cluster E2E 证据；live E2E、mixed-version rollout、arbitrary-client
-admission validation 和其他未闭合边界仍按下文记录。
+已按确认执行唯一的 upstream-facing 动作：
+`git push --force-with-lease origin HEAD:feature/multi-component-failure-safe-rescheduling`，远端 #7841 head
+现为 `6a51dcd9c`。没有修改 PR body 或追加评论，也没有把本地 compile/lint 结果写成 live multi-cluster E2E
+证据；live E2E、mixed-version rollout、arbitrary-client admission validation 和其他未闭合边界仍按下文记录。
 
 ## 当前公开状态
 
