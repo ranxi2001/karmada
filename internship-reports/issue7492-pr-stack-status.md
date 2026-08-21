@@ -1,16 +1,20 @@
 # #7492 多组件调度 PR 栈状态
 
-> 状态核对：2026-08-20（Asia/Shanghai）。动态 PR / CI 状态以 GitHub 为准；本文只保存后续
+> 状态核对：2026-08-21（Asia/Shanghai）。动态 PR / CI 状态以 GitHub 为准；本文只保存后续
 > review 和发布仍需要的当前事实，不再维护 rebase、push 或旧 PR body 过程记录。
 
 <a id="stack-overview"></a>
 
 ## 先说人话
 
-#7492 已按职责拆成五层：API、result producer、interpreter / Work delivery、scale planner 和安全 activation。
-#7837、#7833 已合并；#7830、#7835 仍独立 review；#7841 已按这些新分片重建，公开 head 为
-`b2b27ad01c79ec8cb355461a674110c59d6fb3bf`。#7841 已转为 Ready，当前 16 个 checks success；
-唯一红灯是 v1.34 base E2E 在不相关 rescheduling spec 的 `BeforeEach` 创建临时 member 失败。
+#7492 当前有 4 个未完成项：让多模板应用进入重调度、按已调度组件估算增量、副本变更失败时阻止新配置下发，
+以及扩容超过当前集群容量时不得迁移。它们不是 4 个独立实现：#7835 提供估算规则，#7830 提供 Work 改写能力，
+#7841 负责触发、固定当前目标和失败保留。最后一个 bug 项应作为 #7841 的验收条件，不宜再补一个只修改
+`IsBindingReplicasChanged` 的独立 quick fix。
+
+#7837、#7833 已合并；#7830、#7835 仍等待实质性 review。#7841 公开 head
+`b2b27ad01c79ec8cb355461a674110c59d6fb3bf` 因包含已合并的旧 #7833 commit，当前与 `master` 冲突；本地
+test-only 候选仍在公开 head 之上，现阶段不应先推测试栈扩大冲突面。
 
 #7833 在 2026-08-20 收到 `@RainbowMango` 的首条真人 review 建议：把 helper 从
 `componentSchedulingResult` 改名为 `buildTargetComponents`。PR head `29474a636` 已按建议改名并 rebase 到
@@ -31,6 +35,21 @@ master / #7837 API merged
   `-- #7841  integrates the three heads + safe activation residual
 ```
 
+## 维护者最新任务映射
+
+| Issue 未完成项 | 当前承载 | 代码现状 | 判断 |
+| --- | --- | --- | --- |
+| 多模板应用进入重调度 | #7841 | `schedulePendingComponentsFor*` 在旧的 `IsBindingReplicasChanged` 之前比较 desired / accepted component result | 已有实现，尚未合入 |
+| scale-up 只估增量，scale-down 跳过估算 | #7835 + #7841 | #7835 提供 name-keyed planner；#7841 把 planner 接入 scheduler 入口 | planner 与接线必须一起验收 |
+| 重调度失败时不下发新配置 | #7830 + #7841 | #7830 能按 result 改写 Work；#7841 在 pending / no-fit 时保留 accepted result 和现有 Work | #7830 单独不能闭合这个要求 |
+| 扩容超过容量时不得迁移 | #7841 | scale 路径只保留当前 target；当前 target no-fit 时返回错误，不 patch 新 result | 应作为 #7841 的 blocking regression case |
+
+这里有两个证据边界：`@mszacillo` 给出的 `GetTotalBindingReplicas` 来自其 v1.17 fork，不能据此认定 upstream
+`master` 已复现同一 restart bug；但 `@RainbowMango` 已把“扩容超过容量不得迁移”写进 #7492，目标行为已经明确。
+当前 upstream `IsBindingReplicasChanged` 对 component workload 仍会落入标量逻辑，但 `spec.Replicas` 与
+`TargetCluster.Replicas` 都是 0，现有 non-empty-cluster 测试期望 `false`。因此不应把 fork 中的 helper 修复
+当成 upstream 方案；应验证 #7841 的 component-aware trigger 和 pinned-target 路径。
+
 ## 当前公开状态
 
 | 层级 | Exact head | 当前职责 | 快照状态 |
@@ -39,7 +58,7 @@ master / #7837 API merged
 | [#7830](https://github.com/karmada-io/karmada/pull/7830) | `4583e06d2050` | `ReviseComponents` capability + Work delivery | Open，非 Draft；2 commits，37 files，17 checks success，Tide pending |
 | [#7833](https://github.com/karmada-io/karmada/pull/7833) | `29474a636cfb`，merge `a8ad84cb5288` | scheduler 写完整 component result | 已合并；helper rename 和 reply 已完成；v1.34/v1.36 E2E 通过，合并前 v1.35 因 control-plane failure 红灯 |
 | [#7835](https://github.com/karmada-io/karmada/pull/7835) | `3619c24f6ebc` | component scale planner，不接生产入口 | Open，非 Draft；1 commit，2 files；14 success、3 failure、Tide pending |
-| [#7841](https://github.com/karmada-io/karmada/pull/7841) | `b2b27ad01c79` | trigger、provenance、failure retention、delivery fence | Open，非 Draft；16 success、v1.34 base E2E failure、Tide pending |
+| [#7841](https://github.com/karmada-io/karmada/pull/7841) | `b2b27ad01c79` | trigger、provenance、failure retention、delivery fence | Open，非 Draft；与已合并 #7833 冲突，尚无实质性 human review |
 
 #7833 合并前只有一条不改变行为的 helper 命名建议；其余开放 PR 尚无实质性 human review。当前没有 `/lgtm`、
 `/approve` 或设计认可，bot、reviewer request 和 Tide 状态不能写成人类认可。
@@ -175,10 +194,14 @@ RayCluster lifecycle 212.689s、Ray label-eligibility recovery 142.202s，最终
 
 ## 下一步
 
-1. 保留 #7833 合并前 v1.35 control-plane failure 的 RCA，不再为已合并 PR 触发重跑或改代码；
-2. 决定是否整理并把 test-only `3bb0a304a` 更新到 #7841；
-3. 更新后只把新 SHA 的 upstream checks 归属于对应新 candidate；保留旧 head 的验证边界；
-4. 请 maintainer 评审 accepted-result / source-coherence 协议、`RequiredBy` ownership，以及 admission / rollout
+1. 先保持 #7830、#7835 的独立职责，分别拿到 Work delivery 和 delta planner 的 review 结论；
+2. 重建 #7841：删除已合并的 #7833 commit，并在 #7830、#7835 合入后只保留 trigger、acceptance、
+   failure retention 和 pinned-target residual；
+3. 把“扩容可容纳、扩容 no-fit、缩容、重启后无变化”作为同一组验收矩阵；其中 no-fit 必须同时证明
+   target 不变、accepted result 不变、Work 不变；
+4. #7841 冲突和依赖未收敛前不推 test-only `3bb0a304a`。功能 residual 稳定后，再决定是否把本地 4-spec
+   E2E 补到公开 PR；
+5. maintainer 仍需确认 accepted-result / source-coherence、`RequiredBy` ownership，以及 admission / rollout
    边界。
 
 <a id="history-and-evidence"></a>
