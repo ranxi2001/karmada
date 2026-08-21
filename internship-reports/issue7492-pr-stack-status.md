@@ -50,6 +50,46 @@ master / #7837 API merged
 `TargetCluster.Replicas` 都是 0，现有 non-empty-cluster 测试期望 `false`。因此不应把 fork 中的 helper 修复
 当成 upstream 方案；应验证 #7841 的 component-aware trigger 和 pinned-target 路径。
 
+## 三场景检查与修复边界
+
+本轮只检查普通副本变更的三条路径。以 `taskmanager: 4` 为 accepted result：扩到 6 时 estimator 只能收到
+`+2`；当前 target 放不下 `+2` 时不得改投其他集群，也不得改 Binding result 或 Work；降到 2 时不需要
+额外容量，scheduler 直接提交包含 `taskmanager: 2` 的完整 result。
+
+| 文件 / 区域 | 允许的改动 | 原因 | 验证 |
+| --- | --- | --- | --- |
+| `pkg/scheduler/core/` | 仅修复 delta、pinned target、scale-down 分支中的已证实缺陷，或补直接回归 | planner 和 cluster selection 归 scheduler 所有 | focused core tests |
+| `pkg/scheduler/` | 仅修复 scale routing、result retention，或补 RB / CRB 对称回归 | scheduler 持久化 accepted result | focused scheduler tests |
+| `pkg/controllers/binding/` | 仅修复 pending fence，或补 Work 不变断言 | binding controller 负责 Work delivery | focused binding tests |
+| topic branch history | 从当前 `upstream/master` 重建，删除已合并的 #7833 patch | #7841 当前冲突，旧栈不能作为新候选 | range-diff、diff check |
+
+不改 `TargetCluster.Components` API、detector source snapshot、custom scheduler、自动 target-loss failover、
+admission 或 rollout 规则；不增加 direct GET、retry、watch 或跨组件同步。现有源码和 focused tests 若已经证明
+某条路径，则不为凑改动而修改 production code。
+
+### 检查结果（2026-08-21）
+
+在当前 `upstream/master`（`a8ad84cb5288`）上重建了本地候选
+`rewrite/pr7841-three-scenarios-20260821`：保留 #7830、#7835、#7841 四个 commit，删除已合入 master 的
+#7833；`git range-diff` 显示保留的四个 patch 与原 #7841 等价。
+
+三条路径的 focused tests 均通过，未发现需要追加 production fix 的行为缺口：
+
+| 场景 | 代码检查 | 结果 |
+| --- | --- | --- |
+| scale-up 可容纳 | `calculateMultiTemplateAvailableSetsForScale` 对已有 target 只调用 `positiveComponentDelta`；scheduler 成功后写完整新 component result | 通过；estimator 只收到增量 |
+| scale-up 超容量 | `retainScheduledClusters` 过滤掉其他候选；无 fit 时返回 `FitError`，`preserveResult` 阻止 patch；binding controller 的 pending fence 保留旧 Work | 通过；target、accepted result、Work 均不迁移或覆盖 |
+| scale-down | `calAvailableReplicas` 在单 target pure scale-down 直接返回内部 capacity sentinel；不进入 estimator，`AssignReplicas` 再写完整 desired result | 通过；estimator 调用数为 0，持久化 `TargetCluster.Replicas` 仍为 0 |
+
+验证命令：
+
+```text
+go test -count=1 ./pkg/scheduler/core ./pkg/scheduler ./pkg/controllers/binding ./pkg/util -run '^(Test_calculateMultiTemplateAvailableSetsForScale|Test_runMultiTemplateEstimatorUsesScalePlanner|TestComponentScaleDoesNotMigrateWhenCurrentTargetIsFilterIneligible|TestComponentScaleDownDoesNotLeakAvailabilitySentinelIntoScheduleResult|TestComponentScaleSchedulingPreservesAcceptedResult|TestComponentScaleRouting|TestResourceBindingControllerSyncBindingPreservesWorksWhileComponentResultPending|TestClusterResourceBindingControllerSyncBindingPreservesWorksWhileComponentRequirementsPending|TestShouldWaitForComponentScheduleResult|TestClassifyComponentReplicaTransition|TestIsBindingComponentResultPending|TestIsBindingComponentScaleSupported)$'
+```
+
+四个 package 均通过。这个结果是 focused unit / controller evidence，不等同于当前干净候选已经重新跑过 live
+multi-cluster E2E；之前的 v1.36.1 live 结果仍属于旧行为等价 tree。
+
 ## 当前公开状态
 
 | 层级 | Exact head | 当前职责 | 快照状态 |
@@ -195,11 +235,11 @@ RayCluster lifecycle 212.689s、Ray label-eligibility recovery 142.202s，最终
 ## 下一步
 
 1. 先保持 #7830、#7835 的独立职责，分别拿到 Work delivery 和 delta planner 的 review 结论；
-2. 重建 #7841：删除已合并的 #7833 commit，并在 #7830、#7835 合入后只保留 trigger、acceptance、
-   failure retention 和 pinned-target residual；
+2. 保留本地干净候选 `rewrite/pr7841-three-scenarios-20260821`，等待 #7830、#7835 的 review 后再决定是否
+   更新 #7841；当前不追加 production fix；
 3. 把“扩容可容纳、扩容 no-fit、缩容、重启后无变化”作为同一组验收矩阵；其中 no-fit 必须同时证明
    target 不变、accepted result 不变、Work 不变；
-4. #7841 冲突和依赖未收敛前不推 test-only `3bb0a304a`。功能 residual 稳定后，再决定是否把本地 4-spec
+4. #7841 公开 head 仍冲突，依赖未收敛前不推 test-only `3bb0a304a`。功能 residual 稳定后，再决定是否把本地 4-spec
    E2E 补到公开 PR；
 5. maintainer 仍需确认 accepted-result / source-coherence、`RequiredBy` ownership，以及 admission / rollout
    边界。
