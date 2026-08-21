@@ -14,7 +14,7 @@
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
-| [#7492 PR stack](internship-reports/issue7492-pr-stack-status.md#stack-overview) | 最新 issue body 剩 4 项：component scale trigger、delta/scale-down estimation、失败不下发、超容量不迁移。#7830/#7835 仍待 review；#7841 `b2b27ad01` 因 #7833 已合并而冲突。干净候选已在当前 master 重建，三场景 focused tests 通过，未发现额外 production fix | 先收敛 #7830/#7835；保留干净候选，等依赖 review 后再决定 #7841 更新和 live E2E |
+| [#7492 PR stack](internship-reports/issue7492-pr-stack-status.md#stack-overview) | 最新 issue body 剩 4 项：component scale trigger、delta/scale-down estimation、失败不下发、超容量不迁移。#7830/#7835 仍待 review；#7841 `b2b27ad01` 因 #7833 已合并而冲突。干净候选已在当前 master 重建并推到 fork，三场景 focused tests 通过，未发现额外 production fix | 先收敛 #7830/#7835；等待依赖 review 后再决定是否创建/更新 upstream PR 和补 live E2E |
 | [PR #7827 / Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md) | Open，head `6ebc4b459`；最终 diff 仅 `estimator_test.go`，focused validation 与 current-SHA 3 个 upstream E2E jobs 通过；本地未运行 live E2E | 等待 maintainer review 新信号 |
 | [Day 39 Descheduler](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 汇报稿按整任务调度模型整理；仍缺真实 YAML 对生命周期、诊断、lock、回执与 cooldown 的证据 | 周一前拿真实 YAML 核对并试讲 |
 | [PR #7662 / Day 40](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) | Open，head `586f6fc3508e`；partial 一期限定 Deployment，10 个 stop gates 尚待确认 | `@zhy76` / `@RainbowMango` 回复或 proposal commit |
@@ -22,7 +22,7 @@
 ## Last Run
 
 - 2026-08-21：按 #7492 最新 issue body 重排剩余任务。4 个未完成 checkbox 映射为 #7835 planner、#7830 Work delivery、#7841 trigger/failure retention/pinned target 三层；`GetTotalBindingReplicas` restart 现象来自外部 v1.17 fork，不能当作 upstream `master` 的直接复现，但“扩容超过容量不得迁移”已是 maintainer 明确的验收要求。[当前任务映射](internship-reports/issue7492-pr-stack-status.md#stack-overview)
-- 2026-08-21：在当前 `upstream/master@a8ad84cb5288` 重建 `rewrite/pr7841-three-scenarios-20260821`，删除已合并 #7833 后保留 #7830/#7835/#7841 四个等价 patch。scale-up delta、超容量 pinned no-fit、scale-down zero-estimator 及 binding Work fence focused tests 全通过；未发现额外 production fix，当前候选尚未重新跑 live E2E。[三场景检查](internship-reports/issue7492-pr-stack-status.md#三场景检查与修复边界)
+- 2026-08-21：在当前 `upstream/master@a8ad84cb5288` 重建 `rewrite/pr7841-three-scenarios-20260821`，删除已合并 #7833 后保留 #7830/#7835/#7841 四个等价 patch，并推到 `origin` fork。scale-up delta、超容量 pinned no-fit、scale-down zero-estimator 及 binding Work fence focused tests 全通过；未发现额外 production fix，当前候选尚未重新跑 live E2E，也未创建 upstream PR。[三场景检查](internship-reports/issue7492-pr-stack-status.md#三场景检查与修复边界)
 - 2026-08-20：核对 [PR #7833](https://github.com/karmada-io/karmada/pull/7833) 已于 `09:59:35Z` 合并到 `master`，merge commit `a8ad84cb5288709cc5f6f0e8a5aad0b87a000a31`。合并前 v1.35 control-plane failure 归档为环境 RCA，不再作为当前代码阻塞。
 - 2026-08-20：完成 #7833 新 head CI 红灯 RCA。v1.35 job `96349704810` 的普通 Deployment 不进入 `Components > 1` 新分支，scheduler 在 `08:03:39` 已成功重调度；`08:03:42` 起 etcd linearized read 无法完成 raft agreement，随后 API liveness、leader lease 和整个 host control plane 连锁失效。v1.34/v1.36 E2E 通过；当前不改代码、不把 exit 137 无证据写成 OOM。
 
@@ -43,7 +43,7 @@
 ## Next
 
 - 先复核 #7830、#7835 是否需要基于当前 `master` 调整，并等待各自 review；不把 #7841 的集成问题塞回两个基础 PR。
-- 保留干净候选的四个 patch；功能 residual 收敛后再准备包含 test-only `3bb0a304a` 的 exact branch-update packet。
+- 保留 fork 分支 `origin/rewrite/pr7841-three-scenarios-20260821` 的四个 patch；功能 residual 收敛后再准备包含 test-only `3bb0a304a` 的 exact branch-update packet。
 - #7841 验收至少覆盖 fit scale-up、no-fit scale-up、scale-down 和 restart/no-change；no-fit 同时检查 target、accepted result 和 Work 未变化。
 - 周一前用 Day 39 HTML 稿试讲，并用真实 YAML 核对生命周期、诊断、lock、handoff 和 cooldown。
 
