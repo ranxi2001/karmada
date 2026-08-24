@@ -35,7 +35,7 @@ master / #7837 API + #7833 result producer merged
 
 ## 最新讨论与实现影响（2026-08-24）
 
-#7492 最后一条实质评论仍是 2026-08-20 的
+#7492 在本轮回复前的最后一条实质评论是 2026-08-20 的
 [`@mszacillo` 说明](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5356519299)。在此之前，
 [`@RainbowMango` 只要求确认代码来源](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5355736072)，
 因为 upstream `master` 中不存在 `GetTotalBindingReplicas`。`@mszacillo` 随后确认该 helper 是其团队基于
@@ -53,6 +53,12 @@ component scale 路径。对于 equal 的 duplicated steady reconcile，`schedul
 相同 footprint；整体 scheduling 返回 no-fit 时也不覆盖 accepted result。target 真正失效后的 failover 是另一条
 路径，不能与 scale-up capacity no-fit 混为一谈。这些结论由 current-head 源码与 focused tests 支持；
 control-plane restart 后的 live 行为尚未单独执行。
+
+2026-08-24 已在
+[#7492 回复 `@mszacillo`](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5393442464)：先承认已有
+target 时会越过 `line 51` 进入 scalar 分支，再区分 fork helper 导致的 `component total != 0` 误判与 upstream
+正常的 `0 == 0` 行为，并请其确认 #7841 是否覆盖 v1.17-based deployment 的 restart 场景。当前等待对方回复或
+#7841 review；未据此修改代码或提出 upstream backport。
 
 另一个独立结论来自 issue body，而不是 fork helper：扩容超过当前集群容量时不得迁移 multi-template workload。
 这仍是 #7841 的 blocking regression case，必须同时验证 target、accepted result 和 Work 不变。
