@@ -203,6 +203,29 @@ etcd 容器最终以 137 结束；测试等 Ready 满 420 秒后只看到 `172.1
 同一 SHA 的 v1.34、v1.36 E2E 均已通过。当前证据支持 CI 环境 / control-plane collapse，
 不支持修改 #7833 代码；未定位宿主机层面的 CPU、I/O 或 memory 根因，因此不把 exit 137 直接写成 OOM。
 
+### #7835 current-head CI RCA（2026-08-24）
+
+公开 `#7835@3619c24f6ebcd50e5d57e9ffeb90a231953b80bf` 当前有 14 个 success、3 个 failure；
+三个红 job 的失败机制彼此独立，但都不支持修改本 PR 的 component scale planner：
+
+1. [CLI v1.35](https://github.com/karmada-io/karmada/actions/runs/32130807490/job/95691311325)：
+   Kind 创建 `member3-control-plane` 时，Docker 绑定 `127.0.0.1:45215` 失败，原始错误为
+   `Bind for 127.0.0.1:45215 failed: port is already allocated`。测试尚未进入业务断言；同矩阵 v1.34、v1.36 通过。
+2. [Operator v1.36](https://github.com/karmada-io/karmada/actions/runs/32130807245/job/95691310186)：
+   operator suite 已报告 `SUCCESS! -- 7 Passed | 0 Failed`，随后 `actions/upload-artifact` 才因
+   `Failed to CreateArtifact: Unable to make request: ETIMEDOUT` 把 job 标红。这是测试后的 artifact service 网络失败。
+3. [Base E2E v1.36](https://github.com/karmada-io/karmada/actions/runs/32130807423/job/95693561431)：
+   普通 `Job` 的 binding 在 `11:44:46.295` 已成功调度到 `member1/member2/member3`，随后同一 runner 上的多个
+   control plane 失效。Karmada etcd 出现 7 至 37 秒的 linearized read、8.85 秒和 4.18 秒的 `slow fdatasync`；host kubelet
+   无法续租，多个 control-plane container 同时退出，containerd 处理 task 时连续
+   `context deadline exceeded`，最终 host、Karmada 与 member2 API 均 `connection refused`。失败列表中的
+   Job status、其他并行 spec 和清理错误是同一次 control-plane collapse 的连锁结果。
+
+第三项的测试对象是单模板 `batch/v1 Job`；新增 `calculateMultiTemplateAvailableSetsForScale` 在 #7835 中只被
+单元测试调用，生产入口由 #7841 负责接入。因此三个失败均可先重跑，不为它们修改 #7835 production code。
+现有 artifact 能证明 etcd / container runtime 同时失速，但不能区分 runner 最底层是 CPU、I/O、memory 还是
+其他宿主资源故障，不把它进一步写成 OOM。Tide 仍独立等待 `approved` / `lgtm`。
+
 公开 `#7841@b2b27ad01c79ec8cb355461a674110c59d6fb3bf` 的 lint、codegen、compile、unit、
 CLI/Chart/Operator 三档矩阵、v1.35/v1.36 base E2E 和 DCO 均通过，共 16 个 success。唯一失败是
 v1.34 base E2E：`rescheduling_test.go` 的 `BeforeEach` 创建临时 member 时
