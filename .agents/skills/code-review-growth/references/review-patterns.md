@@ -110,6 +110,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Original user trigger, allocator/state preconditions, base-versus-head result, and final controller/application condition.
 - Test or fix cue: Force the collision or stale state, assert the user-visible recovery, and retain a baseline control; do not treat a happy-path invariant shared by both implementations as regression coverage.
 
+## Release Metadata Pipelines Must Prove End-To-End Completeness
+
+- Pattern: A release collector can pass syntax checks and small-range smoke tests while default pagination, delimiter-sensitive parsing, unresolved identities, or collapsed API errors omit valid release metadata.
+- Seen in: `karmada-io/karmada#7860`, where the PR collector failed the 285-commit v1.18.0 minor range, truncated PR #7298 at an inline backtick, skipped a commit with `author: null`, and converted a PR-metadata request failure into a zero-entry success.
+- Miss symptom: CI is green and one preview range looks correct, but a normal minor release cannot run or a generated changelog/contributor list is incomplete without an error.
+- Review check: Test one real range above every API default limit; compare the collector with the published artifact; include multi-line fenced content containing the delimiter; enumerate null/unresolved identities; and trace transport or GraphQL errors to the process exit status.
+- Evidence to gather: API `total_*` versus returned counts on every page, exact historical PR bodies and changelog entries, unresolved commit SHA and owning PR, stderr plus exit status, and whether the regression fails against the old collector.
+- Test or fix cue: Paginate until the declared total is satisfied, parse the structured fence rather than excluding content characters, surface every unresolved item, and fail closed on partial upstream data. Keep small-range success as a control, not as completeness proof.
+
 ## Recovery-Event Fixes Must Prove Semantic Equality And Termination
 
 - Pattern: Expanding an update predicate can restore a dropped recovery event while also enqueueing representation-only changes or creating a controller feedback loop.
