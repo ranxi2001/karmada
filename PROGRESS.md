@@ -10,7 +10,7 @@
 
 ## Current Snapshot
 
-状态核对时间：2026-08-24。
+状态核对时间：2026-08-25。
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
@@ -21,7 +21,7 @@
 
 ## Last Run
 
-- 2026-08-25：按 work-api #49/#66 的模式完成 Kubernetes/Go 依赖升级本地候选 `deps/kubernetes-1.36-go-1.26@cf1bfed`：Go `1.26.7`、direct Kubernetes modules `v0.36.4`、controller-runtime `v0.24.1`、controller-tools `v0.21.0`、golangci-lint `v2.13.1`。`make test`、`make verify`、controller build、lint 和 module checksum 通过；apidiff 确认 generated `SharedInformerFactory` 新增 methods 对自定义实现 source-incompatible，旧 constructor/call methods 保留。未运行 live E2E，未 push 或创建 PR。[完整记录](internship-reports/k8s-go-update.md)
+- 2026-08-25：按 work-api #49/#66 的模式完成 Kubernetes/Go 依赖升级 `deps/kubernetes-1.36-go-1.26@cf1bfed`；`go.mod` L11-L16 已逐项 `>=` Karmada 对应版本。本地验证通过，[fork push CI](https://github.com/ranxi2001/work-api/actions/runs/32801974517) 的 `lint`、`verify`、`unit test`、`e2e` 全部 success。apidiff 确认 generated `SharedInformerFactory` 新增 methods 对自定义实现 source-incompatible，旧调用入口保留；全量 shared-module/Ginkgo 探索未纳入正式分支，未创建 upstream PR。[完整记录](internship-reports/k8s-go-update.md)
 - 2026-08-25：完成 [community PR #216 Agent Skills 范式复核](internship-reports/community-pr216-agent-skills-paradigm-review.md)。7 个 skill package 均通过 OpenAI validator，merged SHA 的 deterministic suite 通过；同时以最小函数级输入确认 grader error 会被排除出统计分母、`target_triggered=false` 不会使 output gate 失败。结论是格式与任务边界达到高质量 beta 水平，但 eval gate 暂不足以作为 gold-standard reference；是否发送 upstream comment 后续单独决定，本轮没有准备或发布社区文本。
 - 2026-08-24：复核 #7492 完整 thread、current `upstream/master@b6c92395e` 和 #7841 `6a51dcd9c`。确认 `GetTotalBindingReplicas` 属于外部 v1.17 fork，不能作为 upstream restart bug 或 backport 证据；已[回复 `@mszacillo`](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5393442464)，明确承认 `line 51` fallthrough 并请其核对 #7841。current #7841 在旧 scalar helper 前比较 desired/accepted components，equal 不进入 scale planner，steady reconcile 在 target 仍 eligible 时复用 accepted result，scale-up no-fit 则固定当前 target 并保留结果。17 checks success、GitHub `MERGEABLE`，但 restart/no-change 尚无 live restart 证据，也没有 human design review。[最新讨论与实现影响](internship-reports/issue7492-pr-stack-status.md#最新讨论与实现影响2026-08-24)
 - 2026-08-24：完成 `#7835@3619c24f6` 三个红 job 的 exact-attempt RCA。CLI v1.35 是 Docker 绑定 `127.0.0.1:45215` 冲突；Operator v1.36 在 7/7 spec 通过后上传 artifact `ETIMEDOUT`；Base E2E v1.36 已成功调度普通 Job，随后 etcd linearized read / fdatasync 与 containerd 同时失速，control plane 连锁退出。三项均支持重跑，不支持修改 #7835；宿主最底层资源原因仍无直接证据。用户确认后已发送 [`/retest`](https://github.com/karmada-io/karmada/pull/7835#issuecomment-5389840800)，Prow 因缺少 trusted user 的 `/ok-to-test` 拒绝触发，新 run 未启动。[current-head CI RCA](internship-reports/issue7492-pr-stack-status.md#7835-current-head-ci-rca2026-08-24)
