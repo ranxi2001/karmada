@@ -74,6 +74,7 @@ Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCub
 - [Day 49：#7492 PR1 API、旧版本写入保护与 PR #7830 CI](day49-issue7492-pr1-api-compat-pr7830.md)（[Mentor review 与 API Server 实验](day49-7830-review.md)）
 - [Day 52：#7492 多组件调度 PR 设计与答辩](day52-issue7492-multi-component-pr-design-defense.md)
 - [Karmada Community PR #216 Agent Skills 范式复核](community-pr216-agent-skills-paradigm-review.md)
+- [Work API Kubernetes 与 Go 版本升级](k8s-go-update.md)
 - [#7492 PR0-PR4 当前状态与验证边界](issue7492-pr-stack-status.md)
 - [实习任务 TODO](todo.md)
 - [实习生术语扫盲](intern-glossary.md)
