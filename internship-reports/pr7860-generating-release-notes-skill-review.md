@@ -8,7 +8,7 @@
 
 另一个例子是 minor release：`v1.18.0-alpha.0..v1.18.0` 有 285 个 commit，而 Python 收集器没有分页，只拿到默认上限 250 个后退出。也就是说，文档明确支持的 minor release 路径在最近一个完整 minor release 上不能运行。
 
-当前适合给作者 4 条 blocking inline finding；不应 `/lgtm` 或 `/approve`。评论仍需用户确认 exact text 后才能发布。
+已给作者发布 4 条 blocking inline finding；没有附带 `/lgtm` 或 `/approve`。后续只在作者更新 head 后复查这四个完整性边界。
 
 ## PR 与 Review 边界
 
@@ -18,9 +18,9 @@
 - Head：`zhzhuang-zju:releasenote-skills@2e7ae712e2940ac29a8ddb3819fb1e1bc43ada5c`
 - Diff：4 个新文件，`+653/-0`
 - 内容：skill 主流程、Karmada format plugin、PR metadata Python collector、contributor Bash collector
-- 当前状态：17 个 checks success；无 human review decision；`@ranxi2001` 已通过 [comment](https://github.com/karmada-io/karmada/pull/7860#issuecomment-5413148977) `/assign`
+- 当前状态：17 个 checks success；`@ranxi2001` 已通过 [comment](https://github.com/karmada-io/karmada/pull/7860#issuecomment-5413148977) `/assign`，并提交包含四条 blocker 的 [`COMMENTED` review](https://github.com/karmada-io/karmada/pull/7860#pullrequestreview-5021435325)
 - Review 深度：完整读取 PR body、4 个文件、5 条 Copilot inline comments 和 review summary；用历史 release range 做真实 API 回归
-- 未做：没有修改作者分支，没有提交 upstream review，没有运行与这 4 个文件无关的 Go/e2e 矩阵
+- 未做：没有修改作者分支，没有提交 `/lgtm` 或 `/approve`，没有运行与这 4 个文件无关的 Go/e2e 矩阵
 
 ## 实际运行过程
 
@@ -109,13 +109,13 @@ EXIT_STATUS 0
 
 四条都影响 release artifact 的完整性。它们是局部数据边界，逐条 prose 比图更清楚，因此 Review Visualization Gate 不要求 Mermaid。
 
-## 建议的英文 Inline Comments
+## 已发布的英文 Inline Comments
 
-以下是草稿，尚未发布。
+以下四条原文已在 exact head `2e7ae712e2940ac29a8ddb3819fb1e1bc43ada5c` 上作为同一个 `COMMENTED` review 发布，并通过 GitHub API 回读正文。
 
 ### 1. 完整 fenced block
 
-建议锚定 `fetch_pr_info.py` 的 `release_note_patterns`：
+锚定 `fetch_pr_info.py:128` 的 `release_note_patterns`：[upstream comment](https://github.com/karmada-io/karmada/pull/7860#discussion_r3855128290)
 
 ```text
 blocking: This truncates a real Karmada release note when a later line contains inline code. For PR #7298, the current parser returns only the first paragraph and drops the four deprecated-field bullets that appear in the v1.18.0 changelog. Could this parse the complete fenced block, including backticks and line breaks, and add a regression test with that multi-line shape?
@@ -123,7 +123,7 @@ blocking: This truncates a real Karmada release note when a later line contains 
 
 ### 2. Compare pagination
 
-建议锚定 `comparison_is_truncated()` 的调用处：
+锚定 `fetch_pr_info.py:244` 的 `comparison_is_truncated()` 调用处：[upstream comment](https://github.com/karmada-io/karmada/pull/7860#discussion_r3855128301)
 
 ```text
 blocking: This makes the documented minor-release workflow fail for a normal release range instead of collecting all commits. `v1.18.0-alpha.0...v1.18.0` contains 285 commits, so the current script receives the default 250 and exits with status 1. The compare endpoint supports `page`/`per_page`, as `fetch_contributors.sh` already uses. Could this collector paginate too and cover a range above 250 commits?
@@ -131,7 +131,7 @@ blocking: This makes the documented minor-release workflow fail for a normal rel
 
 ### 3. Unresolved contributor identity
 
-建议锚定 `jq -r '.commits[].author.login // empty'`：
+锚定 `fetch_contributors.sh:69` 的 `jq -r '.commits[].author.login // empty'`：[upstream comment](https://github.com/karmada-io/karmada/pull/7860#discussion_r3855128308)
 
 ```text
 blocking: `// empty` silently drops contributors whose commit email is not linked to a GitHub account. In the v1.18.0 range, commit `248997cd6` has `author: null`; it belongs to PR #7372 by `SujoyDutta`, who is present in the published v1.18.0 Contributors section but absent from this script's output. Could this report unresolved commits or recover the login through a verified PR mapping instead of succeeding with an incomplete list?
@@ -139,11 +139,17 @@ blocking: `// empty` silently drops contributors whose commit email is not linke
 
 ### 4. API failure propagation
 
-建议锚定 `get_pr_details_batch()` 的 error return：
+锚定 `fetch_pr_info.py:100` 的 `get_pr_details_batch()` error return：[upstream comment](https://github.com/karmada-io/karmada/pull/7860#discussion_r3855128320)
 
 ```text
 blocking: An HTTP or GraphQL failure here becomes `{}`, and `main()` then prints "No PRs with user-facing changes found" and exits 0. That turns a collection failure into a successful but incomplete release-note result, contrary to Gate 2. Could the batch helper return an explicit error and make `main()` fail non-zero, with a focused request-failure test?
 ```
+
+### 发布校验
+
+- Review：[`5021435325`](https://github.com/karmada-io/karmada/pull/7860#pullrequestreview-5021435325)，state `COMMENTED`，commit `2e7ae712e2940ac29a8ddb3819fb1e1bc43ada5c`
+- 四条 remote body 的 SHA-256 依次为 `ba6168ff3e921bed254531a34e344485e77521d5838cc26e7be085a4ed31638a`、`47c4743da0d9661e7e3d20e0878a569f40699296eff0476e3e2279cc2c0a3756`、`c9c78abeeb786e4d6d6abd870f03c58bc61f3fcb1b68b99805251e0e8195a7ef`、`9cc6c7701b5d92d8d73bb1078302f51bbfb195dc2d70e3f6f31944ad1e939342`，与获准草稿一致
+- GitHub REST 回读的 diff position 依次为 `128`、`244`、`69`、`100`；这四个文件均为本 PR 新增文件，因此 position 与目标新文件行号一致
 
 ## Copilot Comments 复核
 
@@ -175,4 +181,4 @@ blocking: An HTTP or GraphQL failure here becomes `{}`, and `main()` then prints
 
 未决边界：没有证明历史 changelog 本身绝对无人工误差；contributor finding 只依赖一个三方一致的 `@SujoyDutta` 样本，不用总人数差异推导全部遗漏原因。
 
-下一步：用户确认 exact target/text 后发布 inline comments；作者更新时只复查 parser 完整 fence、commit pagination、unresolved identity、request error propagation 及对应 tests。修复前不根据 17 个通用 checks 给出正面 review decision。
+下一步：等待作者回复或更新；新 head 到来后只复查 parser 完整 fence、commit pagination、unresolved identity、request error propagation 及对应 tests。修复前不根据 17 个通用 checks 给出正面 review decision。
