@@ -65,6 +65,14 @@ Suggested next step: <one action or question>.
 
 Omit any line that adds no information. Do not begin with a generic recap of the full thread.
 
+### Decision-Closure Comment
+
+When a thread is mixing downstream code, upstream behavior, and a proposed fix, compress the reply as `scope boundary -> decisive mechanism -> next upstream action`. Stop there when those moves settle the ambiguity; omit local guards, full behavior matrices, PR implementation detail, and secondary validation requests unless one changes the next decision.
+
+For #7492, the useful synthesis was: the false rescheduling came from a fork helper; upstream compares zero-valued scalar fields and therefore does not trigger that path; persisted `.spec.clusters[].components` now enables component-level change detection. A possible fork-only `line 51` guard and #7841 no-fit retention were related but unnecessary for closing that question.
+
+If the maintainer says to improve "this function," record it as an implementation-direction signal and compare the active PR before changing code. The behavior may be implemented through a caller or helper for ownership or control-flow reasons; do not call the PR aligned, approved, or rejected until implementation review or an explicit constraint establishes that boundary.
+
 ## Remove By Default
 
 - A restatement of the issue body or prior comments.

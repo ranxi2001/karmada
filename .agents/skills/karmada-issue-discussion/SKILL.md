@@ -54,6 +54,8 @@ When an issue and its fixing PR are both active, read the latest comments and ti
 
 For long technical discussions, reconstruct the strongest maintainer method as well as the conclusion: note who restated the model as a question, who connected prior work, who supplied the numbered event chain, who compared options and costs, and who separated problem confirmation from solution approval. Store this learning locally; keep upstream replies focused on the current decision.
 
+When a maintainer closes an ambiguity with a short synthesis, extract it as `scope boundary -> decisive mechanism -> next upstream action`. Treat that synthesis as the current discussion state and do not add a redundant technical reply. A named function or file identifies the discussion locus; an action such as "improve this function" is also an implementation-direction signal. Compare it with the active PR, but do not claim that the PR structure is approved or rejected without implementation review or an explicit constraint. See `references/concise-issue-writing.md` for the compression pattern and #7492 example.
+
 For a very long prior thread, map the timeline first and then open the root-cause comment, decision-changing option comparisons, maintainer direction, and closing or superseding event. Completeness means covering the decisions and outcome, not replaying every acknowledgement or repeated position.
 
 ## Production Relevance Gate
