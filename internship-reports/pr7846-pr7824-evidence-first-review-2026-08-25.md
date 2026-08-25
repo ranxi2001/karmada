@@ -54,7 +54,7 @@ aggregate: FailureTarget=True, Failed=True, Active=1
 
 ### 技术证据
 
-在 exact head 上增加临时测试：一个 member 为 `Failed=True, Active=0`，另一个为 `Active=1`。真实 `ParsingJobStatus` 输出：
+在 exact head 上增加临时测试，并用真实 Kubernetes v1.36.1 Job controller 生成 member 状态：一个 member 为 `Failed=True, Active=0`，另一个为 `Active=1`。把这两个状态依次交给 #7846 的 native reflection / aggregation 路径，得到：
 
 ```text
 active=1 failed=1
@@ -62,15 +62,17 @@ conditions=[FailureTarget=True, Failed=True]
 completionTime=<nil>
 ```
 
-随后把该结果交给 Kubernetes 的真实 `ValidateJobUpdateStatus`：
+随后对真实 Kubernetes API Server 执行 `UpdateStatus`：
 
-- issue 环境对应的 Kubernetes `v1.35.2` 拒绝它；
-- 独立用 exact Kubernetes `v1.36.1` 复核，得到同一错误；
+- issue 环境对应的 Kubernetes `v1.35.2` validation 拒绝它；
+- 独立用真实 Kubernetes `v1.36.1` API Server 复核，得到同一错误；
 - 单 member、`Active=0` 的失败聚合可以通过，说明失败原因不是 `FailureTarget` 本身。
 
 ```text
 status.active: Invalid value: 1: active>0 is invalid for finished job
 ```
+
+> 证据边界：这是“真实 Kubernetes member 状态 + #7846 exact-head native aggregation + 真实 API Server `UpdateStatus`”的受控集成复现，不是完整 Karmada 多集群 E2E，也不是 #7844 已记录的线上实例。因此本 finding 分类为 `reachable latent bug`，不写成 `observed production incident`。
 
 源码上，Kubernetes 在终态发生变化时启用 `RejectFinishedJobWithActivePods`（[`strategy.go:373-418`](https://github.com/kubernetes/kubernetes/blob/v1.36.1/pkg/registry/batch/job/strategy.go#L373-L418)），并明确拒绝 `status.Active > 0 && IsJobFinished(job)`（[`validation.go:530-534`](https://github.com/kubernetes/kubernetes/blob/v1.36.1/pkg/apis/batch/validation/validation.go#L530-L534)）。
 
@@ -159,18 +161,18 @@ provided port is already allocated
 
 ### #7846 comment 1
 
-Target: `pkg/util/helper/job.go:103` on `eb14ddd2eadc28866ab5d543b36e7d1c19d877bf`
+Target: `pkg/util/helper/job.go:112` on `eb14ddd2eadc28866ab5d543b36e7d1c19d877bf`
 
 ```text
-This still produces a status that the control-plane API server cannot store when member states are mixed. For example:
+This still produces a status that the control-plane API server cannot store when member states are mixed. A normal `Duplicated` Job can reach this when one member exhausts `backoffLimit` while another is still running:
 
-member-a: Failed=True, Active=0
+member-a: Active=0, Failed=1, Failed=True
 member-b: Active=1
 aggregate: FailureTarget=True, Failed=True, Active=1
 
-`ParsingJobStatus` sums `Active` from every member before entering this branch. I reproduced this aggregate on `eb14ddd`, then passed it to Kubernetes v1.35.2's `ValidateJobUpdateStatus`; it is rejected with `status.active: Invalid value: 1: active>0 is invalid for finished job`. The terminal guard in `aggregateJobStatus` does not help on the first write because the control-plane Job is not terminal yet.
+In a controlled reproduction, the real Kubernetes v1.36.1 Job controller produced both valid member states. Passing their reflected statuses through the native aggregation path at `eb14ddd` produced the aggregate above, and a real API server rejected `UpdateStatus` with `status.active: Invalid value: 1: active>0 is invalid for finished job`. The control-plane Job therefore keeps its previous status and retries until the remaining member becomes inactive.
 
-Could this PR define when the federated Job becomes globally failed and cover `failed + active` with version-matched Job status validation? One API-valid direction is to keep `FailureTarget` as the interim signal while another member is active, but the intended global failure policy should decide that.
+Could we keep `FailureTarget=True` as the interim aggregate condition while `Active > 0`, append `Failed=True` only after all reflected members are inactive, and cover `failed + active` by validating the complete aggregate against the version-matched Job status rules?
 ```
 
 ### #7846 comment 2
