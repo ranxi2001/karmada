@@ -33,18 +33,19 @@ master / #7837 API + #7833 result producer merged
 | 重调度失败时不下发新配置 | #7830 + #7841 | #7830 能按 result 改写 Work；#7841 在 pending / no-fit 时保留 accepted result 和现有 Work | #7830 单独不能闭合这个要求 |
 | 扩容超过容量时不得迁移 | #7841 | scale 路径只保留当前 target；当前 target no-fit 时返回错误，不 patch 新 result | 应作为 #7841 的 blocking regression case |
 
-## 最新讨论与实现影响（2026-08-24）
+## 最新讨论与实现影响（2026-08-25）
 
-#7492 在本轮回复前的最后一条实质评论是 2026-08-20 的
-[`@mszacillo` 说明](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5356519299)。在此之前，
-[`@RainbowMango` 只要求确认代码来源](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5355736072)，
-因为 upstream `master` 中不存在 `GetTotalBindingReplicas`。`@mszacillo` 随后确认该 helper 是其团队基于
-Karmada v1.17 rebase 时加入的兼容代码，并认为这种修改方向不正确。
+[`@RainbowMango` 的最新回复](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5404808509)
+明确了三个结论：故障来自外部 fork；upstream 多模板工作负载的 `.spec.replicas` 与
+`.spec.clusters[].replicas` 都是 0，因此 control-plane restart 和 scale up/down 都不会从该 scalar 分支触发
+重调度，也不会据此发生意外迁移；现在 `.spec.clusters[].components` 已持久化，下一步是按组件检测副本变化并
+触发重调度。该评论来自 issue 作者和项目 member，已把此前的源码推断提升为明确的 maintainer direction。
 
-这段讨论确定了证据边界：fork 中的 helper 会把 component replicas 求和后继续进入 scalar replicas 比较，
-但不能据此认定 upstream `master` 存在同一个 restart bug，也没有形成 quick fix 或 backport 共识。当前
-upstream `IsBindingReplicasChanged` 在已有 target 时仍会继续执行 scalar 分支，但 `spec.Replicas` 与
-`TargetCluster.Replicas` 都是 0，现有 non-empty-cluster 测试期望 `false`。
+此前，[`@mszacillo` 说明](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5356519299)
+`GetTotalBindingReplicas` 是其团队基于 Karmada v1.17 rebase 时加入的兼容代码，并认为这种修改方向不正确；
+[`@RainbowMango` 当时只要求确认代码来源](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5355736072)。
+fork helper 会把 component replicas 求和后继续进入 scalar replicas 比较，不能作为 upstream restart bug、
+quick fix 或 backport 的证据。
 
 #7841 没有修改该 helper 来模拟 fork 行为。它在旧 scalar 检查之前用 `schedulePendingComponentsFor*` 比较
 desired / accepted component result：equal snapshot 不进入 scale planner；真正的 scale-up/down 才进入
@@ -57,8 +58,13 @@ control-plane restart 后的 live 行为尚未单独执行。
 2026-08-24 已在
 [#7492 回复 `@mszacillo`](https://github.com/karmada-io/karmada/issues/7492#issuecomment-5393442464)：先承认已有
 target 时会越过 `line 51` 进入 scalar 分支，再区分 fork helper 导致的 `component total != 0` 误判与 upstream
-正常的 `0 == 0` 行为，并请其确认 #7841 是否覆盖 v1.17-based deployment 的 restart 场景。当前等待对方回复或
-#7841 review；未据此修改代码或提出 upstream backport。
+正常的 `0 == 0` 行为，并请其确认 #7841 是否覆盖 v1.17-based deployment 的 restart 场景。维护者随后用更短的
+三步结论收敛了讨论；后续无需再向 issue 追加同义回复。
+
+维护者所说的 `this function` 在上下文中指向 `IsBindingReplicasChanged`。#7841 当前没有直接扩展该函数，而是在
+旧 scalar 检查前由 `schedulePendingComponentsFor*` 和 `IsBindingComponentResultPending` 完成 component-aware
+检测。两者的目标行为一致，但 issue 评论不是对 #7841 的代码 review，也没有明确否定独立入口；是否需要把检测
+收回 `IsBindingReplicasChanged`，仍应由 PR review 决定，不能把这条方向性评论写成实现批准或 blocking finding。
 
 另一个独立结论来自 issue body，而不是 fork helper：扩容超过当前集群容量时不得迁移 multi-template workload。
 这仍是 #7841 的 blocking regression case，必须同时验证 target、accepted result 和 Work 不变。
