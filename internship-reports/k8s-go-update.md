@@ -184,4 +184,39 @@ the Go language version (go1.25) used to build golangci-lint is lower than the t
 
 work-api `go.mod` L11-L16 已逐项达到或超过 Karmada 对应基线，且依赖升级可以在不修改 hand-written API/controller 逻辑的情况下完成。fork push CI 的 build、lint、verify、unit test 与 live E2E 均通过。该结果证明 work-api 当前仓库能够使用这组版本完成生成、编译和测试，但不覆盖外部消费者自行实现 `SharedInformerFactory` 的场景；后续 PR body 或 reviewer notes 仍需披露新增 interface methods 的 source incompatibility，不能只写“依赖升级，无接口影响”。
 
-当前不需要追加代码修改。若后续准备 upstream PR，应先形成 concise PR body，说明版本选择、生成物、interface compatibility 与 fork CI 结果，再让用户确认 exact target/title/body；本轮没有创建 PR 或发布 comment。
+当前不需要追加代码修改。upstream PR 的 exact title/body 草案见下节；发布前仍需用户再次确认 target 与全文。本轮没有创建 PR、发布 comment 或请求 reviewer。
+
+## Upstream PR 文案草案
+
+- Target：`kubernetes-sigs/work-api:master`
+- Head：`ranxi2001:deps/kubernetes-1.36-go-1.26@cf1bfed10c700e66adb5792c1cad9f906e0b2e66`
+- 状态：仅本地草案，未创建 upstream PR。
+
+### Title
+
+```text
+Bump Kubernetes dependencies to v1.36.4
+```
+
+### Body
+
+<!-- work-api-pr-body:start -->
+```markdown
+This PR bumps Kubernetes dependencies to v1.36.4 and completes the Go 1.26 update deferred in #66. The Go directive moves to 1.26.0, while the toolchain and CI use Go 1.26.7. `controller-runtime`, `controller-tools`, generated clients and informers, and golangci-lint are updated accordingly.
+
+Compatibility note: the regenerated `SharedInformerFactory` interfaces add `StartWithContext`, `WaitForCacheSyncWithContext`, and `InformerName`. Custom implementations must provide these methods. Existing users of the generated factories can continue using the channel-based methods and constructors. CRD manifests and hand-written controller behavior are unchanged.
+
+Tests: `go mod verify`, `hack/update-codegen.sh`, `make manifests`, `go test -run '^$' ./...`, `make test`, `make controller`, `make verify`, and golangci-lint v2.13.1 passed.
+
+This PR was written in part with the assistance of generative AI.
+```
+<!-- work-api-pr-body:end -->
+
+### 写法依据
+
+- 标题沿用 #49、#66 及该仓库连续 Kubernetes 升级 PR 的 `Bump Kubernetes dependencies to vX.Y.Z` 格式。
+- #66 明确把 Go 1.26 推迟到 Kubernetes v1.36，因此首段直接说明本次完成该计划。
+- 当前仓库以及 #49、#66 对应 base 均没有 PR template；不额外添加不存在的 issue、kind 或 release-note 字段。
+- 旧 PR body 很短，但本次 generator 给 public Go interface 新增 methods。该 source compatibility 边界会影响自定义实现，必须保留在 reviewer-facing 文案中。
+- 不在正文引用动态 fork CI 状态；正文只列可复核的本地命令。fork exact-SHA CI 证据继续保留在本报告的“验证结果”中。
+- 最后一句遵循 [Kubernetes AI Guidance](https://www.kubernetes.dev/docs/guide/pull-requests/#ai-guidance) 的披露要求；AI 不列为 co-author，也不写 commit trailer。
