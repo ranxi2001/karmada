@@ -4,7 +4,7 @@
 - 任务来源：[work-api `go.mod@9710f2f`](https://github.com/kubernetes-sigs/work-api/blob/9710f2f9d7c6359c76d501104df86e1278942772/go.mod#L11-L16)
 - 参考 PR：[kubernetes-sigs/work-api#49](https://github.com/kubernetes-sigs/work-api/pull/49) `Bump Kubernetes dependencies to v1.31.6`
 - 参考 PR：[kubernetes-sigs/work-api#66](https://github.com/kubernetes-sigs/work-api/pull/66) `Bump Kubernetes dependencies to v1.35.0`
-- 当前边界：[upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74) 已创建；未发布额外 comment 或请求 reviewer。
+- 当前边界：[upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74) 已更新为单一 squashed commit `f608bdc`，包含 Gomega `v1.42.0`。
 
 > 原始任务：这个 K8s 依赖，以及 Golang 版本帮忙升级一下。大版本号参考 Karmada，小版本号选最新就行。
 
@@ -39,7 +39,7 @@
 
 前 5 项来自 Karmada `go.mod`；Karmada 没有在主 `go.mod` 直接 require `controller-tools`，其对应基线来自 `hack/update-crdgen.sh` 的 `CONTROLLER_GEN_VER="v0.21.0"`，并由当前生成 CRD 的 `controller-gen.kubebuilder.io/version: v0.21.0` annotation 交叉确认。
 
-为避免把约束扩大成“所有同名 indirect module 都必须对齐”，还做过一次全量 shared-module 对比：74 个共同 module 中有 9 个 work-api 版本低于 Karmada，另有 Ginkgo v1/v2 module-path 差异。其中 8 个较高版本来自 Karmada 的 metrics-server 依赖图，并非 L11-L16 的 Kubernetes/controller 兼容下限。对应的 Ginkgo v2 与 indirect dependency 探索没有推送，保留在本地 `scratch/work-api-shared-deps-20260825@55e06d8`；正式分支和 fork 均保持 `cf1bfed`。
+为避免把约束扩大成“所有同名 indirect module 都必须对齐”，还做过一次全量 shared-module 对比：74 个共同 module 中有 9 个 work-api 版本低于 Karmada，另有 Ginkgo v1/v2 module-path 差异。其中 8 个较高版本来自 Karmada 的 metrics-server 依赖图，并非 L11-L16 的 Kubernetes/controller 兼容下限。对应的 Ginkgo v2 与 indirect dependency 探索没有推送，保留在本地 `scratch/work-api-shared-deps-20260825@55e06d8`；后续正式分支仅追加了本报告末尾说明的 Gomega `v1.42.0` 对齐。
 
 ## #49 的做法
 
@@ -107,7 +107,7 @@ PR #66 是当前代码基线之前最近一次 Kubernetes minor 升级，只包�
 
 - work-api branch：`deps/kubernetes-1.36-go-1.26`
 - base：`upstream/master@9710f2f9d7c6359c76d501104df86e1278942772`
-- commit：[`cf1bfed`](https://github.com/ranxi2001/work-api/commit/cf1bfed10c700e66adb5792c1cad9f906e0b2e66) `Bump Kubernetes dependencies to v1.36.4`
+- commit：[`f608bdc`](https://github.com/ranxi2001/work-api/commit/f608bdc8abf65b0feeba94cba272095d0f612a32) `Bump Kubernetes dependencies to v1.36.4`
 - fork branch：[`ranxi2001/work-api:deps/kubernetes-1.36-go-1.26`](https://github.com/ranxi2001/work-api/tree/deps/kubernetes-1.36-go-1.26)，remote head 与本地 commit 一致。
 - commit 状态：包含 `Signed-off-by: ranxi2001 <ranxi169@163.com>`；[upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74) 使用该 exact head。
 - diff：8 files、`+366/-230`。
@@ -189,9 +189,9 @@ work-api `go.mod` L11-L16 已逐项达到或超过 Karmada 对应基线，且依
 ## Upstream PR 文案与发布结果
 
 - Target：`kubernetes-sigs/work-api:master`
-- Head：`ranxi2001:deps/kubernetes-1.36-go-1.26@cf1bfed10c700e66adb5792c1cad9f906e0b2e66`
+- Head：`ranxi2001:deps/kubernetes-1.36-go-1.26@f608bdc8abf65b0feeba94cba272095d0f612a32`
 - PR：[`kubernetes-sigs/work-api#74`](https://github.com/kubernetes-sigs/work-api/pull/74)
-- 创建后核对：`OPEN`、非 draft、`MERGEABLE`，GitHub head 为 exact `cf1bfed10c700e66adb5792c1cad9f906e0b2e66`；EasyCLA `SUCCESS`，其余 upstream checks 当时尚未出现。
+- 状态核对：创建时 head 为 `cf1bfed`；经用户确认 squash push 后，GitHub/fork head 均为单一 commit `f608bdc`。PR 为 `OPEN`、非 draft、`MERGEABLE`，EasyCLA 已对新 SHA 重新通过，其余 upstream checks 当时正在重新挂载。
 - 发布边界：GitHub 保存后的 title/body 与下文批准稿一致；未发布 comment、bot command 或 reviewer request。
 
 ### Title
@@ -222,3 +222,16 @@ This PR was written in part with the assistance of generative AI.
 - 旧 PR body 很短，但本次 generator 给 public Go interface 新增 methods。该 source compatibility 边界会影响自定义实现，必须保留在 reviewer-facing 文案中。
 - 不在正文引用动态 fork CI 状态；正文只列可复核的本地命令。fork exact-SHA CI 证据继续保留在本报告的“验证结果”中。
 - 最后一句遵循 [Kubernetes AI Guidance](https://www.kubernetes.dev/docs/guide/pull-requests/#ai-guidance) 的披露要求；AI 不列为 co-author，也不写 commit trailer。
+
+## Gomega v1.42.0 增量
+
+进一步核对发现，正式分支的 Gomega `v1.40.0` 是 `controller-tools v0.21.0` 在当前 module graph 中要求的最低版本，而不是按 Karmada 基线主动选择的版本。此前用户明确的严格下限仅覆盖 `go.mod` L11-L16，Gomega 位于 L10，因此没有随第一版分支对齐到 Karmada `v1.42.0`。
+
+用户要求试升到 `v1.42` 后，先用本地 signed-off commit `ebaf845d0a97b19b9349999b295bf2c99572ad97` 验证该增量：
+
+- diff 仅为 `go.mod` 一行和 `go.sum` 两个 checksum 条目替换，`3 insertions / 3 deletions`；
+- 最终 build list 为 `github.com/onsi/gomega v1.42.0`，没有其他 module 版本漂移；
+- `go mod verify`、`go test -run '^$' ./...`、`make test` 和 `git diff --check` 均通过；controller coverage 仍为 72.2%；
+- codegen、format、vet 和 manifests 随 `make test` 重新执行，没有新增 tracked diff。
+
+用户随后明确要求 squash push。`ebaf845` 已合入原升级 commit，最终单一 commit 为 `f608bdc8abf65b0feeba94cba272095d0f612a32` `Bump Kubernetes dependencies to v1.36.4`；squash 前后 tree hash 均为 `dbf8edffab470f4c16a7ebc915af9f2ad75d723c`，原 `Signed-off-by` 保留。使用以旧远端 `cf1bfed` 为精确 lease 的 force-push 更新 #74 后，GitHub 与 fork head 均为 `f608bdc`，PR 仍为 `OPEN`、非 draft、`MERGEABLE`，EasyCLA 已重新通过；当时尚无人类 review。
