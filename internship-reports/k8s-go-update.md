@@ -4,7 +4,7 @@
 - 任务来源：[work-api `go.mod@9710f2f`](https://github.com/kubernetes-sigs/work-api/blob/9710f2f9d7c6359c76d501104df86e1278942772/go.mod#L11-L16)
 - 参考 PR：[kubernetes-sigs/work-api#49](https://github.com/kubernetes-sigs/work-api/pull/49) `Bump Kubernetes dependencies to v1.31.6`
 - 参考 PR：[kubernetes-sigs/work-api#66](https://github.com/kubernetes-sigs/work-api/pull/66) `Bump Kubernetes dependencies to v1.35.0`
-- 当前边界：fork topic branch 已推送并通过 push CI；未创建 upstream PR 或 comment。
+- 当前边界：[upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74) 已创建；未发布额外 comment 或请求 reviewer。
 
 > 原始任务：这个 K8s 依赖，以及 Golang 版本帮忙升级一下。大版本号参考 Karmada，小版本号选最新就行。
 
@@ -109,7 +109,7 @@ PR #66 是当前代码基线之前最近一次 Kubernetes minor 升级，只包�
 - base：`upstream/master@9710f2f9d7c6359c76d501104df86e1278942772`
 - commit：[`cf1bfed`](https://github.com/ranxi2001/work-api/commit/cf1bfed10c700e66adb5792c1cad9f906e0b2e66) `Bump Kubernetes dependencies to v1.36.4`
 - fork branch：[`ranxi2001/work-api:deps/kubernetes-1.36-go-1.26`](https://github.com/ranxi2001/work-api/tree/deps/kubernetes-1.36-go-1.26)，remote head 与本地 commit 一致。
-- commit 状态：包含 `Signed-off-by: ranxi2001 <ranxi169@163.com>`；未创建 upstream PR。
+- commit 状态：包含 `Signed-off-by: ranxi2001 <ranxi169@163.com>`；[upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74) 使用该 exact head。
 - diff：8 files、`+366/-230`。
 
 实际变更与 #66 一样保持在依赖、CI 和生成物边界：
@@ -184,13 +184,15 @@ the Go language version (go1.25) used to build golangci-lint is lower than the t
 
 work-api `go.mod` L11-L16 已逐项达到或超过 Karmada 对应基线，且依赖升级可以在不修改 hand-written API/controller 逻辑的情况下完成。fork push CI 的 build、lint、verify、unit test 与 live E2E 均通过。该结果证明 work-api 当前仓库能够使用这组版本完成生成、编译和测试，但不覆盖外部消费者自行实现 `SharedInformerFactory` 的场景；后续 PR body 或 reviewer notes 仍需披露新增 interface methods 的 source incompatibility，不能只写“依赖升级，无接口影响”。
 
-当前不需要追加代码修改。upstream PR 的 exact title/body 草案见下节；发布前仍需用户再次确认 target 与全文。本轮没有创建 PR、发布 comment 或请求 reviewer。
+当前不需要追加代码修改。用户确认 exact target/title/body 后，已创建 [upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74)；没有发布额外 comment 或请求 reviewer。
 
-## Upstream PR 文案草案
+## Upstream PR 文案与发布结果
 
 - Target：`kubernetes-sigs/work-api:master`
 - Head：`ranxi2001:deps/kubernetes-1.36-go-1.26@cf1bfed10c700e66adb5792c1cad9f906e0b2e66`
-- 状态：仅本地草案，未创建 upstream PR。
+- PR：[`kubernetes-sigs/work-api#74`](https://github.com/kubernetes-sigs/work-api/pull/74)
+- 创建后核对：`OPEN`、非 draft、`MERGEABLE`，GitHub head 为 exact `cf1bfed10c700e66adb5792c1cad9f906e0b2e66`；EasyCLA `SUCCESS`，其余 upstream checks 当时尚未出现。
+- 发布边界：GitHub 保存后的 title/body 与下文批准稿一致；未发布 comment、bot command 或 reviewer request。
 
 ### Title
 
