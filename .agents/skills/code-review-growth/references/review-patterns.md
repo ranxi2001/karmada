@@ -92,6 +92,15 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Aggregation code, upstream validation/strategy gates, old and new full status objects, and normal mixed-member timelines.
 - Test or fix cue: Cover `failed + active`, `failed + missing status`, and mixed-version members; use API validation or envtest instead of condition-only object equality.
 
+## API-Allocated Field Fixes Must Audit Sibling Allocation Paths
+
+- Pattern: Removing one control-plane-allocated field before cross-cluster propagation can leave another field on the same resource that uses the same member-side allocator and fails under the same collision.
+- Seen in: `karmada-io/karmada#7824`, where pruning `spec.ports[*].nodePort` fixed ordinary NodePort collisions but left `spec.healthCheckNodePort` on `LoadBalancer + externalTrafficPolicy: Local` Services.
+- Miss symptom: The patch matches the field named in the issue and its happy-path test passes, but a sibling Service mode still sends a nonzero requested port to every member.
+- Review check: Starting from the member API server's allocation transaction, enumerate every field it reserves, every resource mode that enables each allocator, and the create-versus-update retention contract.
+- Evidence to gather: Defaulting, mode predicates, exact allocation calls for zero and nonzero requests, collision errors, propagation pruning, member-observed field retention, and supported version behavior.
+- Test or fix cue: Exercise each sibling field through the real allocator with a preoccupied value. On create, prune control-plane allocations that must be member-local; on update, preserve the member's immutable allocation through the existing retain path.
+
 ## Regression Tests Must Distinguish Old And New Behavior
 
 - Pattern: A changed assertion can describe the desired end state while still passing against the old implementation, so it cannot prove the reported bug was fixed.
