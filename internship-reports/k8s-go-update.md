@@ -4,7 +4,7 @@
 - 任务来源：[work-api `go.mod@9710f2f`](https://github.com/kubernetes-sigs/work-api/blob/9710f2f9d7c6359c76d501104df86e1278942772/go.mod#L11-L16)
 - 参考 PR：[kubernetes-sigs/work-api#49](https://github.com/kubernetes-sigs/work-api/pull/49) `Bump Kubernetes dependencies to v1.31.6`
 - 参考 PR：[kubernetes-sigs/work-api#66](https://github.com/kubernetes-sigs/work-api/pull/66) `Bump Kubernetes dependencies to v1.35.0`
-- 当前边界：[upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74) 已更新为单一 squashed commit `f608bdc`，包含 Gomega `v1.42.0`。
+- 当前边界：[upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74) 已由 Tide 合并为 `upstream/master@b13d322`，包含 Gomega `v1.42.0`。
 
 > 原始任务：这个 K8s 依赖，以及 Golang 版本帮忙升级一下。大版本号参考 Karmada，小版本号选最新就行。
 
@@ -164,6 +164,7 @@ Karmada `upstream/master` 没有引用 `sigs.k8s.io/work-api` module 或这些 g
 | golangci-lint `v2.13.1` | 通过 | 官方 release binary，`0 issues` |
 | module `apidiff` | 完成 | 4 条 incompatible entries、3 个不同 method additions；其余为 compatible additions |
 | [fork push CI `32801974517`](https://github.com/ranxi2001/work-api/actions/runs/32801974517) | 通过 | exact SHA `cf1bfed10c700e66adb5792c1cad9f906e0b2e66`；`lint`、`verify`、`unit test`、`e2e` 全部 success |
+| [upstream PR CI `32805791645`](https://github.com/kubernetes-sigs/work-api/actions/runs/32805791645) | 通过 | final head `f608bdc8abf65b0feeba94cba272095d0f612a32`；`lint`、`verify`、`unit test`、`e2e` 全部 success |
 | `git diff --check` | 通过 | 无 whitespace error |
 
 ### 失败命令与原因
@@ -182,16 +183,16 @@ the Go language version (go1.25) used to build golangci-lint is lower than the t
 
 ## 当前结论
 
-work-api `go.mod` L11-L16 已逐项达到或超过 Karmada 对应基线，且依赖升级可以在不修改 hand-written API/controller 逻辑的情况下完成。fork push CI 的 build、lint、verify、unit test 与 live E2E 均通过。该结果证明 work-api 当前仓库能够使用这组版本完成生成、编译和测试，但不覆盖外部消费者自行实现 `SharedInformerFactory` 的场景；后续 PR body 或 reviewer notes 仍需披露新增 interface methods 的 source incompatibility，不能只写“依赖升级，无接口影响”。
+work-api `go.mod` L11-L16 已逐项达到或超过 Karmada 对应基线，Gomega 也已对齐到 `v1.42.0`，且依赖升级可以在不修改 hand-written API/controller 逻辑的情况下完成。final-head upstream CI 的 lint、verify、unit test 与 live E2E 均通过。该结果证明 work-api 当前仓库能够使用这组版本完成生成、编译和测试，但不覆盖外部消费者自行实现 `SharedInformerFactory` 的场景；PR body 已披露新增 interface methods 的 source incompatibility。
 
-当前不需要追加代码修改。用户确认 exact target/title/body 后，已创建 [upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74)；没有发布额外 comment 或请求 reviewer。
+`RainbowMango` 先确认整体看起来没有问题，同时要求核对测试结果和是否需要适配；final head 的 4 个 GitHub Actions jobs 全部通过后，其提交 `/lgtm` 与 `/approve`，没有 inline comment 或额外适配要求。Tide 于 2026-08-25 14:11（北京时间）合并 [upstream PR #74](https://github.com/kubernetes-sigs/work-api/pull/74)，merge commit 为 `b13d32268a51a91edc2aae6c5b0c99efc6cb4ae0`。该反馈已经由测试和合并状态闭环，不需要追加回复。
 
 ## Upstream PR 文案与发布结果
 
 - Target：`kubernetes-sigs/work-api:master`
 - Head：`ranxi2001:deps/kubernetes-1.36-go-1.26@f608bdc8abf65b0feeba94cba272095d0f612a32`
 - PR：[`kubernetes-sigs/work-api#74`](https://github.com/kubernetes-sigs/work-api/pull/74)
-- 状态核对：创建时 head 为 `cf1bfed`；经用户确认 squash push 后，GitHub/fork head 均为单一 commit `f608bdc`。PR 为 `OPEN`、非 draft、`MERGEABLE`，EasyCLA 已对新 SHA 重新通过，其余 upstream checks 当时正在重新挂载。
+- 状态核对：创建时 head 为 `cf1bfed`；经用户确认 squash push 后，final head 为单一 commit `f608bdc`。EasyCLA 和 `lint`、`verify`、`unit test`、`e2e` 全部成功，`RainbowMango` 对该 SHA 提交 `/lgtm`、`/approve`；Tide 已合并为 `b13d322`。
 - 发布边界：GitHub 保存后的 title/body 与下文批准稿一致；未发布 comment、bot command 或 reviewer request。
 
 ### Title
@@ -234,4 +235,4 @@ This PR was written in part with the assistance of generative AI.
 - `go mod verify`、`go test -run '^$' ./...`、`make test` 和 `git diff --check` 均通过；controller coverage 仍为 72.2%；
 - codegen、format、vet 和 manifests 随 `make test` 重新执行，没有新增 tracked diff。
 
-用户随后明确要求 squash push。`ebaf845` 已合入原升级 commit，最终单一 commit 为 `f608bdc8abf65b0feeba94cba272095d0f612a32` `Bump Kubernetes dependencies to v1.36.4`；squash 前后 tree hash 均为 `dbf8edffab470f4c16a7ebc915af9f2ad75d723c`，原 `Signed-off-by` 保留。使用以旧远端 `cf1bfed` 为精确 lease 的 force-push 更新 #74 后，GitHub 与 fork head 均为 `f608bdc`，PR 仍为 `OPEN`、非 draft、`MERGEABLE`，EasyCLA 已重新通过；当时尚无人类 review。
+用户随后明确要求 squash push。`ebaf845` 已合入原升级 commit，最终单一 commit 为 `f608bdc8abf65b0feeba94cba272095d0f612a32` `Bump Kubernetes dependencies to v1.36.4`；squash 前后 tree hash 均为 `dbf8edffab470f4c16a7ebc915af9f2ad75d723c`，原 `Signed-off-by` 保留。使用以旧远端 `cf1bfed` 为精确 lease 的 force-push 更新 #74 后，final-head CI 全部通过并由 `RainbowMango` 批准。merge commit `b13d322` 的 `go.mod` L10 已确认保留 `github.com/onsi/gomega v1.42.0`。
