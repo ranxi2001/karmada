@@ -83,6 +83,24 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Evidence to gather: Workflow YAML, setup-script defaults, checked-out branch SHA, container image/`inspect.json`, component startup version logs, and the first rejecting component's exact error.
 - Test or fix cue: Build role-labeled cases such as `old member -> new API server` and `new member -> old API server`. Require the proposed compatibility contract and regression tests to satisfy both directions before authorizing a fix PR.
 
+## Aggregated Terminal Status Must Satisfy Cross-Field Validation
+
+- Pattern: Adding a newly required terminal condition can fix one API validation error while the aggregated object still violates another invariant across counters, timestamps, and conditions.
+- Seen in: `karmada-io/karmada#7846`, where synthesizing `FailureTarget=True` fixed `Failed=True` validation for one member but `failed member + active member` still produced `Active>0 + Failed=True`.
+- Miss symptom: Unit tests compare the expected condition slice and pass, but a real API server rejects the complete status object.
+- Review check: For every synthesized terminal condition, enumerate mixed member states and validate the whole aggregate against the target API server's cross-field rules.
+- Evidence to gather: Aggregation code, upstream validation/strategy gates, old and new full status objects, and normal mixed-member timelines.
+- Test or fix cue: Cover `failed + active`, `failed + missing status`, and mixed-version members; use API validation or envtest instead of condition-only object equality.
+
+## Regression Tests Must Distinguish Old And New Behavior
+
+- Pattern: A changed assertion can describe the desired end state while still passing against the old implementation, so it cannot prove the reported bug was fixed.
+- Seen in: `karmada-io/karmada#7824`, where replacing cross-cluster NodePort equality with `nodePort > 0` passes both propagated fixed ports and member allocation when no collision exists.
+- Miss symptom: CI is green, but the test never creates the conflict or state transition that made the old path fail.
+- Review check: Run the proposed regression mentally or mechanically against the base revision and identify the exact assertion that must fail there.
+- Evidence to gather: Original user trigger, allocator/state preconditions, base-versus-head result, and final controller/application condition.
+- Test or fix cue: Force the collision or stale state, assert the user-visible recovery, and retain a baseline control; do not treat a happy-path invariant shared by both implementations as regression coverage.
+
 ## Recovery-Event Fixes Must Prove Semantic Equality And Termination
 
 - Pattern: Expanding an update predicate can restore a dropped recovery event while also enqueueing representation-only changes or creating a controller feedback loop.
