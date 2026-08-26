@@ -17,7 +17,7 @@ aggregate: FailureTarget=True, Failed=True, Active=1
 
 `FailureTarget` 的缺失虽然修了，但 `Failed=True + Active=1` 又触发另一条 Job status validation。#7824 的对应例子是：控制面给 LoadBalancer 分配 `healthCheckNodePort=30081`，member 已占用 30081；PR 只删普通 NodePort，member 仍会收到 30081 并拒绝创建。
 
-本轮只完成 read-only review、临时反例和评论草稿，没有向两个 PR 发布评论或 review。
+2026-08-26 经用户确认，已向 #7846 发布一条关于 `failed + active` 的 inline review comment；其余三条 inline comment 和两条 `Request changes` review 均未发布。
 
 ## 结论
 
@@ -155,13 +155,15 @@ provided port is already allocated
 
 #7824 作者把 v1.35 E2E 失败判断为无关 flake，但没有 same-SHA rerun、maintainer 确认或独立 RCA，本报告不替作者补足这个结论。两条 PR 的 CI 均早于 current master，不能描述为 rebase 后验证。
 
-## 待确认的 upstream review 草稿
+## Upstream review 状态与草稿
 
-以下文本经过术语与证据边界检查，但尚未发布。建议每条 PR 发两个 inline comments，并提交 `Request changes` review；发布前仍需用户确认 exact target 和 exact text。
+以下文本经过术语与证据边界检查。#7846 comment 1 已于 2026-08-26 发布；其余文本仍是未发布草稿，发布前仍需用户确认 exact target 和 exact text。
 
-### #7846 comment 1
+### #7846 comment 1（已发布）
 
 Target: `pkg/util/helper/job.go:112` on `eb14ddd2eadc28866ab5d543b36e7d1c19d877bf`
+
+Published: [`discussion_r3858973277`](https://github.com/karmada-io/karmada/pull/7846#discussion_r3858973277)
 
 ```text
 This still produces a status that the control-plane API server cannot store when member states are mixed. A normal `Duplicated` Job can reach this when one member exhausts `backoffLimit` while another is still running:
@@ -225,6 +227,6 @@ I found one additional API-server-allocated port that follows the same collision
 
 ## 下一步
 
-1. 用户确认四条 exact inline comments 和两个 `Request changes` target。
-2. 获得确认后再发布 upstream review；发布前重新核对 head SHA，head 变化则先重跑最小反例并更新 line anchors。
-3. 作者更新后只复查两条主链：#7846 的完整 Job status validation；#7824 的 `healthCheckNodePort` prune 与真实冲突反事实。避免扩展到已有 thread 或 Copilot 已覆盖的旁支。
+1. 等待 #7846 作者回复或更新；只复查完整 Job status validation，不把 comment 1 重复成顶层评论。
+2. #7846 comment 2、#7824 两条 comments 和两个 `Request changes` 仍需逐项确认；发布前重新核对 head SHA，head 变化则先重跑最小反例并更新 line anchors。
+3. #7824 后续只复查 `healthCheckNodePort` prune 与真实冲突反事实，避免扩展到已有 thread 或 Copilot 已覆盖的旁支。
