@@ -182,18 +182,3 @@ blocking: An HTTP or GraphQL failure here becomes `{}`, and `main()` then prints
 未决边界：没有证明历史 changelog 本身绝对无人工误差；contributor finding 只依赖一个三方一致的 `@SujoyDutta` 样本，不用总人数差异推导全部遗漏原因。
 
 下一步：等待作者回复或更新；新 head 到来后只复查 parser 完整 fence、commit pagination、unresolved identity、request error propagation 及对应 tests。修复前不根据 17 个通用 checks 给出正面 review decision。
-
-
-豆包分析，需要验证 ## 我额外发现的问题（建议顺手提，都不算 blocking 但值得说）
-
-1. **两个脚本的失败哲学完全相反，是核心设计不一致**：`fetch_contributors.sh` 对传输层是 fail-closed（`curl --fail` + `set -o errexit` + `jq -e`），但对你第 3 条说的空 author 是 fail-open；`fetch_pr_info.py` 对 compare 步骤 fail-closed（第 2 条），但对 GraphQL 步骤 fail-open（第 4 条）。四个问题本质上都是 "**静默数据丢失 vs. 显式失败**" 的选择没做统一。
-2. **GraphQL 成功响应下仍会静默丢 PR**：`if pull_request: result[...] = ...` + main 里 `continue`，某个 PR 在批量响应里缺失（被删 / 别名报错）时既无报错也无数量对账。建议加一个 `pr_numbers` 与取回数目的核对。
-3. **bot 过滤只有文档层、没有执行层**：format 文档说 Contributors 要排除 `[bot]`，但 `fetch_contributors.sh` 会原样输出 `karmada-bot` 这类登录名（真实 285 commit 范围里就有），SKILL Gate 3 第 4 步也只说 "去重排序" 没说过滤 ——bot 过滤完全依赖下游手工。这条最好固化到脚本或 Gate 3 指令里。
-4. **GraphQL 单查询别名数量**：minor 范围 285 个 PR 会拼成约 285 个别名的单条 GraphQL 查询，GitHub 有 query cost / 复杂度上限，建议作者拿真实范围跑一次确认不触发；必要时分批（如每 50 个一组）。
-5. 小问题：`normalize_release_note` 里 `len(normalized) <= 3` 会把真实 3 字符 note 丢掉（概率极低）；`github_request` 无 timeout、无限流重试；`release-note` 匹配大小写敏感且要求围栏后必须换行。
-
-另外你 PR 页面里 Copilot 那条 " 路径用了 `.github/skills/...`" 的评论已标记 Outdated—— 我看当前版本 SKILL.md 里 Gate 2/3 都已是 `.claude/skills/...`，作者改过了，这条不用再提。
-
-复现脚本我放在了 `C:\Users\r50059641\Doubao\chats\2026-08-26\new-chat\review7860\`（`fetch_pr_info.py` + `repro_test.py`），你可以直接重跑或改参数复验。
-
-需要的话我可以接着做两件事之一：① 为这 4 条各出一份可直接贴到 PR 上的修复 diff（含第 1 条的回归测试）；② 帮你起草对 zhzhuang-zju 的跟进回复（把你的 4 条 + 我上面补充的几点整理成一条完整 review 总结）。你要哪个？
