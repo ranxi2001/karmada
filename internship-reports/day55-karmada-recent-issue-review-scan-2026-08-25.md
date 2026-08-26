@@ -1,4 +1,4 @@
-# Karmada 近期 Issue / PR Review 候选扫描（2026-08-25）
+# Day 55：Karmada 近期 Issue / PR Review 候选扫描（2026-08-25）
 
 ## 先说人话
 

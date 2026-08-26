@@ -1,4 +1,4 @@
-# Karmada Community PR #216 Agent Skills 范式复核
+# Day 53：Karmada Community PR #216 Agent Skills 范式复核
 
 - 日期：2026-08-25
 - 评审对象：[karmada-io/community#216](https://github.com/karmada-io/community/pull/216) `Agent skills for Karmada users`

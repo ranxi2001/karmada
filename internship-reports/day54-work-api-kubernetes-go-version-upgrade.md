@@ -1,4 +1,4 @@
-# Work API Kubernetes 与 Go 版本升级
+# Day 54：Work API Kubernetes 与 Go 版本升级
 
 - 日期：2026-08-25
 - 任务来源：[work-api `go.mod@9710f2f`](https://github.com/kubernetes-sigs/work-api/blob/9710f2f9d7c6359c76d501104df86e1278942772/go.mod#L11-L16)
