@@ -13,7 +13,7 @@ config:
 ---
 flowchart TB
     subgraph INPUT["Existing extraction and scheduling"]
-        direction LR
+        direction TB
         SOURCE["Source workload<br/>e.g. FlinkDeployment"]:::existing
         COMPONENTS["GetComponents<br/>to Binding spec.components<br/>Component: replicas + requirements"]:::existing
         SCHED["Scheduler AssignReplicas<br/>supported multi-template placement<br/>existing after PR 7833"]:::existing
@@ -25,7 +25,7 @@ flowchart TB
     end
 
     subgraph DELIVERY["PR 7830 Work delivery"]
-        direction LR
+        direction TB
         CONSUMER["ensureWork calls reviseWorkloadReplicas<br/>select component, scalar, or fallback<br/>Commit 2 consumer"]:::commit2
         HAS_RESULT{"Component result<br/>present?"}:::commit2
         SCALAR["ReviseReplica<br/>existing scalar path"]:::existing
@@ -37,7 +37,7 @@ flowchart TB
     end
 
     subgraph OUTPUT["Existing Work finalization"]
-        direction LR
+        direction TB
         OVERRIDE["ApplyOverridePolicies<br/>runs last"]:::existing
         WORK["Work manifest<br/>dispatched to member cluster"]:::external
 
