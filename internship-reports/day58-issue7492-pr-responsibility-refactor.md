@@ -356,12 +356,14 @@ git diff --check
 | PR | public head | local head | proposed title | body | visible size | SHA-256 |
 | --- | --- | --- | --- | --- | --- | --- |
 | #7830 | `e3e9d4e9f` | `e3e9d4e9f` | unchanged: `feat: trigger rescheduling on component replica changes` | [current snapshot](day58-pr7830-current-body.md) | 210 words / 16 lines | `fe314b53e4594276d447353f9d5684e49e23c1bef471f32fa0e730512e51ba49` |
-| #7835 | `3619c24f6` | `e19a318eb` | `feat: plan component replica scale estimation` | [draft](day58-pr7835-body-draft.md) | 202 words / 16 lines | `2c965c47e9ed17b4f637dc37dbb46db64a96cbd10870fb03087ae6145d265551` |
+| #7835 | `e19a318eb` | `e19a318eb` | `feat: plan component replica scale estimation` | [published body](day58-pr7835-body-draft.md) | 202 words / 16 lines | `2c965c47e9ed17b4f637dc37dbb46db64a96cbd10870fb03087ae6145d265551` |
 | #7841 | `6a51dcd9c` | `c8146e039` | `feat: preserve accepted component state on rescheduling failure` | [draft](day58-pr7841-body-draft.md) | 240 words / 16 lines | `71b09b39992fdfb446689aaccea96116cd15ad86e18a39e56b3ba591da5797ac` |
 
 三个 packet 分别请求确认、分别 explicit-lease force-push、分别验证 remote head/title/body bytes；不批量执行。
 
 2026-08-27 21:25（Asia/Shanghai）：#7830 packet 已执行并验证。remote head 为 `e3e9d4e9f9319357fd8a1921f655f5b9b2be602a`，title 未变，changed files 仍精确为 `pkg/scheduler/scheduler_test.go`、`pkg/util/binding.go`、`pkg/util/binding_test.go`，统计 `+277/-8`；remote body SHA-256 与 local snapshot 相等，`cmp` 返回 0。下一步只处理 #7835 packet。
+
+2026-08-27 21:29（Asia/Shanghai）：#7835 packet 已执行并验证。force-push 后首次 REST response 短暂返回旧 head，随后 GitHub PR ref 收敛到 `e19a318ebb664e02abbbf1f5c4f1d19b43c83835`；未重复 push。GitHub stacked surface 为 5 files、`+680/-14`，其中 #7835 residual 精确为 `estimation.go` / `estimation_test.go`、`+403/-6`。remote body SHA-256 与 local draft 相等，`cmp` 返回 0。下一步只处理 #7841 packet。
 
 ## 数据流
 
@@ -383,6 +385,5 @@ scheduling success / failure
 
 ## 下一步
 
-1. 单独请求 #7835 `3619c24f6 -> e19a318eb` 与新 body 确认。
-2. #7835 验证完成后，最后请求 #7841 `6a51dcd9c -> c8146e039` 与新 title/body 确认。
-3. 只监控 official PR CI；live Flink workflow 由 upstream PR CI 验证，本地 compile/lint 不写成 live 结果。
+1. 最后请求 #7841 `6a51dcd9c -> c8146e039` 与新 title/body 确认。
+2. 只监控 official PR CI；live Flink workflow 由 upstream PR CI 验证，本地 compile/lint 不写成 live 结果。
