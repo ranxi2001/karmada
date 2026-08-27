@@ -49,7 +49,7 @@
 
 ### #7830 本地实现结果
 
-新候选分支为 `rewrite/pr7830-trigger-20260827`，基于 `upstream/master@61af4b2bb186f5b2bf929348d57a1f0bec0988cb`，signed-off commit 为 `78dfc7a40092eaa08ee480af124d5b2069e0f120`。公开 PR 仍停留在旧 head `4583e06d2050058d4ff8a3980fe587ea12a48c79`；本轮没有 push、force-push、PR body 编辑或评论。
+新候选分支为 `rewrite/pr7830-trigger-20260827`，基于 `upstream/master@61af4b2bb186f5b2bf929348d57a1f0bec0988cb`，signed-off commit 为 `78dfc7a40092eaa08ee480af124d5b2069e0f120`。用户确认 exact update packet 后，该 commit 已以 explicit lease force-push 到公开 PR head branch；title/body 已更新并完成远端逐字校验。
 
 最终 residual diff：
 
@@ -83,7 +83,7 @@ git show --check HEAD
 
 未运行 live E2E：该 PR 只增加进入 scheduler 的条件，focused scheduler tests 已证明 RB / CRB 调用链；estimation 和 failure-safe Work propagation 的集成 / Flink E2E 分别属于后续 PR。
 
-### #7830 upstream update packet（等待 exact approval）
+### #7830 upstream update packet（已发布并验证）
 
 - Target：`karmada-io/karmada#7830`，head branch `ranxi2001:feature/multi-component-scale-rescheduling`；
 - 当前公开 head：`4583e06d2050058d4ff8a3980fe587ea12a48c79`；
@@ -92,9 +92,18 @@ git show --check HEAD
 - exact body：[day49-pr7830-rebuilt-body-draft.md](day49-pr7830-rebuilt-body-draft.md)；
 - body SHA-256：`fe314b53e4594276d447353f9d5684e49e23c1bef471f32fa0e730512e51ba49`；
 - reviewer-visible size：210 words、16 nonblank lines；
-- actions：以 explicit lease force-push replacement commit，再更新 PR title/body；不发 comment、不请求 reviewer、不改 labels。
+- actions：以 explicit lease force-push replacement commit，再更新 PR title/body；未发 comment、未请求 reviewer、未改 labels。
 
 独立 diff-to-body 审计未发现 blocker：正文不再包含 `ReviseComponents`、interpreter API、Work 改写或 component delivery；对 #7835/#7841 的提及只界定 non-goal。scheduler-level 新测试直接覆盖 scale-up；scale-down 由 helper test 和同一 RB/CRB 调用链证明，body 没有夸大测试层级。
+
+2026-08-27 19:44（Asia/Shanghai）发布结果：
+
+- explicit lease 要求远端旧 head 必须为 `4583e06d2050058d4ff8a3980fe587ea12a48c79`；force-push 成功后远端 head 为 `78dfc7a40092eaa08ee480af124d5b2069e0f120`；
+- `gh pr edit` 因 token 缺少无关的 `read:org` GraphQL scope 失败，push 已成功但 title/body 当时尚未修改；随后使用 GitHub REST `PATCH /repos/karmada-io/karmada/pulls/7830` 发送同一获准 title/body；
+- remote title 精确等于 `feat: trigger rescheduling on component replica changes`；
+- remote body SHA-256 精确等于 `fe314b53e4594276d447353f9d5684e49e23c1bef471f32fa0e730512e51ba49`，`cmp` 返回 0；
+- GitHub changed files 精确为 `pkg/util/binding.go`、`pkg/util/binding_test.go`、`pkg/scheduler/scheduler_test.go`，统计为 `+215/-8`；
+- PR URL：[karmada-io/karmada#7830](https://github.com/karmada-io/karmada/pull/7830)。
 
 ## 旧栈记录（已被 2026-08-27 职责重构取代）
 

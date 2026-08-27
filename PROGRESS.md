@@ -14,14 +14,14 @@
 
 | 主线 | 当前状态 | 下一触发条件 |
 | --- | --- | --- |
-| [#7492 PR stack](internship-reports/issue7492-pr-stack-status.md#stack-overview) | 三需求重新拆为 #7830 trigger、#7835 estimation、#7841 failure-safe propagation；#7830 local signed-off head `78dfc7a40`，exact title/body packet 已冻结，公开 PR 仍为旧 `4583e06d2` | 等用户确认 `karmada-io/karmada#7830` 的 force-push + title/body update packet |
+| [#7492 PR stack](internship-reports/issue7492-pr-stack-status.md#stack-overview) | 三需求重新拆为 #7830 trigger、#7835 estimation、#7841 failure-safe propagation；#7830 已更新为 trigger-only head `78dfc7a40`，3-file diff 与 title/body 已远端精确验证 | 等 #7830 official PR CI / human review；之后基于新 head 重整 #7835 |
 | [PR #7827 / Day 48](internship-reports/day48-estimator-assumption-e2e-isolation-pr7827.md) | Open，head `6ebc4b459`；最终 diff 仅 `estimator_test.go`，focused validation 与 current-SHA 3 个 upstream E2E jobs 通过；本地未运行 live E2E | 等待 maintainer review 新信号 |
 | [Day 39 Descheduler](internship-reports/day39-karmada-descheduler-code-contracts-and-options.md) | 汇报稿按整任务调度模型整理；仍缺真实 YAML 对生命周期、诊断、lock、回执与 cooldown 的证据 | 周一前拿真实 YAML 核对并试讲 |
 | [PR #7662 / Day 40](internship-reports/day40-pr7662-unschedulable-replica-rescheduling-api-plan.md) | Open，head `586f6fc3508e`；partial 一期限定 Deployment，10 个 stop gates 尚待确认 | `@zhy76` / `@RainbowMango` 回复或 proposal commit |
 
 ## Last Run
 
-- 2026-08-27：完成 #7830 scope reset：旧 37-file `ReviseComponents` / Work delivery diff 全部移出，local `rewrite/pr7830-trigger-20260827@78dfc7a40` 仅修改 `IsBindingReplicasChanged` 及 RB / CRB tests；focused race 与完整受影响 package tests 通过。exact upstream update packet 已冻结：title `feat: trigger rescheduling on component replica changes`，body SHA-256 `fe314b53e4594276d447353f9d5684e49e23c1bef471f32fa0e730512e51ba49`，等待确认，未 push。[职责、diff 与 packet](internship-reports/issue7492-pr-stack-status.md#7830-本地实现结果)
+- 2026-08-27：完成并发布 #7830 scope reset：旧 37-file `ReviseComponents` / Work delivery diff 全部移出，公开 head `78dfc7a40` 仅修改 `IsBindingReplicasChanged` 及 RB / CRB tests；focused race 与完整受影响 package tests 通过。explicit-lease force-push 与 REST title/body update 完成，remote head、title、3-file diff 和 body SHA-256 `fe314b53e4594276d447353f9d5684e49e23c1bef471f32fa0e730512e51ba49` 已精确验证。[职责、diff 与发布证据](internship-reports/issue7492-pr-stack-status.md#7830-本地实现结果)
 - 2026-08-27：补全 [PR #7830 component delivery 数据流与 reviewer comment 草稿](internship-reports/day49-pr7830-component-delivery-comment-draft.md)：区分已有 `Component` scheduler input、`TargetComponent` per-cluster output、commit 1 `ReviseComponents` capability 与 commit 2 `ensureWork` consumer；exact Markdown Mermaid 通过 `@mermaid-js/mermaid-cli@11.16.0` 临时渲染为纵向 `609×2204`，草稿 243 visible words、SHA-256 `44b0118081b5f3adfd23a525ceee9dda7337b2eb6f8673554f2ee8cde82f32ed`。未发布上游评论。
 - 2026-08-26：完成 [Day 57：PR #7860 Release Notes Skill 完整性 Review](internship-reports/day57-pr7860-release-notes-skill-review.md)，并已发布 [`/assign` acknowledgment](https://github.com/karmada-io/karmada/pull/7860#issuecomment-5413148977) 与包含 [4 条 completeness blocker](https://github.com/karmada-io/karmada/pull/7860#pullrequestreview-5021435325) 的 `COMMENTED` review；remote body 与获准草稿逐条哈希一致，未给 `/lgtm` 或 `/approve`。同轮将全局 `humanizer-cs` 从 `v0.5.0` 升级到稳定版 `v0.5.1@865e6feabc5c803d4b6e08a8581d23f4ddfb4a9c`，备份位于 `/home/ranxi/.codex/skills/.humanizer-cs-backup-0.5.0-20260825163316`，新 session 生效。
 - 2026-08-26：完成 [Day 56：#7846 / #7824 evidence-first review](internship-reports/day56-pr7846-pr7824-evidence-first-review.md) 的首条上游反馈。#7846 用真实 Kubernetes v1.36.1 Job controller 生成 `failed + active` member 状态，经 exact-head native aggregation 后由真实 API Server 拒绝 `Active>0 + Failed=True`；用户确认后已发布 [`job.go:112` inline comment](https://github.com/karmada-io/karmada/pull/7846#discussion_r3858973277)。未提交 `Request changes`；#7846 第二条与 #7824 两条草稿仍待逐项确认。
@@ -29,7 +29,7 @@
 
 ## Current Blockers
 
-- #7492：#7830 local replacement 尚未更新公开 PR；force-push 会通知 reviewer，必须先获得 exact action 确认。#7835/#7841 仍需按新依赖栈重整，本轮未修改。
+- #7492：#7830 已更新，等待 official PR CI / human review；#7835/#7841 仍需按新依赖栈重整，本轮未修改。
 - Day 39：尚缺真实 YAML 来证明 `NotStarted`、长期 `SchedulerUnschedulable`、单目标 Placement、执行前 admission lock 和新目标回执。
 - #7662：V1 estimator 缺 source freshness；public mode、threshold、V2 观测合同、requestID/ack、pinned selection 与 Descheduler 仲裁仍待确认。
 
@@ -43,8 +43,8 @@
 
 ## Next
 
-- 等用户确认 `karmada-io/karmada#7830` update packet：explicit-lease force-push `78dfc7a40`，并更新冻结的 title/body；发布后校验 remote head、title 与 body hash。
-- #7830 更新公开 PR 后，再基于新 head 重整 #7835；不把 estimation 或 Work propagation 回填到 #7830。
+- 等 #7830 official PR CI / human review；不把 fork push CI 作为验证证据。
+- 基于公开 #7830 head `78dfc7a40` 重整 #7835；不把 Work propagation 回填到 #7830/#7835。
 - 保持 #7841 current public head `6a51dcd9c` 不变，等 #7830/#7835 新栈确定后再处理 residual diff。
 - #7841 验收至少覆盖 fit scale-up、no-fit scale-up、scale-down 和 restart/no-change；no-fit 同时检查 target、accepted result 和 Work 未变化。
 - 周一前用 Day 39 HTML 稿试讲，并用真实 YAML 核对生命周期、诊断、lock、handoff 和 cooldown。
