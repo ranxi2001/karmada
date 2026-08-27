@@ -2,13 +2,13 @@
 
 日期：2026-08-27
 
-状态核对时间：2026-08-27 21:39（Asia/Shanghai）
+状态核对时间：2026-08-27 21:56（Asia/Shanghai）
 
 ## 先说人话
 
 #7492 的三个 PR 已经按“触发、计算、失败保护”重新发布，旧的 `ReviseComponents` / component delivery 大包没有保留。当前工作已从“继续改设计”转为“等待 official CI 和 human review”。
 
-还不能把任务写成完全结束：#7841 exact head `c8146e039` 的 official lint 发现 `calAvailableReplicas` cyclomatic complexity 为 17，超过阈值 15。本地已经提取 helper 并形成 signed-off follow-up `2b567c5a5`；core lint、完整 race tests 和 E2E compile 均通过，但该 commit 尚未获得 upstream push 确认。
+还不能把任务写成完全结束：#7841 旧 head `c8146e039` 的 official lint 发现 `calAvailableReplicas` cyclomatic complexity 为 17，超过阈值 15。修复已经以 signed-off follow-up `2b567c5a5` 发布；本地 core lint、完整 race tests 和 E2E compile 均通过，current-head official `lint` 与 `codegen` 也已通过，其余 jobs 仍在运行。
 
 具体例子仍是：accepted `JM=1, TM=4`，source 改为 `JM=1, TM=6`。#7830 只触发 scheduler，#7835 只计算 `TM=+2`，#7841 只在 scheduler 接受后更新 Work；无法容纳时 accepted snapshot 与旧 Work 都保持 `TM=4`。
 
@@ -18,9 +18,23 @@
 | --- | --- | --- | --- | --- |
 | [#7830](https://github.com/karmada-io/karmada/pull/7830) | `e3e9d4e9f` | component replicas changed → trigger rescheduling | 3 files，`+277/-8` | 同 residual |
 | [#7835](https://github.com/karmada-io/karmada/pull/7835) | `e19a318eb` | positive delta / scale-down skip calculation | 2 files，`+403/-6` | 5 files，`+680/-14` |
-| [#7841](https://github.com/karmada-io/karmada/pull/7841) | `c8146e039` | failure-safe accepted-result commit 与 Work guard | 14 files，`+804/-26` | 18 files，`+1484/-40` |
+| [#7841](https://github.com/karmada-io/karmada/pull/7841) | `2b567c5a5` | failure-safe accepted-result commit 与 Work guard | 14 files，`+816/-33` | 18 files，`+1496/-47` |
 
 三个 remote head、title、changed-file surface 和 body bytes/SHA-256 已逐项验证。PR 仍为 Open / blocked on CI and review，没有 external human review，也没有 `/lgtm` 或 `/approve`。
+
+## 分 PR 答辩口径
+
+### #7830：触发重新调度
+
+#7830 的核心目的是让 multi-template workload 在 component replicas 改变时重新进入现有 scheduler，因为这类 workload 的 scalar `spec.replicas` 为 0，旧的副本变化判断无法感知 `TM=4 -> 6`。它不新增 CRD 或 interpreter 接口，而是复用 #7837 定义、#7833 持久化的数据边界：desired `ResourceBindingSpec.Components` 与 accepted `ResourceBindingSpec.Clusters[0].Components`；实现上扩展现有 `IsBindingReplicasChanged`，并提供按 component name 比较的 `ComponentReplicasEqual`，只有 feature gate 开启、accepted snapshot 可比较且副本确实不同时才沿既有 `ScaleSchedule` 路径触发重调度，equal、普通单模板和不可比较状态保持旧行为。这个 PR 到“要不要重新调度”为止，不计算 delta，也不碰 Work。
+
+### #7835：计算重新调度所需容量
+
+#7835 的核心目的是在 component scale 已经被判定后给出不会 double count 的容量计算，而不是决定何时调度或如何提交结果。它没有增加对外 API，只在 scheduler core 内提供 `calculateMultiTemplateAvailableSetsForScale(ctx, multiTemplateEstimationContext)`：以 desired `spec.Components`、accepted `spec.Clusters[0].Components` 和唯一 accepted target 为输入，按 name 判断方向；纯扩容构造 positive delta 后通过现有 `ReplicaEstimator.MaxAvailableComponentSets` 估算，纯缩容直接返回 `minimumAvailableComponentSets` 这一内部容量证据并跳过 estimator，mixed、equal、snapshot 缺失/不完整以及 new candidate 都显式报错，绝不 fallback 到 full desired estimation。该 PR 有意不接 production caller，因为单独激活后，旧 scheduler 会在 `FitError` 时清空 accepted result；#7841 必须把 planner activation 与 failure retention 一起接入，最终完整 component assignment 仍由既有 scheduler result 流程生成。
+
+### #7841：失败时保留已接受状态
+
+#7841 的核心目的是把“新配置是否被 scheduler 接受”变成 Work 更新的门槛：成功时提交新 accepted snapshot 并允许最新 source 下发，失败时保留旧 snapshot 和旧 Work。接口设计只增加内部调度选项 `ScheduleAlgorithmOption.IsMultiComponentScale`，用它固定当前 accepted target、调用 #7835 planner，并让任何 component-scale error 在现有 `Spec.Clusters` result patch 前返回；交付侧在 source fetch 与既有 `ensureWork` 之间调用 `shouldWaitForComponentScheduleResult`，通过现有只读接口 `ResourceInterpreter.GetComponents` 提取 source replicas，再用 #7830 的 `ComponentReplicasEqual` 对照 accepted `TargetCluster.Components`，相等才继续更新 Work，不相等或不可比较就等待。source 本身已经包含新 replicas，所以这里不需要 `ReviseComponents`、workload rewrite 或新的 interpreter API。
 
 ## 实际代码数据流
 
@@ -107,9 +121,9 @@ git diff --check
 
 | PR | Checks | Failure | Human review |
 | --- | --- | --- | --- |
-| #7830 | 13 success / 5 pending / 18 total | 0 | 无 external human review |
-| #7835 | 6 success / 12 pending / 18 total | 0 | 无 external human review |
-| #7841 | 2 success / 11 pending / 1 failure / 14 total | `lint` | 无 external human review |
+| #7830 | 14 success / 3 jobs running + Tide pending / 18 total | 0 | 无 external human review |
+| #7835 | 14 success / 3 jobs running + Tide pending / 18 total | 0 | 无 external human review |
+| #7841 | 3 success / 10 jobs running + Tide pending / 14 total | 0 | 无 external human review |
 
 动态 CI 状态以 GitHub 为准。本报告只记录核对时快照，不把 pending、DCO 或 Tide 当作设计认可。
 
@@ -124,7 +138,7 @@ pkg/scheduler/core/util.go:57
 cyclomatic complexity 17 of func `calAvailableReplicas` is high (> 15) (gocyclo)
 ```
 
-漏检原因：发布前只对 `test/e2e/suites/base/...` 跑了 changed-path lint，没有覆盖同时修改的 `pkg/scheduler/core/...`。本地 follow-up `2b567c5a5` 把 component-scale pre-estimator resolution 提取到 `resolveComponentScaleWithoutEstimator`，并用 `targetClustersWithReplicas` 统一构造 capacity result；行为不变。
+漏检原因：发布前只对 `test/e2e/suites/base/...` 跑了 changed-path lint，没有覆盖同时修改的 `pkg/scheduler/core/...`。Follow-up `2b567c5a5` 把 component-scale pre-estimator resolution 提取到 `resolveComponentScaleWithoutEstimator`，并用 `targetClustersWithReplicas` 统一构造 capacity result；行为不变。
 
 Follow-up 验证：
 
@@ -135,13 +149,13 @@ go test -race -count=1 ./pkg/scheduler/core ./pkg/scheduler ./pkg/controllers/bi
 go test -count=1 ./test/e2e/suites/base -run '^$'
 ```
 
-全部通过。该 commit 尚未 push，必须单独获得 `c8146e039 -> 2b567c5a5` exact action 确认。
+全部通过。用户确认后已按旧 head `c8146e039` 执行精确 `--force-with-lease`；origin branch 与 GitHub PR head 均为 `2b567c5a553b6c34b49e0a7d5b0a6d1630b3a7cf`。Title 未变，remote body 与获准草稿逐字节一致，SHA-256 仍为 `71b09b39992fdfb446689aaccea96116cd15ad86e18a39e56b3ba591da5797ac`。Current-head official [lint job 98540268305](https://github.com/karmada-io/karmada/actions/runs/33078785199/job/98540268305) 已在 5m46s 后通过，旧 head 的唯一红灯已经消除。
 
 ## 反面案例与方法沉淀
 
 - [Day 49](day49-7830-review.md) 保留“从现有代码反推需求、扩成 API/interpreter/delivery”的反面案例；不再修改。
 - [Day 58](day58-issue7492-pr-responsibility-refactor.md) 保存完整拆分、架构冲突、range/residual diff 和 upstream update packet。
-- Day 59 只记录最终交付状态、CI gap 和下一 owner，不重复 Day 58 的完整实现过程。
+- Day 59 记录最终交付状态、分 PR 答辩口径、CI gap 和下一 owner，不重复 Day 58 的完整实现过程。
 
 可复用规则：
 
@@ -153,14 +167,12 @@ go test -count=1 ./test/e2e/suites/base -run '^$'
 
 ## 未决边界
 
-- #7841 lint follow-up 尚待获准 push，public CI 仍红；
-- official CI 其余 jobs 尚未完成；
+- #7830、#7835 的 live E2E jobs 与 #7841 新一轮 official jobs 尚未完成；
 - 三个 PR 尚无 external human review；
 - live Flink quota/no-fit、ordered-affinity 和 CRB 行为尚未本地 E2E 验证；
 - requirements provenance、legacy missing snapshot、failover/recovery 明确移出当前 Phase IV。
 
 ## 下一步
 
-1. 请求并执行 #7841 lint follow-up exact push，验证 remote head 和 body不变。
-2. 只监控 official PR CI；exact-head failure 出现后按 diff相关性分类。
-3. 等待 maintainer review，不为 pending状态重复 push、retest或恢复旧大包范围。
+1. 只监控 official PR CI；exact-head failure 出现后按 diff 相关性分类。
+2. 等待 maintainer review，不为 pending 状态重复 push、retest 或恢复旧大包范围。
