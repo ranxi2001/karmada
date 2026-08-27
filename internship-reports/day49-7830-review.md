@@ -4,6 +4,7 @@
 - 相关 Issue：[#7492](https://github.com/karmada-io/karmada/issues/7492)
 - 相关 PR：[#7830](https://github.com/karmada-io/karmada/pull/7830)、[#7833](https://github.com/karmada-io/karmada/pull/7833)、[#7841](https://github.com/karmada-io/karmada/pull/7841)
 - 实验对象：`ResourceBinding`
+- 流程图补充日期：2026-08-27
 
 > 2026-08-18 更新：PR #7830 已 force-push 为 `4583e06d2050058d4ff8a3980fe587ea12a48c79`，当前
 > diff 是 `ReviseComponents` interpreter 能力与 Work delivery；原 validation、feature-gate rollback 和
@@ -47,6 +48,35 @@ result 是否仍对应当前 source”。`ResourceInterpreter` 知道 `taskmanag
 职责图的 canonical source 是
 [`day49-7830-review-component-ownership.mmd`](day49-7830-review-component-ownership.mmd)。按仓库 export gate
 只保留 `.mmd`，本轮未生成 PNG/SVG。
+
+## `Component`、`TargetComponent` 与新增 operation 的关系
+
+> 2026-08-27 更新：[#7833](https://github.com/karmada-io/karmada/pull/7833) 已合并，因此 scheduler producer 已进入 upstream `master`。它仍不属于 #7830 的两个 commit；#7830 消费该结果并完成 Work delivery。
+
+Commit 1 没有新增另一种 workload component。它补充的是既有读取链的反向 operation：原有 `GetComponents` 把不同 CRD 的字段解释成统一的 `[]Component`，新增 `ReviseComponents` 再把 scheduler 产出的 `[]TargetComponent` 写回不同 CRD 的实际副本字段。
+
+| 对象或 operation | 相对 #7830 的状态 | 携带的信息 | 在链路中的作用 |
+| --- | --- | --- | --- |
+| `Component` / `binding.spec.components` | 已有 | `name`、全局期望 `replicas`、每副本资源与调度要求 | detector 生成的 scheduler input |
+| `TargetComponent` / `binding.spec.clusters[*].components` | API 已由 #7837 提供，producer 已由 #7833 合并 | `name`、某个目标集群获分配的 `replicas` | scheduler output；按 `name` 对应 `Component` |
+| `ComponentResource` / `GetComponents` | 已有 | workload object -> `[]Component` | 读取资源结构，即 decode |
+| `ComponentRevision` / `ReviseComponents` | commit 1 新增 | workload object + `[]TargetComponent` -> revised workload object | 写回资源结构，即 encode |
+| `reviseWorkloadReplicas` | commit 2 新增 | 当前目标集群的 scalar 或 component result | 在 `ensureWork` 中选择 component path、scalar path 或 fail-closed fallback |
+| `ReviseReplica` | 已有 | 单个 scalar replica result | 没有 component result 时继续使用的旧路径 |
+
+`Component.Name` 与 `TargetComponent.Name` 是两侧的关联键，但两者的信息量不同。`Component` 包含 scheduler 做容量和约束判断所需的 requirements；`TargetComponent` 只保存该集群的副本分配结果。`ReviseComponents` 因此只改副本字段，不重新判断 placement、资源要求或 result freshness。
+
+### 整体数据流
+
+1. detector 对 source workload 调用已有 `GetComponents`，把 Flink 等 CRD 的字段转成统一的 `binding.spec.components`。
+2. scheduler 读取 `[]Component`，在 #7833 当前支持的 multi-template placement 范围内选择目标集群，并把每个组件的 name/replicas 写入 `binding.spec.clusters[*].components`。该 producer 来自已合并的 #7833。
+3. binding controller 的已有 `ensureWork` 为每个目标集群 clone source workload；commit 2 新增的 `reviseWorkloadReplicas` 决定采用 component result 还是 legacy scalar result。
+4. component result 存在且有 hook 时，commit 1 新增的 `ReviseComponents` dispatcher 按既有优先级选择 configurable Lua、custom webhook 或 built-in thirdparty；native interpreter 当前没有 component revision implementation。
+5. 具体规则拥有 CRD 字段映射。Flink 内置 Lua 例如把 `jobmanager=1`、`taskmanager=4` 写入 `spec.jobManager.replicas` 和 `spec.taskManager.replicas`。
+6. 没有 `ReviseComponents` hook 时，commit 2 仅在已有 `GetComponents` 且 name/replicas exact match 时允许原对象继续交付；没有读取 hook 或结果不同都会返回错误，避免生成副本数与结果不一致的 Work。
+7. replica revision 完成后，已有 `ApplyOverridePolicies` 最后执行，随后 controller 创建或更新 Work。
+
+用于后续 reviewer comment 的英文数据流图和说明保存在 [`day49-pr7830-component-delivery-comment-draft.md`](day49-pr7830-component-delivery-comment-draft.md)。该草稿中的 Mermaid fence 是 comment 的 canonical source；本轮只做临时渲染校验，不保存 PNG/SVG。
 
 ## 为什么会改 37 个文件
 
