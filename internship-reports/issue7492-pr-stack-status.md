@@ -83,6 +83,19 @@ git show --check HEAD
 
 未运行 live E2E：该 PR 只增加进入 scheduler 的条件，focused scheduler tests 已证明 RB / CRB 调用链；estimation 和 failure-safe Work propagation 的集成 / Flink E2E 分别属于后续 PR。
 
+### #7830 upstream update packet（等待 exact approval）
+
+- Target：`karmada-io/karmada#7830`，head branch `ranxi2001:feature/multi-component-scale-rescheduling`；
+- 当前公开 head：`4583e06d2050058d4ff8a3980fe587ea12a48c79`；
+- 待发布 head：`78dfc7a40092eaa08ee480af124d5b2069e0f120`；
+- proposed title：`feat: trigger rescheduling on component replica changes`；
+- exact body：[day49-pr7830-rebuilt-body-draft.md](day49-pr7830-rebuilt-body-draft.md)；
+- body SHA-256：`fe314b53e4594276d447353f9d5684e49e23c1bef471f32fa0e730512e51ba49`；
+- reviewer-visible size：210 words、16 nonblank lines；
+- actions：以 explicit lease force-push replacement commit，再更新 PR title/body；不发 comment、不请求 reviewer、不改 labels。
+
+独立 diff-to-body 审计未发现 blocker：正文不再包含 `ReviseComponents`、interpreter API、Work 改写或 component delivery；对 #7835/#7841 的提及只界定 non-goal。scheduler-level 新测试直接覆盖 scale-up；scale-down 由 helper test 和同一 RB/CRB 调用链证明，body 没有夸大测试层级。
+
 ## 旧栈记录（已被 2026-08-27 职责重构取代）
 
 #7492 当前有 4 个未完成项：让多模板应用进入重调度、按已调度组件估算增量、副本变更失败时阻止新配置下发，
