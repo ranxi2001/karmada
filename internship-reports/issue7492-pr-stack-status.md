@@ -1,11 +1,89 @@
 # #7492 多组件调度 PR 栈状态
 
-> 状态核对：2026-08-24（Asia/Shanghai）。动态 PR / CI 状态以 GitHub 为准；本文只保存后续
+> 状态核对：2026-08-27（Asia/Shanghai）。动态 PR / CI 状态以 GitHub 为准；本文只保存后续
 > review 和发布仍需要的当前事实，不再维护 rebase、push 或旧 PR body 过程记录。
 
 <a id="stack-overview"></a>
 
-## 先说人话
+## 2026-08-27 职责重构决定
+
+### 先说人话
+
+本轮不再沿用“`#7830` 负责 component delivery、`#7841` 同时负责 trigger / estimation / failure safety”的旧栈。Issue #7492 把 application scale 拆成三个连续但独立的需求，当前工作先只整理 `#7830`：当 desired component replicas 与 scheduler 已接受的 `TargetCluster.Components` 不一致时，复用现有 `IsBindingReplicasChanged` 入口让 Binding 进入 `ScaleSchedule`。到“重新调用 scheduler”为止；怎么算增量和失败后是否更新 Work 都不属于该 PR。
+
+具体例子：Binding 当前保存 `jobmanager=1, taskmanager=4`，detector 随 source 更新把 `spec.components` 改为 `jobmanager=1, taskmanager=6`。`#7830` 只检测到 `4 -> 6` 并触发 scheduler；它不计算 `+2`，也不决定新配置能否传播。
+
+原 `#7830@4583e06d2050058d4ff8a3980fe587ea12a48c79` 的 37-file diff 全部服务于 `ReviseComponents` 与 binding-controller delivery，无法映射到“进入 rescheduling”这一条需求。新候选将从当前 `upstream/master` 重建，因此这些 API、generated files、interpreter、Flink customization 和 Work delivery 改动全部移出 `#7830`，而不是在旧 diff 上继续删补。
+
+### 代码归属表
+
+| 当前代码 / 行为 | 当前位置 | 实际归属 | 本轮处理 |
+| --- | --- | --- | --- |
+| component replica change detection | `#7841` 的 `schedulePendingComponentsFor*` 和 transition helpers | `#7830` | 收敛为 `IsBindingReplicasChanged` 内的 name-keyed replica comparison |
+| positive delta、scale direction、mixed transition、missing snapshot planning | `#7835` / `#7841` | `#7835` | `#7830` 不实现 |
+| accepted result retention、scheduler success/failure、Work propagation guard | `#7841` | `#7841` | `#7830` 不实现 |
+| `ReviseComponents` interpreter capability 与 component delivery | `#7830` | remove | 当前单集群整体调度模型不需要 |
+
+### #7830 文件范围
+
+| 文件 / 区域 | Change type | 原因 | 风险 | 测试 |
+| --- | --- | --- | --- | --- |
+| `pkg/util/binding.go` | production | 扩展 scheduler 已使用的 `IsBindingReplicasChanged` trigger | name/order 比较错误可能造成漏调度或无变化重调度 | focused util unit tests |
+| `pkg/util/binding_test.go` | tests | 覆盖 scale-up、scale-down、equal、single-template、feature-gate-off | 全局 feature gate 污染 | 测试结束恢复原状态 |
+| `pkg/scheduler/scheduler_test.go` | tests only, conditional | 仅在 helper 测试不足以证明 scheduler 入口时添加 | 测试扩大但 production 不变 | RB / CRB trigger test |
+
+明确不改：`pkg/scheduler/core/estimation.go`、`pkg/controllers/binding/`、`pkg/resourceinterpreter/`、config API、CRD、OpenAPI、generated files、Flink customization、admission / v1alpha1 compatibility、E2E。若实现需要这些文件，先停止并重新检查职责冲突。
+
+### #7830 判断与验证
+
+- feature gate 关闭：保持现有 scalar replica 行为；
+- `len(spec.components) <= 1`：保持普通单模板 / 单 component 行为；
+- cluster 为空：保留现有 failover trigger；
+- accepted component snapshot 缺失：不猜测变化，不在 `#7830` 选择 migration / fallback policy；
+- snapshot 存在：按 component name 比较 replicas，顺序变化不触发，scale-up / scale-down 都触发；
+- 不分类 pure / mixed scale，不计算 delta，不调用 estimator。
+
+最小验证先运行 `go test -race -count=1 ./pkg/util`；若增加 scheduler tests，再运行 `go test -race -count=1 ./pkg/scheduler`。完成后执行 `git diff --check upstream/master...HEAD`。
+
+实际五 PR 数据流的 canonical source 是 [issue7492-pr-responsibility-flow.mmd](issue7492-pr-responsibility-flow.mmd)。当前先实现其中 `#7830` 节点。首次可选渲染因本机未安装 `mmdc` 退出，未下载新 renderer；canonical source 已人工核对，PNG / SVG 未生成，Mermaid syntax 仍缺本地 renderer 验证。
+
+### #7830 本地实现结果
+
+新候选分支为 `rewrite/pr7830-trigger-20260827`，基于 `upstream/master@61af4b2bb186f5b2bf929348d57a1f0bec0988cb`，signed-off commit 为 `78dfc7a40092eaa08ee480af124d5b2069e0f120`。公开 PR 仍停留在旧 head `4583e06d2050058d4ff8a3980fe587ea12a48c79`；本轮没有 push、force-push、PR body 编辑或评论。
+
+最终 residual diff：
+
+```text
+ pkg/scheduler/scheduler_test.go |  68 +++++++++++++++++++++++++++
+ pkg/util/binding.go             |  53 +++++++++++++++++----
+ pkg/util/binding_test.go        | 102 ++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 215 insertions(+), 8 deletions(-)
+```
+
+`pkg/util/binding.go` 扩展现有 `IsBindingReplicasChanged`：feature gate 开启、desired 至少两个 components、恰好一个 target 且 accepted snapshot 完整可比较时，按 component name 比较 replicas。scale-up、scale-down 和 mixed replica directions 都只回答“replicas changed”；不计算方向或 delta。snapshot 缺失、component name set 变化、重复 / 空名称和多 target 等不可比较状态不猜 fallback，继续保持旧行为。
+
+`pkg/util/binding_test.go` 覆盖 scale-up、scale-down、equal + reordered、feature gate off、普通 single component、empty clusters failover、missing snapshot 和 name-set change。`pkg/scheduler/scheduler_test.go` 证明 RB / CRB 在 component replicas 变化后都会调用现有 scheduler 路径并写入 mock schedule result；没有修改 scheduler production code。
+
+验证结果：
+
+```text
+go test -race -count=1 ./pkg/util -run '^TestIsBindingReplicasChanged$'
+ok github.com/karmada-io/karmada/pkg/util
+
+go test -race -count=1 ./pkg/scheduler -run '^(TestDoScheduleBinding|TestDoScheduleClusterBinding)$'
+ok github.com/karmada-io/karmada/pkg/scheduler
+
+go test -count=1 ./pkg/util ./pkg/scheduler
+ok github.com/karmada-io/karmada/pkg/util
+ok github.com/karmada-io/karmada/pkg/scheduler
+
+git diff --check
+git show --check HEAD
+```
+
+未运行 live E2E：该 PR 只增加进入 scheduler 的条件，focused scheduler tests 已证明 RB / CRB 调用链；estimation 和 failure-safe Work propagation 的集成 / Flink E2E 分别属于后续 PR。
+
+## 旧栈记录（已被 2026-08-27 职责重构取代）
 
 #7492 当前有 4 个未完成项：让多模板应用进入重调度、按已调度组件估算增量、副本变更失败时阻止新配置下发，
 以及扩容超过当前集群容量时不得迁移。它们不是 4 个独立实现：#7835 提供估算规则，#7830 提供 Work 改写能力，
