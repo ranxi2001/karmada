@@ -14,10 +14,17 @@
 
 Karmada 独立记录从 Week 3 开始。Week 1、Week 2 的主线仍在 AgentCube，对应总结保留在 AgentCube 仓库 `intern` 分支，不在这里重复维护。
 
+- [Karmada 实习主要工作输出与总结](final-karmada-internship-work-summary.md)
 - [Week 3：进入 Karmada 并完成第一项 Upstream 贡献](week3-summary.md)
 - [Week 4：从证书布局提案转向可验证的轮换路径](week4-summary.md)
 - [Week 5：稳定 CI 环境并建立 Flake 证据链](week5-summary.md)
 - [Week 6：从架构 Review 与证书收敛走向可验证的 Flake 修复](week6-summary.md)
+- [Week 7：Scheduler Review、Remedy 修复合入与两项回归提交](week7-summary.md)
+- [Week 8：Waiting Store Review、Queue 实验与 Descheduler 专项调研](week8-summary.md)
+- [Week 9：Descheduler 代码契约与 Binding 更新 Review](week9-summary.md)
+- [Week 10：#7492 API 拆分、E2E 因果模型与四个 PR 提交](week10-summary.md)
+- [Week 11：多组件 PR 栈验证、Accepted Result 交付与 CI 归因](week11-summary.md)
+- [Week 12：Phase IV 三 PR 重构、Work API 合入与 Evidence-First Review](week12-summary.md)
 
 ## 记录索引
 

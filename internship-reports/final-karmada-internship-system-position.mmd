@@ -1,0 +1,31 @@
+flowchart TB
+    USER["User / Source Workload"] -->|"create or update resource"| API["Karmada API Server"]
+    API -->|"resource and policy events"| DETECTOR["ResourceDetector<br/>builds scheduling intent"]
+    DETECTOR -->|"ResourceBinding / ClusterResourceBinding"| BINDING[("Binding desired and accepted state")]
+    BINDING -->|"pending or changed binding"| SCHED["karmada-scheduler<br/>placement and replica decisions"]
+    SCHED -->|"accepted TargetClusters / Components"| BINDING
+    BINDING -->|"accepted assignment"| BC["Binding Controller<br/>builds Work"]
+    BC -->|"Work"| EC["Execution Controller"]
+    EC -->|"apply manifest"| MEMBER["Member Cluster"]
+    MEMBER -.->|"resource status"| STATUS["Status Aggregation"]
+    STATUS -.->|"aggregated status"| BINDING
+
+    OP["Operator"] -->|"karmadactl init"| CLI["Certificate Rotation<br/>identity and Secret safety"]
+    CLI -->|"certificates, Secrets, kubeconfigs"| API
+
+    REVIEW["Cross-cutting work<br/>PR Review, CI / E2E RCA,<br/>failure and cleanup validation"] -.-> DETECTOR
+    REVIEW -.-> SCHED
+    REVIEW -.-> BC
+    REVIEW -.-> MEMBER
+
+    classDef entry fill:#dae8fc,stroke:#6c8ebf,color:#172554;
+    classDef control fill:#d5e8d4,stroke:#82b366,color:#14532d;
+    classDef state fill:#fff2cc,stroke:#d6b656,color:#713f12;
+    classDef focus fill:#fce4d6,stroke:#c65911,color:#7f3000,stroke-width:3px;
+    classDef review fill:#e4dfec,stroke:#8064a2,color:#403152,stroke-width:3px;
+
+    class USER,OP entry;
+    class API,DETECTOR,BC,EC,STATUS control;
+    class BINDING,MEMBER state;
+    class SCHED,CLI focus;
+    class REVIEW review;
