@@ -3,8 +3,9 @@
 - 日期：2026-08-13
 - Issue：[`karmada-io/karmada#7826`](https://github.com/karmada-io/karmada/issues/7826)
 - Pull Request：[`karmada-io/karmada#7827`](https://github.com/karmada-io/karmada/pull/7827)
-- 当前提交：`6ebc4b459611c4e5bde92ea88e2f314c56f65377`
-- 基线：`upstream/master@09c08f405b2f0b53106b1947e08a82d4cc94de28`
+- 公开提交：`6ebc4b459611c4e5bde92ea88e2f314c56f65377`
+- 本地 rebase 候选：`478fdcc8df0ac607a8b0d82adb5f3aafac57c756`
+- 当前基线：`upstream/master@4a6efcd1b4e4a2d3fd244016d66adc2235f2c1e1`
 - 证据等级：E3；尚未达到 E4
 
 ## 先说人话
@@ -417,3 +418,23 @@ PASS
    PR，需明确接受最终 diff 不再是单文件。
 4. #7827 进入外部等待后，工作主线回到 #7492 PR1：完成 legacy-write safety guard、RB/CRB 真实 API
    Server 回归和 rebase 后验证，再准备正式 PR。
+
+## 2026-09-01：冲突处理与当前候选
+
+### 先说人话
+
+#7827 与最新 `master` 的冲突来自 #7836 已合入的容量计算：原 PR 仍从 suite 启动时缓存的 member client 读取节点，最新代码则要求按实时 Pod request 计算可用 CPU。临时 Kind 集群不在启动时缓存中，因此冲突不能只选一侧；当前候选保留最新容量算法，并把该临时集群的独立 `KubeClient` 显式传给 `mostAvailableSchedulableNodeCPU`。
+
+这次复核还发现两个会削弱 E2E 结论的边界。第一，`ClusterConditionReady=True` 不代表 scheduler 的异步 estimator connection worker 已完成，缺少连接时 general estimator fallback 可能给出相同的 no-fit 结果。候选现在先等待 scheduler 在 estimator cache 写入连接后的确定日志，再在第一个 Flink binding 后校验 dedicated estimator 的 `karmada_scheduler_estimator_estimating_request_total{result="success",type="MaxAvailableComponentSets"}` 指标。第二，原 cleanup 在 `createCluster` 和 `join.Run` 成功后才注册，中途失败可能留下 Kind 集群或 control-plane Secret；候选把回滚提前注册，并对部分 join 遗留的 credentials 做幂等删除。
+
+### 实际结果
+
+- 本地最终提交为 `478fdcc8df0ac607a8b0d82adb5f3aafac57c756`，直接基于 `upstream/master@4a6efcd1b`，历史已整理为一个 signed-off commit。
+- 最终 residual diff 仍只有 `test/e2e/suites/base/estimator_test.go`，为 `+287/-13`；没有修改 scheduler、estimator、cache、TTL、retry 或 timeout 的生产代码。
+- 两个本地备份引用保留旧公开 head 与 squash 前候选：`backup/pr7827-before-rebase-20260901@6ebc4b459`、`backup/pr7827-resolved-pre-squash-20260901@c8e3577f5`。
+- `go test -count=1 ./test/e2e/suites/base -run '^$'`、`go test -race -count=1 ./test/e2e/suites/base -run '^$'`、`go vet ./test/e2e/suites/base`、`PATH=/root/go/bin:$PATH make verify` 和 `git diff --check upstream/master...HEAD` 均通过。
+- 未运行 live multi-cluster E2E。旧 head 的 upstream E2E 结果不能证明新候选行为；force-push 后仍需以 `478fdcc8d` 的 official PR CI 为准。
+
+### 当前发布边界
+
+公开分支仍为 `6ebc4b459611c4e5bde92ea88e2f314c56f65377`，PR 当前仍显示 conflict。本地已验证远端 lease 值与该 SHA 一致，计划使用 `--force-with-lease=refs/heads/test/estimator-assumption-isolation:6ebc4b459611c4e5bde92ea88e2f314c56f65377` 更新到 `478fdcc8d`。PR title 保持 `test(e2e): isolate estimator assumption cluster`；正文候选已更新到 [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md)。force-push 与公开正文更新仍等待用户对 exact target/text 的确认。
