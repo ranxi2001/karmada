@@ -3,8 +3,8 @@
 - 日期：2026-08-13
 - Issue：[`karmada-io/karmada#7826`](https://github.com/karmada-io/karmada/issues/7826)
 - Pull Request：[`karmada-io/karmada#7827`](https://github.com/karmada-io/karmada/pull/7827)
-- 公开提交：`6ebc4b459611c4e5bde92ea88e2f314c56f65377`
-- 本地 rebase 候选：`478fdcc8df0ac607a8b0d82adb5f3aafac57c756`
+- 当前公开提交：`478fdcc8df0ac607a8b0d82adb5f3aafac57c756`
+- rebase 前公开提交：`6ebc4b459611c4e5bde92ea88e2f314c56f65377`
 - 当前基线：`upstream/master@4a6efcd1b4e4a2d3fd244016d66adc2235f2c1e1`
 - 证据等级：E3；尚未达到 E4
 
@@ -437,4 +437,6 @@ PASS
 
 ### 当前发布边界
 
-公开分支仍为 `6ebc4b459611c4e5bde92ea88e2f314c56f65377`，PR 当前仍显示 conflict。本地已验证远端 lease 值与该 SHA 一致，计划使用 `--force-with-lease=refs/heads/test/estimator-assumption-isolation:6ebc4b459611c4e5bde92ea88e2f314c56f65377` 更新到 `478fdcc8d`。PR title 保持 `test(e2e): isolate estimator assumption cluster`；正文候选已更新到 [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md)。force-push 与公开正文更新仍等待用户对 exact target/text 的确认。
+用户确认 exact target/text 后，已使用 `--force-with-lease=refs/heads/test/estimator-assumption-isolation:6ebc4b459611c4e5bde92ea88e2f314c56f65377` 将公开分支更新到 `478fdcc8d`。PR title 保持 `test(e2e): isolate estimator assumption cluster`，正文按 [`day48-pr7827-dedicated-cluster-body-draft.md`](day48-pr7827-dedicated-cluster-body-draft.md) 更新；远端 body 与草稿逐字比较为空，SHA-256 均为 `7958c17cc1d4e1a9453bf52e41159041e0c7affb624fc9c069c0d87019e577f2`。
+
+GitHub 回读确认 PR base/head 为 `4a6efcd1b/478fdcc8d`，`mergeable=true`、`mergeable_state=blocked`，冲突已经消失，blocked 来自尚未完成的 required checks。公开 diff 为 1 commit、1 file、`+287/-13`；DCO 已通过，lint、codegen 与 9 个 Kubernetes E2E jobs 当前 pending。后续不再引用旧 head 的 E2E 结果，只处理 `478fdcc8d` 的 official CI 或 human review 新信号。
