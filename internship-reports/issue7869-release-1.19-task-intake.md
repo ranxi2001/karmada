@@ -1,6 +1,6 @@
 # Issue #7869：release-1.19 本周可认领任务尽调
 
-状态核对时间：2026-09-01 09:50（Asia/Shanghai）
+状态核对时间：2026-09-01 10:04（Asia/Shanghai）
 
 ## 先说人话
 
@@ -107,6 +107,22 @@ subject:  chore: update maintained release versions
 
 文案以 [#7242](https://github.com/karmada-io/karmada/pull/7242) 为主要风格先例：lowercase title、单一 `/kind documentation`、一句话 what/why、`Part of #7869` 和 `NONE` release note；只额外加入真实 validation boundary 与 AI assistance disclosure。
 
+## Upstream PR 发布结果
+
+- PR：[karmada-io/karmada#7872](https://github.com/karmada-io/karmada/pull/7872)
+- State：Open，非 Draft，REST `mergeable=true` / `mergeable_state=blocked`
+- Base：`master@4a6efcd1b4e4a2d3fd244016d66adc2235f2c1e1`
+- Head：`ranxi2001:chore/maintain-release-1.19@3c3f74c5df16aba3dcccc3ca5d5c0101a351a291`
+- Public diff：4 files、`+11/-11`、1 commit
+- Remote title SHA-256：`44a0ae88110aa3168e2651a01a85a4d79532af2ede3ad0fb4426b7bc9a85457f`，与 local title `cmp` 相等
+- Remote body SHA-256：`094150375532f364e6b78cbfde7b0c1f075c0222ce07bbc937935114aa2e5981`，与 local body `cmp` 相等
+- Labels：`size/S`、`kind/documentation`
+- Initial review：无 human review；平台自动请求 `Garrybest`、`liangyuanpeng`、`chaosi-zju`，本轮没有手动 request reviewer
+
+初始 official checks 快照：DCO pass；9 个 Kubernetes jobs、`codegen`、`lint` pending；Tide pending，提示缺 `approved` / `lgtm`。这些是动态状态，不写入 PR body，也不把 pending 当失败。
+
+工具记录：首次用 `gh pr view --json ...` 同时读取 org reviewer/team 字段时，GraphQL 因 token 缺 `read:org` 返回 scope error；改用 public REST API 后成功核对 labels、assignees、requested reviewers、mergeability 和 reviews。该限制不影响 PR 创建、body 验证或 official checks 查询。
+
 ## 暂不认领：website upgrading docs
 
 `Add upgrading v1.18 to v1.19 docs` 仍未标 owner，但本轮不同时占第三个任务。原 upgrading-docs comment 草稿保留为 superseded 记录，不得发布。
@@ -132,6 +148,6 @@ subject:  chore: update maintained release versions
 
 ## 下一步
 
-1. 用户核对 local commit、diff、测试与 PR 文案。
-2. 获得 exact push / PR approval 后才把 `chore/maintain-release-1.19` 推到 origin 并创建 upstream PR。
-3. PR 创建后以 official PR CI 为动态验证面，不把 fork push CI 当作发布证据。
+1. 只监控 #7872 official PR CI；exact-head failure 出现后按 diff 相关性分类。
+2. 等待 human review；不为 pending 状态重复 push、retest 或手动 request reviewer。
+3. 后续任何 branch update、review reply 或 reviewer request 继续走 exact-text/action approval。
