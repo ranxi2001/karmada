@@ -1,6 +1,6 @@
 # Issue #7869：release-1.19 本周可认领任务尽调
 
-状态核对时间：2026-09-01 10:04（Asia/Shanghai）
+状态核对时间：2026-09-01 10:28（Asia/Shanghai）
 
 ## 先说人话
 
@@ -123,6 +123,29 @@ subject:  chore: update maintained release versions
 
 工具记录：首次用 `gh pr view --json ...` 同时读取 org reviewer/team 字段时，GraphQL 因 token 缺 `read:org` 返回 scope error；改用 public REST API 后成功核对 labels、assignees、requested reviewers、mergeability 和 reviews。该限制不影响 PR 创建、body 验证或 official checks 查询。
 
+## Codex review 意见处理
+
+[Codex inline comment](https://github.com/karmada-io/karmada/pull/7872#discussion_r3900126376) 指出：README 写“latest 10 Kubernetes versions”，但整张表保留 1.36..1.26 共 11 列；建议删除 1.26，或修改文字。
+
+结论分成两部分：
+
+- 删除 1.26 不成立：v1.17 和 v1.18 仍各自使用 1.26；#7665 中 `@RainbowMango` 已明确说明规则是“Each karmada version is tested against 10 Kubernetes versions”，不是整表只能有 10 列。
+- 修改文字成立：旧句把“每行 10 个版本”写成了容易理解为“整表 10 列”的措辞，且相同 bot 意见已在 #7242/#7665 重复出现。把它改为 `for each Karmada version against 10 Kubernetes versions` 能消除歧义，不改变任何 compatibility window。
+
+Local review fix：
+
+```text
+commit:  765ca1dc25fad1f5278a56385fc83a5236400cb1
+subject: docs: clarify compatibility table scope
+diff:    README.md +1/-1
+```
+
+该 commit 已 signed-off。重新运行 PyYAML/matrix assertions、README wording/table assertions、release refs、`actionlint v1.7.12` 和 final diff check，全部通过。最终 local PR surface 为 4 files、`+13/-13`、2 commits；没有新增 runtime compatibility 或 image-scanning 证据。
+
+Reply exact draft：[issue7869-pr7872-copilot-reply-draft.md](issue7869-pr7872-copilot-reply-draft.md)，35 visible words / 1 nonblank line，SHA-256 `48e51a3e3a60669a41c4dee78c350714628aca8f1b5edb89bc35e09b522bfc63`。当前仅本地准备，remote branch / PR head 仍为 `3c3f74c5d`；尚未 push、reply 或 resolve thread。
+
+Review-fix packet 准备时，#7872 exact old head 的 official checks 为 14 pass、3 个 E2E pending、Tide pending、0 failure；无 human review。该动态状态只用于确认没有同时发生的失败信号，不作为 review fix 正确性的证据。
+
 ## 暂不认领：website upgrading docs
 
 `Add upgrading v1.18 to v1.19 docs` 仍未标 owner，但本轮不同时占第三个任务。原 upgrading-docs comment 草稿保留为 superseded 记录，不得发布。
@@ -148,6 +171,6 @@ subject:  chore: update maintained release versions
 
 ## 下一步
 
-1. 只监控 #7872 official PR CI；exact-head failure 出现后按 diff 相关性分类。
-2. 等待 human review；不为 pending 状态重复 push、retest 或手动 request reviewer。
-3. 后续任何 branch update、review reply 或 reviewer request 继续走 exact-text/action approval。
+1. 获得 exact branch-update / inline-reply approval 后，fast-forward push `3c3f74c5d -> 765ca1dc2` 并发布获准回复；不 resolve thread。
+2. 更新后重新核对 PR head、incremental/full diff、reply bytes 与 official CI restart。
+3. 等待 human review；不手动 request reviewer，后续任何回复继续走 exact-text/action approval。

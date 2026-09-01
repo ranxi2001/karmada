@@ -1,0 +1,1 @@
+Updated in `765ca1dc2`: the sentence now states that each Karmada version is tested against 10 Kubernetes versions. Kubernetes 1.26 remains because v1.17 and v1.18 still use that column, consistent with the [maintainer clarification in #7665](https://github.com/karmada-io/karmada/pull/7665#discussion_r3478721397).
