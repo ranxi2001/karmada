@@ -4,38 +4,38 @@
 
 ## Goal
 
-主线：#7830 新 review 的代码建议与测试已完成，本地等待发布确认。
+主线：#7830 的建议修改与测试已 squash 为一个提交并发布，等待 CI/review。
 
 ## Current Snapshot
 
 状态核对时间：2026-10-19。
 
-- [#7830 后续 review](internship-reports/day59-issue7492-phase-iv-pr-refactor-closeout.md)：用户要求先采用建议再写测试；三处 suggestion 已精确采用，新版 `06a3e9578` 为 1 signed-off commit，base `b14c23c6d`，3 files `+403/-9`。
-- helper 已改为私有，检查所有 target；名称/数量/副本变化触发，空组件结果跳过。14 helper cases 与调用层新增 4 cases；util/scheduler 全部 race tests、lint 通过。
-- 远端仍为上轮 `8806479cd`；[新版 PR body](internship-reports/day58-pr7830-current-body.md) 与回复草稿在报告中，尚未发布。
-- #7835/#7841 的旧接口仍需后续单独衔接；其他历史任务见 [TODO](internship-reports/todo.md)。
+- [#7830 squash 发布](internship-reports/day59-issue7492-phase-iv-pr-refactor-closeout.md)：用户在 GitHub 接受建议后远端为 `410d4a135`，已按授权合入 tests 并推送为 `7249f81ab`；1 signed-off commit、3 files `+403/-9`，保留真实 Co-authored-by。
+- `7249f81ab` 与已验证的 `06a3e9578` tree 完全一致；util/scheduler 全部 race tests 与 lint 已通过，本轮只改 commit metadata，未重复测试。
+- 新 head DCO success，多版本 official CI queued/in_progress；PR mergeable=true、mergeable_state=blocked，等待 reviewer 复审。
+- [新版 PR body](internship-reports/day58-pr7830-current-body.md) 与回复草稿未发布，本轮仅更新代码分支；#7835/#7841 接口后续单独衔接。
 
 ## Last Run
 
-- 2026-10-19：依用户指示先原样采用 RainbowMango 代码 suggestions，再更新 tests；全包 race tests 与 lint 通过。新版 `06a3e9578` 保留单提交，工作区干净、未推送；[证据与发布草稿](internship-reports/day59-issue7492-phase-iv-pr-refactor-closeout.md)。
+- 2026-10-19：用户明确授权 squash/push，确认已接受源码与本地一致、仅差 tests 后，用 lease `410d4a135` 更新为 `7249f81ab`；GitHub 回读单提交、3 files、author trailers 正确。未发评论或更改正文；[发布证据](internship-reports/day59-issue7492-phase-iv-pr-refactor-closeout.md)。
 
 ## Current Blockers
 
-- 无本地实现阻塞；新版发布待确认。远端 `8806479cd` 仍被 RainbowMango 的 CHANGES_REQUESTED review 阻塞，需修订发布后复审批准。
+- 无本地实现阻塞；official CI 与 human review 为外部状态。
 
 ## Ruled Out
 
-- 上轮“组件集合无法比较时不触发”的限制已被 maintainer 的明确建议替代；不继续保留旧测试预期。
-- 空组件结果不视为组件删除；跳过该 target 并继续检查其他 target，最后沿用 legacy replica checks。
+- 不将旧的“组件集合无法比较时不触发”限制恢复进测试；现以 maintainer 三处 suggestion 为准。
+- 空组件结果跳过，继续检查其他 target，并沿用 legacy replica checks。
 - 不扩展 estimator/controller，不修改下游 PR，不额外增加 malformed-result 防御分支。
 
 ## Next
 
-- 若获准发布，用 exact lease `8806479cd39473a0d09bb3a117278ef61b0302b8` 将 `06a3e9578` 更新至现有 #7830 分支。
-- 同步新版 body 并发布报告中的一行回复，回读远端 SHA/text；只看新 head official PR CI。
+- 只跟进 #7830 `7249f81ab` official CI 或 human review 新信号，不为 pending 重复 push/retest。
+- 若继续同步 PR body/reply，使用报告中的本地草稿并确认 exact text；不自动 resolve threads 或请求 reviewer。
 
 ## Stop Conditions
 
-- upstream-facing branch push、PR/issue/comment/review/mention 必须先确认 exact target/diff/text。
+- 新的 upstream-facing branch push、PR/issue/comment/review/mention 必须先确认 exact target/diff/text。
 - lease 或发布目标发生变化时先重新核对；不覆盖他人更新。
 - 记录完成后检查 diff 与 intern root allowlist，提交并推送 origin/intern。

@@ -6,7 +6,7 @@
 
 ## 2026-10-19：#7830 当前审查结论
 
-最新状态：按用户要求，已原样采用 RainbowMango 的三处代码 suggestion，再更新测试。本地新版为 `06a3e9578`，race tests 与 lint 均通过，尚未推送；以下保留当日上一轮的审查与发布证据，最新行为以“后续 review”小节为准。
+最新状态：用户已在 GitHub 接受三处 suggestion，并授权 squash 与推送测试；已发布 `7249f81ab`，公开仅 1 commit、3 files `+403/-9`，DCO 通过，其余 official CI 已启动。以下保留此前审查与本地准备证据，最新发布结果见“用户接受建议后的 squash”小节。
 
 ### 先说人话
 
@@ -90,13 +90,25 @@ RainbowMango 在 [review](https://github.com/karmada-io/karmada/pull/7830#pullre
 
 合并门槛核对：用户看到的 `Merging is blocked — 1 review requesting changes by reviewers with write access` 对应 RainbowMango 的 [CHANGES_REQUESTED review](https://github.com/karmada-io/karmada/pull/7830#pullrequestreview-5568228463)，review commit 为远端 `8806479cd`。API 当前 `mergeable=true`、`mergeable_state=blocked`；本地修订 `06a3e9578` 仍未推送。按 [GitHub required reviews 说明](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/approving-a-pull-request-with-required-reviews)，这种规则下需原 reviewer 后续提交 approving review；发布修订与解除审查阻塞是两件事，不能把本地修改或 resolve thread 写成 approval。
 
+### 2026-10-19 用户接受建议后的 squash 与测试推送
+
+用户在 GitHub 接受三处 suggestion 后，远端从 `8806479cd` 前进为 `410d4a1358c1982fe8933204b7459ebfa2e4e0df`，PR 共 4 commits：原功能提交与三个 `Update pkg/util/binding.go`。逐文件比较确认，远端源码与本地已验证版本完全一致，唯一差异为新增/更新的 `pkg/util/binding_test.go`。
+
+按用户明确授权，将全部修改合为一个 signed-off commit `7249f81ab60267b3fe4c03d103b49229ae1df663`，保留 suggestion commits 中真实存在的 `Co-authored-by: Hongcai Ren <renhongcai@huawei.com>`；没有替维护者添加 sign-off。原 suggestion commits 的 author 为 `Onefly <ranxi169@163.com>`，与当前作者使用相同邮箱。
+
+通过 `git diff --exit-code 06a3e9578^{tree} HEAD^{tree}` 验证新版与已跑过 race tests/lint 的提交 tree 完全一致，本轮只增加共同作者信息并改写提交身份，故没有重复运行相同测试。diff whitespace 检查通过。
+
+使用 exact lease `410d4a1358c1982fe8933204b7459ebfa2e4e0df` 推送到 `origin/feature/multi-component-scale-rescheduling` 成功；GitHub 回读为 head `7249f81ab`、1 commit、3 files `+403/-9`、mergeable=true，author trailers 已核对。Title 不变；按本轮“squash 并推送测试”的范围，没有更新 PR body、发送回复或 resolve threads；新版 body 草稿仍在本地保留。
+
+current-head official CI 首次回读为 DCO success，多版本 checks queued/in_progress；`mergeable_state=blocked`，不能将提交发布成功写成获得 review approval。
+
 ### 本地记录与下一步
 
 本地原 feature worktree 停留在 `cf59527e2`，与远端分支存在分歧；当前证据直接读取 exact-SHA Git 对象，未切换或重置旧 worktree。若继续实现，应从审查 head 建独立 worktree，并先确认当前 base 差异与依赖接口。
 
 环境中 `/home/humanizer-cs/skills/humanizer-cs/SKILL.md` 不存在，改用已安装的 `/home/ranxi/.codex/skills/humanizer-cs/SKILL.md` 及其必读 references；更新检查使用 `python3`（`python` 不存在），版本为 `0.5.3`，无可用更新。
 
-上一轮 `8806479cd` 已发布；本轮 follow-up `06a3e9578` 的代码与测试已完成，本地等待发布确认。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
+follow-up 已获准以 `7249f81ab` 发布；后续只跟进该 head 的 official PR CI 与 human review，新版正文与回复草稿未在本轮发布。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
 
 ## 先说人话
 
