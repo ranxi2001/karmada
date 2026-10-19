@@ -88,6 +88,8 @@ RainbowMango 在 [review](https://github.com/karmada-io/karmada/pull/7830#pullre
 
 > Applied the suggested changes and updated the unit tests.
 
+合并门槛核对：用户看到的 `Merging is blocked — 1 review requesting changes by reviewers with write access` 对应 RainbowMango 的 [CHANGES_REQUESTED review](https://github.com/karmada-io/karmada/pull/7830#pullrequestreview-5568228463)，review commit 为远端 `8806479cd`。API 当前 `mergeable=true`、`mergeable_state=blocked`；本地修订 `06a3e9578` 仍未推送。按 [GitHub required reviews 说明](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/approving-a-pull-request-with-required-reviews)，这种规则下需原 reviewer 后续提交 approving review；发布修订与解除审查阻塞是两件事，不能把本地修改或 resolve thread 写成 approval。
+
 ### 本地记录与下一步
 
 本地原 feature worktree 停留在 `cf59527e2`，与远端分支存在分歧；当前证据直接读取 exact-SHA Git 对象，未切换或重置旧 worktree。若继续实现，应从审查 head 建独立 worktree，并先确认当前 base 差异与依赖接口。

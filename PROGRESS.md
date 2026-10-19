@@ -21,7 +21,7 @@
 
 ## Current Blockers
 
-- 无本地实现阻塞；新的 upstream branch/body/reply 发布需确认 exact diff/text。
+- 无本地实现阻塞；新版发布待确认。远端 `8806479cd` 仍被 RainbowMango 的 CHANGES_REQUESTED review 阻塞，需修订发布后复审批准。
 
 ## Ruled Out
 
