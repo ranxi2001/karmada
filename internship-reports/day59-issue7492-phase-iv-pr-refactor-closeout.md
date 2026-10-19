@@ -8,7 +8,7 @@
 
 ### 先说人话
 
-建议接受 RainbowMango 今天提出的简化意见，并同步处理 PR 描述与提交整理：#7830 只需要判断组件副本是否变化，可以用一个布尔比较函数替代 `ComponentScale` 枚举。扩容、缩容、部分组件增而另一些减，当前调用都会进入同一个重新调度分支；区分方向对这个 PR 的调用者没有额外作用。这是接口复杂度建议，尚未发现由枚举本身导致的行为错误。本轮只审查并记录，未修改或发布 PR 代码。
+建议接受 RainbowMango 今天提出的简化意见，并同步处理 PR 描述与提交整理：#7830 只需要判断组件副本是否变化，可以用一个布尔比较函数替代 `ComponentScale` 枚举。扩容、缩容、部分组件增而另一些减，当前调用都会进入同一个重新调度分支；区分方向对这个 PR 的调用者没有额外作用。这是接口复杂度建议，尚未发现由枚举本身导致的行为错误。初次审查只记录建议；随后用户要求实施，具体结果见下文实施状态。
 
 例如已调度结果为 `jobmanager=1, taskmanager=4`，期望改为 `jobmanager=1, taskmanager=6`，应触发重新调度。若期望变为 `jobmanager=2, worker=4`，组件名称集合已经变化，当前 PR 则保留原行为，不能在看到第一个副本差异时提前返回 `true`。
 
@@ -32,7 +32,35 @@
 
 现有 helper 测试应改为布尔断言，保留扩容、缩容、混合变化、仅重排、缺失/不可比较结果的语义。修改后最小验证是 helper 与 `TestIsBindingReplicasChanged`，再验证 `TestDoScheduleBinding` / `TestDoScheduleClusterBinding`；保持 Placement annotation 与 Placement 相同，确保用例真正走到副本变化分支。
 
-本轮没有修改 executable code，也没有重新运行 Go tests。GitHub exact-head check-runs 已核对：`3529779` 的 17 项检查全部成功，包含 unit、lint、codegen、compile 与 E2E；Tide pending 的原因是缺少 `approved` 标签。这只证明当前 head 的现有 CI 结果，不证明尚未实现的布尔版本通过测试，也不代表完整 #7835/#7841 功能已验收。
+初次审查没有修改 executable code，也没有重新运行 Go tests。GitHub exact-head check-runs 已核对：`3529779` 的 17 项检查全部成功，包含 unit、lint、codegen、compile 与 E2E；Tide pending 的原因是缺少 `approved` 标签。这只证明当前 head 的现有 CI 结果，不证明尚未实现的布尔版本通过测试，也不代表完整 #7835/#7841 功能已验收。
+
+### 2026-10-19 实施设计（源码修改前）
+
+用户已要求开始实施。源码范围为 `pkg/util/binding.go`（删除枚举并替换比较函数）、`pkg/util/binding_test.go`（布尔断言与不可比较边界）、`pkg/scheduler/scheduler_test.go`（保留既有 RB/CRB 入口测试）。不修改 scheduler 路由、估算器、Binding controller、API、generated files 或 #7835/#7841 分支。
+
+比较函数拟命名 `IsComponentReplicasChanged`，返回单一 bool；desired 由 admission 保证有效。先检查非空/等长，再构造 scheduled name-to-replicas map；遍历 desired 时若名称不存在即返回 false，副本不同时只累积 changed，全部名称匹配后返回 changed。新增边界用例覆盖“先发现副本变化，后发现名称缺失”，防止错误的提前成功返回。
+
+在 latest upstream/master 的独立 worktree 重建当前 PR 的三文件 diff，并整理为一个 signed-off commit；如 base 有相关变更，先核对重叠再继续。验证先跑 helper 与 IsBindingReplicasChanged、RB/CRB 调度入口的 race tests，再跑受影响包和 changed-path lint；不启动 live E2E 或全仓测试。待验证通过后更新本地 PR body 草稿，展示 exact diff/text 后再发布。
+
+### 2026-10-19 实施状态与待发布内容
+
+新版已在 `/home/ranxi/projects/karmada-pr7830-bool` 的 `review/pr7830-bool` 分支准备，基于最新 `upstream/master@b14c23c6d`。原 5 commits 整理为一个 signed-off commit `8806479cd39473a0d09bb3a117278ef61b0302b8`，相对 master 为 3 files `+339/-8`；工作区干净，祖先关系与 diff whitespace 检查通过。latest master 相对原 base 前进 70 commits，但三个目标文件没有重叠变化。
+
+`ComponentScale` 与 `ClassifyComponentScale` 已移除，替换为单一 bool 函数 `IsComponentReplicasChanged`；保持 admission 前提、按名称比较和不可比较时返回 false 的行为。新增测试覆盖先遇到副本差异、随后出现名称不匹配的情况。RB/CRB 调度入口测试保持原样。相对旧 PR head 的三个目标文件，源码为 `+11/-40`、util tests 为 `+21/-15`，scheduler tests 不变。
+
+验证命令及结果：
+
+- `GOTOOLCHAIN=go1.26.9 GOMAXPROCS=4 go test -race -count=1 -p=4 ./pkg/util ./pkg/scheduler`：通过；util `13.103s`、scheduler `1.663s`，覆盖两个包全部 tests。
+- `GOTOOLCHAIN=go1.26.9 GOMAXPROCS=4 golangci-lint run --concurrency=4 ./pkg/util ./pkg/scheduler`：通过，`0 issues`。
+- 未运行完整 `make test`、全仓 `make verify` 或 live E2E。没有 API/generated files 变化。
+
+本机默认 Go 为 1.27.0，latest master 已要求 1.26.9，故通过 `GOTOOLCHAIN=go1.26.9` 下载并使用版本匹配的工具链；没有修改 topic branch 的 `go.mod` 或 `.go-version`。本地检查已完成；正文可见 171 words / 15 nonblank lines，回复 17 words / 1 line，无长文例外。test log 为 `/tmp/pr7830-bool-tests.log`，lint log 为 `/tmp/pr7830-bool-lint.log`。本地 `git diff 8806479cd^ 8806479cd` 可复查完整提交。
+
+发布目标：现有 `karmada-io/karmada#7830`，head branch `ranxi2001/karmada:feature/multi-component-scale-rescheduling`，title 保持 `feat: trigger rescheduling on component replica changes`；正文以 [current body 草稿](day58-pr7830-current-body.md) 为准，仍保留官方模板与 AI assistance disclosure。发布应使用旧 head `3529779731010c16be738017b047ba490293a592` 的 exact force-with-lease；不改动旧本地 feature worktree，不更新 #7835/#7841，不自行 resolve threads 或请求 reviewer。
+
+完成 branch push 与 body 更新后，可在 RainbowMango 本日 review 下回复以下一句；当前只是本地草稿，尚未发布：
+
+> Replaced the enum with a boolean comparison, updated the description, and squashed the changes into one commit.
 
 ### 本地记录与下一步
 
@@ -40,7 +68,7 @@
 
 环境中 `/home/humanizer-cs/skills/humanizer-cs/SKILL.md` 不存在，改用已安装的 `/home/ranxi/.codex/skills/humanizer-cs/SKILL.md` 及其必读 references；更新检查使用 `python3`（`python` 不存在），版本为 `0.5.3`，无可用更新。
 
-下一步是实施上述窄范围简化并做针对性验证，同步 PR 描述并整理提交；任何 PR branch push 或上游回复仍需确认具体改动和英文文本。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
+窄范围简化、针对性验证、正文草稿与单提交整理均已完成；下一步等待用户确认具体改动和英文文本后，更新现有 PR branch/body 并回复 review。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
 
 ## 先说人话
 
