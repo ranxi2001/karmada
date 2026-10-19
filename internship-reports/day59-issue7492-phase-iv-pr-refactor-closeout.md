@@ -42,7 +42,7 @@
 
 在 latest upstream/master 的独立 worktree 重建当前 PR 的三文件 diff，并整理为一个 signed-off commit；如 base 有相关变更，先核对重叠再继续。验证先跑 helper 与 IsBindingReplicasChanged、RB/CRB 调度入口的 race tests，再跑受影响包和 changed-path lint；不启动 live E2E 或全仓测试。待验证通过后更新本地 PR body 草稿，展示 exact diff/text 后再发布。
 
-### 2026-10-19 实施状态与待发布内容
+### 2026-10-19 实施与发布结果
 
 新版已在 `/home/ranxi/projects/karmada-pr7830-bool` 的 `review/pr7830-bool` 分支准备，基于最新 `upstream/master@b14c23c6d`。原 5 commits 整理为一个 signed-off commit `8806479cd39473a0d09bb3a117278ef61b0302b8`，相对 master 为 3 files `+339/-8`；工作区干净，祖先关系与 diff whitespace 检查通过。latest master 相对原 base 前进 70 commits，但三个目标文件没有重叠变化。
 
@@ -58,9 +58,15 @@
 
 发布目标：现有 `karmada-io/karmada#7830`，head branch `ranxi2001/karmada:feature/multi-component-scale-rescheduling`，title 保持 `feat: trigger rescheduling on component replica changes`；正文以 [current body 草稿](day58-pr7830-current-body.md) 为准，仍保留官方模板与 AI assistance disclosure。发布应使用旧 head `3529779731010c16be738017b047ba490293a592` 的 exact force-with-lease；不改动旧本地 feature worktree，不更新 #7835/#7841，不自行 resolve threads 或请求 reviewer。
 
-完成 branch push 与 body 更新后，可在 RainbowMango 本日 review 下回复以下一句；当前只是本地草稿，尚未发布：
+用户确认后，已在 RainbowMango 的枚举意见下发布以下 [17-word 回复](https://github.com/karmada-io/karmada/pull/7830#discussion_r4311221327)，`in_reply_to_id=4311034303`；回读正文与获准文本一致：
 
 > Replaced the enum with a boolean comparison, updated the description, and squashed the changes into one commit.
+
+发布核验：exact force-with-lease `3529779731010c16be738017b047ba490293a592` 成功，origin branch 与 GitHub PR head 均已更新为 `8806479cd39473a0d09bb3a117278ef61b0302b8`。PR base 为 `b14c23c6dfa652d0b1b8d4a0dce28043b33e0c0c`，公开 diff 为 1 commit、3 files `+339/-8`，mergeable=true；title 未变。远端 body 与获准本地文件逐字节一致，SHA-256 为 `8875b1315a4e71dc595fa4a4124400e9ab7f967c0a4841c383233f5f4d3ad578`。
+
+`gh pr edit --body-file` 首次失败，错误为 `GraphQL: Projects (classic) is being deprecated ... (repository.pullRequest.projectCards)`。这是 gh 获取旧 Projects 字段时的 API 兼容问题；使用 REST `PATCH /repos/karmada-io/karmada/pulls/7830`，从正文文件构造 JSON input 后更新成功。没有重复发布回复，也没有 resolve review thread 或新增 reviewer mention。
+
+current-head official CI 已启动：首次回读为 DCO success、lint/codegen 与多版本 jobs in_progress，Tide pending。其余 job 尚未完成；不沿用旧 head 的 green checks，不检查 fork push workflows。
 
 ### 本地记录与下一步
 
@@ -68,7 +74,7 @@
 
 环境中 `/home/humanizer-cs/skills/humanizer-cs/SKILL.md` 不存在，改用已安装的 `/home/ranxi/.codex/skills/humanizer-cs/SKILL.md` 及其必读 references；更新检查使用 `python3`（`python` 不存在），版本为 `0.5.3`，无可用更新。
 
-窄范围简化、针对性验证、正文草稿与单提交整理均已完成；下一步等待用户确认具体改动和英文文本后，更新现有 PR branch/body 并回复 review。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
+窄范围简化、针对性验证、单提交整理及获准发布均已完成；下一步只跟进 `8806479cd` 的 official PR CI 或新 maintainer review。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
 
 ## 先说人话
 
