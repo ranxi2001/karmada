@@ -6,6 +6,8 @@
 
 ## 2026-10-19：#7830 当前审查结论
 
+最新状态：按用户要求，已原样采用 RainbowMango 的三处代码 suggestion，再更新测试。本地新版为 `06a3e9578`，race tests 与 lint 均通过，尚未推送；以下保留当日上一轮的审查与发布证据，最新行为以“后续 review”小节为准。
+
 ### 先说人话
 
 建议接受 RainbowMango 今天提出的简化意见，并同步处理 PR 描述与提交整理：#7830 只需要判断组件副本是否变化，可以用一个布尔比较函数替代 `ComponentScale` 枚举。扩容、缩容、部分组件增而另一些减，当前调用都会进入同一个重新调度分支；区分方向对这个 PR 的调用者没有额外作用。这是接口复杂度建议，尚未发现由枚举本身导致的行为错误。初次审查只记录建议；随后用户要求实施，具体结果见下文实施状态。
@@ -68,13 +70,31 @@
 
 current-head official CI 已启动：首次回读为 DCO success、lint/codegen 与多版本 jobs in_progress，Tide pending。其余 job 尚未完成；不沿用旧 head 的 green checks，不检查 fork push workflows。
 
+### 2026-10-19 后续 review：先采用建议，再更新测试
+
+RainbowMango 在 [review](https://github.com/karmada-io/karmada/pull/7830#pullrequestreview-5568228463) 提供三处完整 suggestion，并要求更新单测。用户随后明确要求先接受代码建议、再写测试。此轮以这三处 suggestion 为实现基准：修改注释、调用 `isComponentReplicasChanged(bindingSpec.Components, bindingSpec.Clusters)`、原样采用私有 helper。
+
+新的触发语义覆盖所有 target clusters：任一有组件结果的集群出现副本或组件集合变化就触发；没有组件结果的集群跳过，继续 legacy replica checks。此 maintainer 指导替代上轮单目标、同名集合限定，不继续保留旧的 incomparable-return-false 测试预期。`pkg/scheduler/core/common.go:AssignReplicas` 在 multi-template applicable 时为每个目标写入 `buildTargetComponents(spec.Components)`；空结果的旧数据与单组件路径仍可出现，所以 skip 与 legacy fallback 都需要测试。
+
+源码只修改 `pkg/util/binding.go`；随后调整 `pkg/util/binding_test.go`，保留原 scheduler 入口测试。单测覆盖多目标第二目标变化、组件增删/改名、重排相等、空结果跳过后继续后续集群、全部空结果及单组件 legacy replica checks。验证使用 util/scheduler 两包全部 race tests 与 changed-package lint；不改 estimator、controller 或下游 PR。PR body 同步去掉 snapshot、single-target 与忽略组件集合变化的旧描述。发布仍需确认本轮 exact diff/text。
+
+实施结果：三处 suggestion 文本均从 GitHub API 读取并与最终 `pkg/util/binding.go` 精确匹配，没有额外改动 helper。之后重写 helper 测试为 `Test_isComponentReplicasChanged`，包含 14 个用例；调用层另新增 4 个用例，覆盖多个 target、移除至单组件、Duplicated/Divided legacy checks。原“名称/数量变化不触发”用例已改为触发；删除依赖旧 incomparable 语义的 malformed-result 用例，没有新增防御分支。scheduler 入口 tests 未改动。
+
+新验证（Go 1.26.9）：`go test -race -count=1 -p=4 ./pkg/util ./pkg/scheduler` 全部通过，util `13.062s`、scheduler `1.683s`；`golangci-lint run --concurrency=4 ./pkg/util ./pkg/scheduler` 通过，`0 issues`。日志为 `/tmp/pr7830-maintainer-tests.log` 与 `/tmp/pr7830-maintainer-lint.log`。没有运行 live E2E 或全仓 verify。
+
+本地提交已 amend 为单个 signed-off `06a3e9578bc833dfce616dee49e8b60d65b5203d`，base 仍为 `b14c23c6d`；相对 master 3 files `+403/-9`，本轮相对已发布 `8806479cd` 只改 util 的源码与 tests，`+146/-83`。工作区干净，diff check 通过。尚未推送，本轮代码修改授权不代替新的上游 exact diff/text 发布确认。
+
+[新版 body 草稿](day58-pr7830-current-body.md) 已去掉 snapshot、single-target 与忽略组件集合变化的描述，并更新 release note。后续发布目标仍为现有 #7830；可用旧 head `8806479cd39473a0d09bb3a117278ef61b0302b8` 的 exact lease 更新；不自动 resolve threads 或更新下游 PR。待发布回复草稿：
+
+> Applied the suggested changes and updated the unit tests.
+
 ### 本地记录与下一步
 
 本地原 feature worktree 停留在 `cf59527e2`，与远端分支存在分歧；当前证据直接读取 exact-SHA Git 对象，未切换或重置旧 worktree。若继续实现，应从审查 head 建独立 worktree，并先确认当前 base 差异与依赖接口。
 
 环境中 `/home/humanizer-cs/skills/humanizer-cs/SKILL.md` 不存在，改用已安装的 `/home/ranxi/.codex/skills/humanizer-cs/SKILL.md` 及其必读 references；更新检查使用 `python3`（`python` 不存在），版本为 `0.5.3`，无可用更新。
 
-窄范围简化、针对性验证、单提交整理及获准发布均已完成；下一步只跟进 `8806479cd` 的 official PR CI 或新 maintainer review。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
+上一轮 `8806479cd` 已发布；本轮 follow-up `06a3e9578` 的代码与测试已完成，本地等待发布确认。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
 
 ## 先说人话
 

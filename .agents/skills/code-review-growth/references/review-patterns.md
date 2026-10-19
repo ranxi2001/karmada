@@ -523,3 +523,12 @@ Keep entries concise and evidence-oriented. Add a new entry only when a real rev
 - Review check: For every required invariant, name one current PR owner and verify the code in that PR's actual base-to-head diff. Recompute each residual after every history rewrite, then compare PR-body dependency and patch-equivalence claims with current patch identities.
 - Evidence to gather: Exact bases and heads, commit ancestry, patch IDs or residual diffs, current and stale file lists, feature-gate default, merge/rollout order, and the design or API contract that requires each invariant.
 - Test or fix cue: Restore an orphaned invariant in a narrow owner-aligned follow-up or the nearest current owner, rebuild the integration branch from current heads, update the PR body, and keep activation disabled until every required owner is present in the deployable stack.
+
+## Change Detection And Planner Support Have Different Boundaries
+
+- Pattern: A trigger helper can silently inherit the later planner's current restrictions, missing changes that the trigger is expected to report. Missing persisted fields may require a different policy from present-but-different results.
+- Seen in: `karmada-io/karmada#7830`, where RainbowMango requested checking every target cluster and treating component additions/removals as changes, while skipping targets with no recorded component results.
+- Miss symptom: The trigger requires exactly one cluster and matching component identities because the downstream incremental planner supports only that shape; tests then preserve those private restrictions as the trigger's contract.
+- Review check: Define separately what counts as changed, which changes the planner supports, and who preserves results on failure. Verify producer behavior before equating an absent result with a changed component set.
+- Evidence to gather: `AssignReplicas` result-writing conditions, helper callers, existing scalar fallback, exact maintainer guidance, and ownership of unsupported-operation handling.
+- Test or fix cue: Cover later target changes, component additions/removals/renames, and missing-result skip plus legacy fallback. Keep the implementation at the accepted trigger boundary; do not introduce broader validation or convergence machinery.

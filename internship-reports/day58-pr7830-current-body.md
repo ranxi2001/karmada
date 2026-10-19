@@ -20,9 +20,9 @@ Optionally add one or more of the following kinds if applicable:
 
 **What this PR does / why we need it**:
 
-Multi-template workloads keep the scalar replica fields at zero, so component replica changes do not trigger rescheduling.
+Multi-template workloads keep the scalar replica fields at zero, so changes to component replicas or names do not trigger rescheduling.
 
-With `MultiplePodTemplatesScheduling` enabled, this PR compares desired component replicas with the scheduled snapshot by name for multi-component workloads with one scheduled target. Replica changes trigger the existing `ScaleSchedule` path. Reordered entries are treated as equal; missing snapshots and component-set changes retain the existing behavior.
+With `MultiplePodTemplatesScheduling` enabled, this PR compares desired components with the per-component replicas recorded in each target cluster. Changes in replica counts or component names trigger the existing `ScaleSchedule` path. Component order is ignored. Clusters without recorded component results are skipped and continue to rely on the legacy replica checks.
 
 **Which issue(s) this PR fixes**:
 <!--
@@ -58,5 +58,5 @@ Some brief examples of release notes:
 -->
 
 ```release-note
-`karmada-scheduler`: Multi-template workloads are rescheduled when component replicas change.
+`karmada-scheduler`: Multi-template workloads are rescheduled when component replicas or component names change.
 ```
