@@ -4,6 +4,44 @@
 
 状态核对时间：2026-08-27 21:56（Asia/Shanghai）
 
+## 2026-10-19：#7830 当前审查结论
+
+### 先说人话
+
+建议接受 RainbowMango 今天提出的简化意见，并同步处理 PR 描述与提交整理：#7830 只需要判断组件副本是否变化，可以用一个布尔比较函数替代 `ComponentScale` 枚举。扩容、缩容、部分组件增而另一些减，当前调用都会进入同一个重新调度分支；区分方向对这个 PR 的调用者没有额外作用。这是接口复杂度建议，尚未发现由枚举本身导致的行为错误。本轮只审查并记录，未修改或发布 PR 代码。
+
+例如已调度结果为 `jobmanager=1, taskmanager=4`，期望改为 `jobmanager=1, taskmanager=6`，应触发重新调度。若期望变为 `jobmanager=2, worker=4`，组件名称集合已经变化，当前 PR 则保留原行为，不能在看到第一个副本差异时提前返回 `true`。
+
+> 注释：这里的“没有触发”只指新增的组件副本比较分支；后续已有的标量副本判断仍照常执行。缺失或无法比较的结果如何恢复，仍未由本 PR 解决。
+
+### 当前代码与讨论证据
+
+审查对象为 [#7830](https://github.com/karmada-io/karmada/pull/7830)，head `3529779731010c16be738017b047ba490293a592`，base `61af4b2bb186f5b2bf929348d57a1f0bec0988cb`；3 files，`+362/-8`。已读取 PR body、全部 conversation comments、line comments、reviews、当前 diff 与 RB/CRB 调用路径。
+
+- [mszacillo 的分类建议](https://github.com/karmada-io/karmada/pull/7830#discussion_r3891434535)希望用分类函数简化调用，并为 #7835 复用；后续又建议去掉 admission 已保证的 desired-name 校验与多余 map helper。作者已完成这些修改；[2026-09-01 的评论](https://github.com/karmada-io/karmada/pull/7830#issuecomment-5495468406)给出 `/lgtm`。
+- [RainbowMango 2026-10-19 的意见](https://github.com/karmada-io/karmada/pull/7830#discussion_r4311034303)认为当前 PR 只需 yes/no，枚举过重。两条建议的关注点分别是后续复用与当前需求，可以通过当前 PR 保持布尔接口、方向分析由估算阶段负责来处理。
+- [当前 `IsBindingReplicasChanged` 与分类函数](https://github.com/karmada-io/karmada/blob/3529779731010c16be738017b047ba490293a592/pkg/util/binding.go#L54)把 `Up/Down/Mixed` 全部映射为 `true`，`None/Unknown` 均继续旧路径；全仓检索没有发现当前 #7830 内其他 production classifier caller。
+- RainbowMango 同日的 review 总结还明确要求处理剩余评论、按内容更新 PR 描述、整理 commits。API 确认当前共 5 commits：`78dfc7a`、`ae34007`、`e3e9d4e`、`0673179`、`3529779`；其中比较函数与分类函数的迭代可整理为一个最终聚焦提交。当前 body 已匹配 trigger-only 职责，但修改接口后仍需检查描述、验证命令与结果是否一致。
+- [RB 调用](https://github.com/karmada-io/karmada/blob/3529779731010c16be738017b047ba490293a592/pkg/scheduler/scheduler.go#L428)与 [CRB 调用](https://github.com/karmada-io/karmada/blob/3529779731010c16be738017b047ba490293a592/pkg/scheduler/scheduler.go#L504)仅使用 bool 决定是否调度，并记录 `ScaleSchedule`；两者不消费方向。
+- #7835 当前 head `e19a318ebb664e02abbbf1f5c4f1d19b43c83835` 的 `pkg/scheduler/core/estimation.go` 仍有自己的 `componentReplicaScaleDirection`，并未调用 #7830 新增的 `ClassifyComponentScale`。#7841 当前 head `9a048730721a558c9e70c490a2890abf4491603f` 仍使用旧版 `ComponentReplicasEqual`，因此后续 stack 更新需要检查接口衔接，不能假定远端三个 PR 已同步。
+- 当前 PR body 已关联 [#7895](https://github.com/karmada-io/karmada/issues/7895)，其三个任务仍是触发重新调度、增量估算/缩容跳过估算、失败时阻止下发。该 issue 有另一位贡献者的认领请求，不能据此推断已获得分配或实现已经被替代。
+
+### 建议修改边界与验证
+
+建议删除 `ComponentScale` 及其常量，将分类函数改为只返回 bool 的副本变化比较。比较仍按名称进行，保留 desired 名称由 admission 保证非空且唯一的前提；长度不同、scheduled 缺失或名称不匹配时不触发新增分支。可以在遍历时累积 `changed`，但必须完成名称匹配检查后才返回它。不要简化成“任何不相等都触发”，那会把目前排除的组件集合变化带入重新调度。
+
+现有 helper 测试应改为布尔断言，保留扩容、缩容、混合变化、仅重排、缺失/不可比较结果的语义。修改后最小验证是 helper 与 `TestIsBindingReplicasChanged`，再验证 `TestDoScheduleBinding` / `TestDoScheduleClusterBinding`；保持 Placement annotation 与 Placement 相同，确保用例真正走到副本变化分支。
+
+本轮没有修改 executable code，也没有重新运行 Go tests。GitHub exact-head check-runs 已核对：`3529779` 的 17 项检查全部成功，包含 unit、lint、codegen、compile 与 E2E；Tide pending 的原因是缺少 `approved` 标签。这只证明当前 head 的现有 CI 结果，不证明尚未实现的布尔版本通过测试，也不代表完整 #7835/#7841 功能已验收。
+
+### 本地记录与下一步
+
+本地原 feature worktree 停留在 `cf59527e2`，与远端分支存在分歧；当前证据直接读取 exact-SHA Git 对象，未切换或重置旧 worktree。若继续实现，应从审查 head 建独立 worktree，并先确认当前 base 差异与依赖接口。
+
+环境中 `/home/humanizer-cs/skills/humanizer-cs/SKILL.md` 不存在，改用已安装的 `/home/ranxi/.codex/skills/humanizer-cs/SKILL.md` 及其必读 references；更新检查使用 `python3`（`python` 不存在），版本为 `0.5.3`，无可用更新。
+
+下一步是实施上述窄范围简化并做针对性验证，同步 PR 描述并整理提交；任何 PR branch push 或上游回复仍需确认具体改动和英文文本。以下保留 2026-08-27 历史交付证据，其旧 head、CI 和“尚无 review”表述不代表今天状态。
+
 ## 先说人话
 
 #7492 的三个 PR 已经按“触发、计算、失败保护”重新发布，旧的 `ReviseComponents` / component delivery 大包没有保留。当前工作已从“继续改设计”转为“等待 official CI 和 human review”。

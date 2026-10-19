@@ -57,7 +57,7 @@ For technical-route HTML presentations, default to a fixed `1920×1080` stage th
 
 Use `.agents/skills/build-technical-research-slides/` when creating or revising a technical research HTML deck, including narrative compression, terminology cleanup, Style A implementation, browser validation, and replacement of a superseded version.
 
-For Chinese terminology and prose cleanup, the local Humanizer-cs skill lives at `/home/humanizer-cs/skills/humanizer-cs/SKILL.md`. Read that entry and its required references before editing, and protect exact code identifiers, API fields, modes, plugin names, issue numbers, and evidence boundaries from free-form rewriting.
+For Chinese terminology and prose cleanup, the installed Humanizer-cs skill lives at `/home/ranxi/.codex/skills/humanizer-cs/SKILL.md`. Read that entry and its required references before editing, and protect exact code identifiers, API fields, modes, plugin names, issue numbers, and evidence boundaries from free-form rewriting.
 
 On the current Linux workspace, reuse the installed Playwright `1.62.1` browser cache before downloading another browser. The existing full Chromium is `/root/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome`, and the headless shell is `/root/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell`. Do not pin an older Playwright version that requests a different browser build unless the existing browser is proven incompatible.
 
